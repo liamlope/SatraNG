@@ -611,4 +611,43 @@
     <string name="satra_notif_control_desc">Preview and customize the VPN notification</string>
     <string name="satra_notif_title_connected">Connected</string>
     <string name="satra_sub_hub_hint">Traffic, expiry, and panel announcements from your 3x-ui subscription</string>
+    <string name="satra_settings_hub_title">Control center</string>
+    <string name="satra_settings_hub_subtitle">Connection, privacy, apps, and performance — organized by category.</string>
+    <string name="satra_settings_section_connection">Connection</string>
+    <string name="satra_settings_section_apps">App coverage</string>
+    <string name="satra_settings_section_experience">Experience</string>
+    <string name="satra_settings_section_performance">Performance</string>
+    <string name="satra_settings_section_system">System</string>
+    <string name="satra_settings_mode_vpn">VPN mode</string>
+    <string name="satra_settings_mode_proxy">Proxy only</string>
+    <string name="satra_settings_port_chip">Port %1$s</string>
+    <string name="satra_settings_coverage_all">All apps through tunnel</string>
+    <string name="satra_settings_coverage_selected">Selected apps only (per-app on)</string>
+    <string name="satra_settings_per_app_master">Per-app proxy</string>
+    <string name="satra_settings_per_app_master_sub">Off = every app uses the tunnel. On = only the apps you pick.</string>
+    <string name="satra_settings_per_app_toggle_a11y">Toggle per-app proxy</string>
+    <string name="satra_settings_on">On</string>
+    <string name="satra_settings_off">Off</string>
+    <string name="satra_settings_per_app_manage">Choose apps</string>
+    <string name="satra_settings_per_app_manage_sub">Pick which apps use or bypass the tunnel</string>
+    <string name="satra_settings_cat_mode_sub">VPN, proxy-only, and root</string>
+    <string name="satra_settings_cat_tunnel_sub">DNS, IPv6, HEV TUN, MTU</string>
+    <string name="satra_settings_cat_core_sub">Local SOCKS, sniffing, remote DNS</string>
+    <string name="satra_settings_cat_ui_sub">Language, theme, layout</string>
+    <string name="satra_settings_cat_notif_sub">Notification actions and details</string>
+    <string name="satra_settings_cat_routing_sub">Domain and IP routing rules</string>
+    <string name="satra_settings_cat_mux_sub">Mux concurrency (may break some apps)</string>
+    <string name="satra_settings_cat_fragment_sub">TLS fragment options</string>
+    <string name="satra_settings_cat_obs_sub">Auto select by ping or load</string>
+    <string name="satra_settings_cat_advanced_sub">Boot, always-on VPN, test URLs</string>
+    <string name="satra_settings_tunnel_reset">Apply Satra tunnel presets</string>
+    <string name="satra_settings_tunnel_reset_sub">Port 28888, HEV, local DNS, full-device coverage</string>
+    <string name="satra_settings_tunnel_reset_done">Satra tunnel presets applied</string>
+    <string name="satra_settings_safety">Safety &amp; Play Protect</string>
+    <string name="satra_settings_safety_sub">Why Google shows a warning for sideloaded APKs</string>
+    <string name="satra_settings_safety_title">Safe install tips</string>
+    <string name="satra_settings_safety_body">SatraNG is signed with our release key and is not distributed through Play Store yet. Always install only APKs from your trusted SatraNG folder.</string>
+    <string name="satra_settings_play_protect_title">About the Play Protect warning</string>
+    <string name="satra_settings_play_protect_body">Play Protect has not verified this developer signature yet. That is not a malware verdict. Tap Install anyway to continue. Choose Don\'t send if you do not want to upload the APK. A stable release signature reduces this warning over time.</string>
+
 </resources>

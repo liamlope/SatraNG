@@ -613,4 +613,43 @@
     <string name="satra_sub_days_left">%1$d days left</string>
     <string name="satra_sub_hours_left">%1$d hours left</string>
     <string name="satra_notif_channels">Channels: VPN · subscription · test</string>
+    <string name="satra_settings_hub_title">مرکز کنترل</string>
+    <string name="satra_settings_hub_subtitle">اتصال، حریم خصوصی، اپ‌ها و عملکرد — با دسته‌بندی واضح.</string>
+    <string name="satra_settings_section_connection">اتصال</string>
+    <string name="satra_settings_section_apps">پوشش اپ‌ها</string>
+    <string name="satra_settings_section_experience">تجربه کاربری</string>
+    <string name="satra_settings_section_performance">عملکرد</string>
+    <string name="satra_settings_section_system">سیستم</string>
+    <string name="satra_settings_mode_vpn">حالت VPN</string>
+    <string name="satra_settings_mode_proxy">فقط پروکسی</string>
+    <string name="satra_settings_port_chip">پورت %1$s</string>
+    <string name="satra_settings_coverage_all">همه اپ‌ها از تانل</string>
+    <string name="satra_settings_coverage_selected">فقط اپ‌های انتخاب‌شده (Per-app روشن)</string>
+    <string name="satra_settings_per_app_master">پروکسی Per-app</string>
+    <string name="satra_settings_per_app_master_sub">خاموش = همه اپ‌ها از تانل. روشن = فقط اپ‌هایی که انتخاب می‌کنید.</string>
+    <string name="satra_settings_per_app_toggle_a11y">روشن یا خاموش کردن پروکسی Per-app</string>
+    <string name="satra_settings_on">روشن</string>
+    <string name="satra_settings_off">خاموش</string>
+    <string name="satra_settings_per_app_manage">انتخاب اپ‌ها</string>
+    <string name="satra_settings_per_app_manage_sub">کدام اپ‌ها از تانل استفاده کنند یا نکنند</string>
+    <string name="satra_settings_cat_mode_sub">VPN، فقط پروکسی، و روت</string>
+    <string name="satra_settings_cat_tunnel_sub">DNS، IPv6، HEV TUN، MTU</string>
+    <string name="satra_settings_cat_core_sub">SOCKS محلی، sniffing، DNS ریموت</string>
+    <string name="satra_settings_cat_ui_sub">زبان، تم، چیدمان</string>
+    <string name="satra_settings_cat_notif_sub">اقدام‌ها و جزئیات نوتیفیکیشن</string>
+    <string name="satra_settings_cat_routing_sub">قوانین مسیریابی دامنه و IP</string>
+    <string name="satra_settings_cat_mux_sub">هم‌زمانی Mux (ممکن است بعضی اپ‌ها را خراب کند)</string>
+    <string name="satra_settings_cat_fragment_sub">گزینه‌های Fragment برای TLS</string>
+    <string name="satra_settings_cat_obs_sub">انتخاب خودکار با پینگ یا بار</string>
+    <string name="satra_settings_cat_advanced_sub">بوت، Always-on VPN، URL تست</string>
+    <string name="satra_settings_tunnel_reset">اعمال پیش‌فرض تانل Satra</string>
+    <string name="satra_settings_tunnel_reset_sub">پورت ۲۸۸۸۸، HEV، DNS محلی، پوشش کل دستگاه</string>
+    <string name="satra_settings_tunnel_reset_done">پیش‌فرض‌های تانل Satra اعمال شد</string>
+    <string name="satra_settings_safety">ایمنی و Play Protect</string>
+    <string name="satra_settings_safety_sub">چرا گوگل برای APK خارج از استور هشدار می‌دهد</string>
+    <string name="satra_settings_safety_title">نکات نصب امن</string>
+    <string name="satra_settings_safety_body">SatraNG با کلید انتشار ما امضا شده و هنوز از Play Store توزیع نمی‌شود. فقط APK را از پوشه معتبر SatraNG نصب کنید.</string>
+    <string name="satra_settings_play_protect_title">درباره هشدار Play Protect</string>
+    <string name="satra_settings_play_protect_body">گوگل هنوز امضای این توسعه‌دهنده را به‌اندازه کافی ندیده است؛ این حکم بدافزار نیست. برای ادامه Install anyway را بزنید. اگر نمی‌خواهید APK آپلود شود Don\'t send را انتخاب کنید. با امضای پایدار این هشدار کمتر می‌شود.</string>
+
 </resources>
