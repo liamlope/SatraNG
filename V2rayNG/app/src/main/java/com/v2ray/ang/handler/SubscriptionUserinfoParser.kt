@@ -29,8 +29,10 @@ object SubscriptionUserinfoParser {
         }
         normalized["announce"]?.takeIf { it.isNotBlank() }?.let { subscription.announce = it }
         normalized["support-url"]?.takeIf { it.isNotBlank() }?.let { subscription.supportUrl = it }
-        normalized["profile-web-page-url"]?.takeIf { it.isNotBlank() && subscription.supportUrl.isNullOrBlank() }
-            ?.let { subscription.supportUrl = it }
+        normalized["profile-web-page-url"]?.takeIf { it.isNotBlank() }?.let {
+            subscription.profileWebPageUrl = it
+            if (subscription.supportUrl.isNullOrBlank()) subscription.supportUrl = it
+        }
         normalized["profile-update-interval"]?.toLongOrNull()?.let {
             subscription.profileUpdateInterval = it
             if (it > 0) {

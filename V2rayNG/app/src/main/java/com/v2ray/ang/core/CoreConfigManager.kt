@@ -1178,6 +1178,7 @@ object CoreConfigManager {
             LogUtil.i(AppConfig.TAG, "Tor mode on but SOCKS $port not open yet; skipping chain")
             return
         }
+        val useDialerProxy = tor.mode == com.v2ray.ang.handler.TorConnectionMode.WithVpn
         val torOutbound = V2rayConfig.OutboundBean(
             tag = AppConfig.TAG_TOR,
             protocol = "socks",
@@ -1186,11 +1187,15 @@ object CoreConfigManager {
                 port = port,
                 level = AppConfig.DEFAULT_LEVEL,
             ),
-            streamSettings = V2rayConfig.OutboundBean.StreamSettingsBean(
-                sockopt = V2rayConfig.OutboundBean.StreamSettingsBean.SockoptBean(
-                    dialerProxy = AppConfig.TAG_PROXY,
+            streamSettings = if (useDialerProxy) {
+                V2rayConfig.OutboundBean.StreamSettingsBean(
+                    sockopt = V2rayConfig.OutboundBean.StreamSettingsBean.SockoptBean(
+                        dialerProxy = AppConfig.TAG_PROXY,
+                    )
                 )
-            ),
+            } else {
+                null
+            },
             mux = V2rayConfig.OutboundBean.MuxBean(false),
         )
         v2rayConfig.outbounds.add(torOutbound)
@@ -1201,7 +1206,10 @@ object CoreConfigManager {
                 outboundTag = AppConfig.TAG_TOR,
             )
         )
-        LogUtil.i(AppConfig.TAG, "Tor chain enabled via ${AppConfig.TAG_TOR} port=$port")
+        LogUtil.i(
+            AppConfig.TAG,
+            "Tor chain enabled via ${AppConfig.TAG_TOR} port=$port mode=${tor.mode} dialer=$useDialerProxy"
+        )
     }
 
     private fun isLocalPortOpen(port: Int): Boolean {

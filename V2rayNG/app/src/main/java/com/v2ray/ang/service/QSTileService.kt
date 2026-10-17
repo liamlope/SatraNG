@@ -30,12 +30,22 @@ class QSTileService : TileService() {
      */
     fun setState(state: Int) {
         qsTile?.icon = Icon.createWithResource(applicationContext, R.drawable.ic_stat_name)
+        val torOn = com.v2ray.ang.handler.TorManager.state.value.enabled
         if (state == Tile.STATE_INACTIVE) {
             qsTile?.state = Tile.STATE_INACTIVE
             qsTile?.label = getString(R.string.app_name)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                qsTile?.subtitle = null
+            }
         } else if (state == Tile.STATE_ACTIVE) {
             qsTile?.state = Tile.STATE_ACTIVE
             qsTile?.label = CoreServiceManager.getRunningServerName()
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                qsTile?.subtitle = when {
+                    torOn -> getString(R.string.satra_status_vpn_tor)
+                    else -> getString(R.string.satra_status_connected)
+                }
+            }
         }
 
         qsTile?.updateTile()

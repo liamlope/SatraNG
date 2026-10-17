@@ -91,24 +91,51 @@ object NotificationManager {
                 ""
             }
 
+        val prefs = NotificationPrefs.state.value
+        val tor = TorManager.state.value
+        val torOn = tor.enabled
+        val title = when {
+            torOn -> service.getString(R.string.satra_notif_title_protected)
+            else -> service.getString(R.string.satra_notif_title_connected)
+        }
+        val subtitle = buildString {
+            if (prefs.showLocation && !currentConfig?.remarks.isNullOrBlank()) {
+                append(currentConfig?.remarks)
+            }
+            if (prefs.showTor && torOn) {
+                if (isNotEmpty()) append(" · ")
+                append(
+                    when (tor.mode) {
+                        TorConnectionMode.TorOnly -> service.getString(R.string.satra_status_tor_only)
+                        else -> service.getString(R.string.satra_status_vpn_tor)
+                    }
+                )
+            }
+            if (isEmpty()) append(service.getString(R.string.app_name))
+        }
         mBuilder = NotificationCompat.Builder(service, channelId)
             .setSmallIcon(R.drawable.ic_stat_name)
-            .setContentTitle(currentConfig?.remarks ?: service.getString(R.string.app_name))
+            .setContentTitle(title)
+            .setContentText(subtitle)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setShowWhen(false)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentPendingIntent)
-            .addAction(
+        if (prefs.actionStop) {
+            mBuilder?.addAction(
                 R.drawable.ic_delete_24dp,
                 service.getString(R.string.notification_action_stop_v2ray),
                 stopV2RayPendingIntent
             )
-            .addAction(
+        }
+        if (prefs.actionRestart) {
+            mBuilder?.addAction(
                 R.drawable.ic_restore_24dp,
                 service.getString(R.string.title_service_restart),
                 restartV2RayPendingIntent
             )
+        }
 
         //mBuilder?.setDefaults(NotificationCompat.FLAG_ONLY_ALERT_ONCE)
 

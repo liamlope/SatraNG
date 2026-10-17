@@ -23,6 +23,7 @@ data class SubscriptionItem(
     var profileTitle: String? = null,
     var announce: String? = null,
     var supportUrl: String? = null,
+    var profileWebPageUrl: String? = null,
     var profileUpdateInterval: Long = 0L, // hours from Profile-Update-Interval
 ) {
     fun usedBytes(): Long = (upload + download).coerceAtLeast(0L)
