@@ -445,6 +445,7 @@ abstract class BaseServerActivity : BaseComponentActivity() {
         var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
         val scrollState = rememberScrollState()
         Scaffold(
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
             contentWindowInsets = WindowInsets(0),
             topBar = {
                 AppTopBar(

@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -34,11 +35,11 @@ import com.v2ray.ang.R
 fun PreferenceGroupHeader(title: String, modifier: Modifier = Modifier) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.secondary,
+        style = MaterialTheme.typography.labelLarge,
+        color = SatraColors.TealDeep,
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
+            .padding(start = 20.dp, end = 16.dp, top = 20.dp, bottom = 8.dp)
     )
 }
 
@@ -91,16 +92,17 @@ private fun SettingsItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 3.dp)
             .then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
-            .padding(16.dp),
+            .padding(horizontal = 12.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
             Icon(
                 painter = icon,
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = titleColor
+                modifier = Modifier.size(22.dp),
+                tint = if (enabled) SatraColors.TealDeep else titleColor
             )
             Spacer(modifier = Modifier.width(16.dp))
         }
@@ -258,8 +260,9 @@ fun SettingsSwitchItem(
                 onCheckedChange = if (enabled) onCheckedChange else null,
                 modifier = Modifier.scale(0.8f),
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                    checkedTrackColor = MaterialTheme.colorScheme.secondary
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = SatraColors.Teal,
+                    checkedBorderColor = SatraColors.Teal
                 ),
                 enabled = enabled
             )

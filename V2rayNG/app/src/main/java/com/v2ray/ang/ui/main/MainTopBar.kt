@@ -1,5 +1,6 @@
 package com.v2ray.ang.ui.main
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -19,12 +21,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.LocalDarkTheme
+import com.v2ray.ang.ui.compose.SatraColors
 import com.v2ray.ang.ui.compose.verticalScrollbar
 
 @Composable
@@ -46,73 +52,113 @@ fun MainTopBar(
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val maxMenuHeight = LocalConfiguration.current.screenHeightDp.dp - statusBarHeight - navBarHeight - 20.dp
+    val dark = LocalDarkTheme.current
 
-    AppTopBar(
-        title = stringResource(R.string.title_server),
-        onBackClick = {},
-        isLoading = isLoading,
-        isSearchActive = showSearch,
-        searchQuery = searchQuery,
-        onSearchQueryChange = onSearchQueryChange,
-        onSearchClose = onSearchClose,
-        searchPlaceholder = stringResource(R.string.menu_item_search),
-        navigationIcon = {
-            if (showSearch) {
-                IconButton(onClick = onSearchClose) {
-                    Icon(painterResource(R.drawable.ic_arrow_back_24dp), contentDescription = stringResource(R.string.acc_back))
+    Box(
+        modifier = Modifier
+            .background(
+                Brush.verticalGradient(
+                    colors = if (dark) {
+                        listOf(SatraColors.InkSoft.copy(alpha = 0.98f), SatraColors.Ink.copy(alpha = 0.92f))
+                    } else {
+                        listOf(
+                            androidx.compose.ui.graphics.Color(0xF2FFFFFF),
+                            androidx.compose.ui.graphics.Color(0xE6F3F6F9)
+                        )
+                    }
+                )
+            )
+    ) {
+        AppTopBar(
+            title = stringResource(R.string.app_name),
+            onBackClick = {},
+            isLoading = isLoading,
+            isSearchActive = showSearch,
+            searchQuery = searchQuery,
+            onSearchQueryChange = onSearchQueryChange,
+            onSearchClose = onSearchClose,
+            searchPlaceholder = stringResource(R.string.menu_item_search),
+            navigationIcon = {
+                if (showSearch) {
+                    IconButton(onClick = onSearchClose) {
+                        Icon(
+                            painterResource(R.drawable.ic_arrow_back_24dp),
+                            contentDescription = stringResource(R.string.acc_back)
+                        )
+                    }
+                } else {
+                    IconButton(
+                        onClick = onMenuClick,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.ic_menu_24dp),
+                            contentDescription = stringResource(R.string.acc_open_menu),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
-            } else {
-                IconButton(onClick = onMenuClick) {
-                    Icon(painterResource(R.drawable.ic_menu_24dp), contentDescription = stringResource(R.string.acc_open_menu))
+            },
+            actions = {
+                if (!showSearch) {
+                    IconButton(onClick = { onSearchToggle(true) }) {
+                        Icon(
+                            painterResource(R.drawable.ic_search_24dp),
+                            contentDescription = stringResource(R.string.acc_search)
+                        )
+                    }
                 }
-            }
-        },
-        actions = {
-            if (!showSearch) {
-                IconButton(onClick = { onSearchToggle(true) }) {
-                    Icon(painterResource(R.drawable.ic_search_24dp), contentDescription = stringResource(R.string.acc_search))
+                Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
+                    IconButton(onClick = { showImportMenu = true }) {
+                        Icon(
+                            painterResource(R.drawable.ic_add_24dp),
+                            contentDescription = stringResource(R.string.acc_add),
+                            tint = SatraColors.TealDeep
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showImportMenu,
+                        onDismissRequest = { showImportMenu = false },
+                        scrollState = importMenuScrollState,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier
+                            .heightIn(max = maxMenuHeight)
+                            .verticalScrollbar(importMenuScrollState)
+                    ) {
+                        ImportMenuContent(
+                            onAction = { action ->
+                                showImportMenu = false
+                                onAction(action)
+                            }
+                        )
+                    }
                 }
-            }
-            Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                IconButton(onClick = { showImportMenu = true }) {
-                    Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add))
-                }
-                DropdownMenu(
-                    expanded = showImportMenu,
-                    onDismissRequest = { showImportMenu = false },
-                    scrollState = importMenuScrollState,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier
-                        .heightIn(max = maxMenuHeight)
-                        .verticalScrollbar(importMenuScrollState)
-                ) {
-                    ImportMenuContent(
-                        onAction = { action ->
-                            showImportMenu = false
-                            onAction(action)
+                Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            painterResource(R.drawable.ic_more_vert_24dp),
+                            contentDescription = stringResource(R.string.acc_more)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        scrollState = moreMenuScrollState,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier
+                            .heightIn(max = maxMenuHeight)
+                            .verticalScrollbar(moreMenuScrollState)
+                    ) {
+                        MoreMenuContent { action ->
+                            showMenu = false
+                            onMoreMenuAction(action)
                         }
-                    )
-                }
-            }
-            Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(painterResource(R.drawable.ic_more_vert_24dp), contentDescription = stringResource(R.string.acc_more))
-                }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    scrollState = moreMenuScrollState,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier
-                        .heightIn(max = maxMenuHeight)
-                        .verticalScrollbar(moreMenuScrollState)
-                ) {
-                    MoreMenuContent { action ->
-                        showMenu = false
-                        onMoreMenuAction(action)
                     }
                 }
             }
-        }
-    )
+        )
+    }
 }

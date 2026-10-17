@@ -1,0 +1,90 @@
+name: Build SatraNG APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [satra-build]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-36 platforms;android-35 build-tools;36.0.0 platform-tools'
+
+      - name: Install platform 37 if available
+        run: |
+          yes | sdkmanager "platforms;android-37" "build-tools;37.0.0" || \
+          yes | sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          sdkmanager --list_installed | head -40
+
+      - name: Install NDK
+        run: |
+          yes | sdkmanager --install "ndk;27.0.12077973" || yes | sdkmanager --install "ndk;26.1.10909125"
+          NDK_DIR=$(ls -d $ANDROID_HOME/ndk/* | head -1)
+          echo "NDK_HOME=$NDK_DIR" >> $GITHUB_ENV
+          echo "Using NDK at $NDK_DIR"
+
+      - name: Patch ndkVersion
+        run: |
+          NDK_VER=$(basename "$NDK_HOME")
+          sed -i "/compileSdk = /a\\        ndkVersion = \"$NDK_VER\"" V2rayNG/app/build.gradle.kts
+          # Fallback compileSdk if 37 missing
+          if [ ! -d "$ANDROID_HOME/platforms/android-37" ]; then
+            sed -i 's/compileSdk = 37/compileSdk = 36/' V2rayNG/app/build.gradle.kts
+            sed -i 's/targetSdk = 37/targetSdk = 36/' V2rayNG/app/build.gradle.kts
+          fi
+          head -20 V2rayNG/app/build.gradle.kts
+
+      - name: Build libhevtun
+        run: bash compile-hevtun.sh
+
+      - name: Copy libhevtun
+        run: cp -r libs V2rayNG/app/
+
+      - name: Download libv2ray.aar
+        run: |
+          pushd AndroidLibXrayLite
+          CURRENT_TAG=$(git describe --tags --abbrev=0)
+          popd
+          mkdir -p V2rayNG/app/libs
+          gh release download "$CURRENT_TAG" -R 2dust/AndroidLibXrayLite -p libv2ray.aar -D V2rayNG/app/libs
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Build debug APK (arm64)
+        run: |
+          cd V2rayNG
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          chmod 755 gradlew
+          ./gradlew assemblePlaystoreDebug -PABI_FILTERS=arm64-v8a --stacktrace
+
+      - name: Collect APK
+        run: |
+          mkdir -p out
+          find V2rayNG/app/build/outputs/apk -name '*.apk' -print -exec cp {} out/ \;
+          ls -lah out
+
+      - name: Upload SatraNG APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SatraNG-apk
+          path: out/*.apk
+          if-no-files-found: error
