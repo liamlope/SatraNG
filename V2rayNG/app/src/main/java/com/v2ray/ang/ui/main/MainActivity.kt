@@ -100,7 +100,7 @@ class MainActivity : HelperBaseComponentActivity() {
     @Composable
     override fun ScreenContent() {
         BackHandler { moveTaskToBack(false) }
-        MainScreen(
+        com.v2ray.ang.ui.home.SatraHomeScreen(
             mainViewModel = mainViewModel,
             onAction = { action ->
                 when (action) {

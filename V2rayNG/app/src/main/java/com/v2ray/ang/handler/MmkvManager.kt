@@ -490,6 +490,21 @@ object MmkvManager {
         serverAffStorage.encode(guid, JsonUtil.toJson(aff))
     }
 
+    fun encodeServerGeo(
+        guid: String,
+        countryCode: String?,
+        countryName: String?,
+        resolvedIp: String?,
+    ) {
+        if (guid.isBlank()) return
+        val aff = decodeServerAffiliationInfo(guid) ?: ServerAffiliationInfo()
+        aff.countryCode = countryCode
+        aff.countryName = countryName
+        aff.resolvedIp = resolvedIp
+        aff.geoUpdatedAt = System.currentTimeMillis()
+        serverAffStorage.encode(guid, JsonUtil.toJson(aff))
+    }
+
     /**
      * Clears all test delay results.
      *

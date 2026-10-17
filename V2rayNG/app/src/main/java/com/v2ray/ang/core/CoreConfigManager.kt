@@ -16,11 +16,14 @@ import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.isNotNullEmpty
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
+import com.v2ray.ang.handler.TorManager
 import com.v2ray.ang.util.HttpUtil
 import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.PackageUidResolver
 import com.v2ray.ang.util.Utils
+import java.net.InetSocketAddress
+import java.net.Socket
 
 object CoreConfigManager {
     private var initConfigCache: String? = null
@@ -203,6 +206,7 @@ object CoreConfigManager {
 
         // User routing rules (policyGroupBalancerTags rewrites TAG_PROXY→balancer when main is POLICYGROUP).
         configureRouting(configContext, v2rayConfig, policyGroupBalancerTags)
+        configureTorChain(v2rayConfig)
         configureFakeDns(v2rayConfig)
         configureDns(configContext, v2rayConfig, policyGroupBalancerTags)
         configureLocalDns(configContext, v2rayConfig)
@@ -1158,6 +1162,56 @@ object CoreConfigManager {
                 subjectSelector = allBurstSelectors,
                 pingConfig = burstTemplate.pingConfig
             )
+        }
+    }
+
+    /**
+     * When Tor mode is on and a local Tor SOCKS port is reachable, chain traffic:
+     * user → Tor SOCKS → (dialerProxy) selected VPN proxy.
+     * Tor should bootstrap through the same selected config via dialerProxy.
+     */
+    private fun configureTorChain(v2rayConfig: V2rayConfig) {
+        val tor = TorManager.state.value
+        if (!tor.enabled) return
+        val port = tor.socksPort
+        if (!isLocalPortOpen(port)) {
+            LogUtil.i(AppConfig.TAG, "Tor mode on but SOCKS $port not open yet; skipping chain")
+            return
+        }
+        val torOutbound = V2rayConfig.OutboundBean(
+            tag = AppConfig.TAG_TOR,
+            protocol = "socks",
+            settings = V2rayConfig.OutboundBean.OutSettingsBean(
+                address = AppConfig.LOOPBACK,
+                port = port,
+                level = AppConfig.DEFAULT_LEVEL,
+            ),
+            streamSettings = V2rayConfig.OutboundBean.StreamSettingsBean(
+                sockopt = V2rayConfig.OutboundBean.StreamSettingsBean.SockoptBean(
+                    dialerProxy = AppConfig.TAG_PROXY,
+                )
+            ),
+            mux = V2rayConfig.OutboundBean.MuxBean(false),
+        )
+        v2rayConfig.outbounds.add(torOutbound)
+        v2rayConfig.routing.rules.add(
+            0,
+            V2rayConfig.RoutingBean.RulesBean(
+                network = "tcp,udp",
+                outboundTag = AppConfig.TAG_TOR,
+            )
+        )
+        LogUtil.i(AppConfig.TAG, "Tor chain enabled via ${AppConfig.TAG_TOR} port=$port")
+    }
+
+    private fun isLocalPortOpen(port: Int): Boolean {
+        return try {
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(AppConfig.LOOPBACK, port), 250)
+                true
+            }
+        } catch (_: Exception) {
+            false
         }
     }
 

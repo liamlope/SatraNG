@@ -360,6 +360,7 @@ private fun ServerListItem(
                 row.remarks,
                 Modifier.weight(1f),
                 style = MaterialTheme.typography.titleMedium.copy(lineBreak = LineBreak.Paragraph),
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -368,7 +369,8 @@ private fun ServerListItem(
                     Icon(
                         painterResource(R.drawable.ic_more_vert_24dp),
                         stringResource(R.string.acc_more),
-                        Modifier.size(22.dp)
+                        Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {

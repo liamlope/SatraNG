@@ -14,5 +14,44 @@ data class SubscriptionItem(
     var allowInsecureUrl: Boolean = false,
     var userAgent: String? = null,
     var requestHeaders: String? = null,
-)
 
+    // 3x-ui / standard subscription headers (Subscription-Userinfo)
+    var upload: Long = 0L,
+    var download: Long = 0L,
+    var total: Long = 0L, // 0 = unlimited
+    var expire: Long = 0L, // unix seconds; 0 = no expiry
+    var profileTitle: String? = null,
+    var announce: String? = null,
+    var supportUrl: String? = null,
+    var profileUpdateInterval: Long = 0L, // hours from Profile-Update-Interval
+) {
+    fun usedBytes(): Long = (upload + download).coerceAtLeast(0L)
+
+    fun remainingBytes(): Long? {
+        if (total <= 0L) return null
+        return (total - usedBytes()).coerceAtLeast(0L)
+    }
+
+    fun usageFraction(): Float? {
+        if (total <= 0L) return null
+        return (usedBytes().toDouble() / total.toDouble()).toFloat().coerceIn(0f, 1f)
+    }
+
+    fun isNearQuota(threshold: Float = 0.9f): Boolean {
+        val f = usageFraction() ?: return false
+        return f >= threshold
+    }
+
+    fun isNearExpire(withinMs: Long = 3L * 24 * 60 * 60 * 1000): Boolean {
+        if (expire <= 0L) return false
+        val expireMs = if (expire > 10_000_000_000L) expire else expire * 1000L
+        val left = expireMs - System.currentTimeMillis()
+        return left in 1 until withinMs
+    }
+
+    fun isExpired(): Boolean {
+        if (expire <= 0L) return false
+        val expireMs = if (expire > 10_000_000_000L) expire else expire * 1000L
+        return System.currentTimeMillis() >= expireMs
+    }
+}

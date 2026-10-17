@@ -4,29 +4,34 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Soft glow disc -->
+    <!-- Soft disc -->
     <path
-        android:fillColor="#1A2DD4A8"
-        android:pathData="M54,54m-34,0a34,34 0,1 1,68 0a34,34 0,1 1,-68 0" />
-    <!-- Outer arc -->
+        android:fillColor="#222DD4A8"
+        android:pathData="M54,54m-36,0a36,36 0,1 1,72 0a36,36 0,1 1,-72 0" />
+    <!-- Outer signal arc -->
     <path
         android:fillColor="#00000000"
-        android:strokeWidth="4"
+        android:strokeWidth="4.5"
         android:strokeColor="#2DD4A8"
         android:strokeLineCap="round"
-        android:pathData="M30,62 C34,42 46,30 54,30 C62,30 74,42 78,62" />
-    <!-- Mid arc -->
+        android:pathData="M28,64 C32,40 42,28 54,28 C66,28 76,40 80,64" />
+    <!-- Mid signal arc -->
     <path
         android:fillColor="#00000000"
-        android:strokeWidth="4"
-        android:strokeColor="#5EEAD4"
+        android:strokeWidth="4.5"
+        android:strokeColor="#7EEADF"
         android:strokeLineCap="round"
-        android:pathData="M36,60 C39,46 46,38 54,38 C62,38 69,46 72,60" />
+        android:pathData="M36,62 C39,46 46,38 54,38 C62,38 69,46 72,62" />
+    <!-- S letter mark -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeWidth="5"
+        android:strokeColor="#F5A524"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M64,48 C64,42 60,40 54,40 C48,40 44,42 44,47 C44,52 48,53 54,54 C60,55 64,57 64,62 C64,68 59,70 54,70 C48,70 44,67 44,62" />
     <!-- Core node -->
     <path
-        android:fillColor="#F5A524"
-        android:pathData="M54,66m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
-    <path
         android:fillColor="#0B1B2B"
-        android:pathData="M54,66m-3.2,0a3.2,3.2 0,1 1,6.4 0a3.2,3.2 0,1 1,-6.4 0" />
+        android:pathData="M54,54m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
 </vector>

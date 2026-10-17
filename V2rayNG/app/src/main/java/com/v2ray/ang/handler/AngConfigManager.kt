@@ -488,9 +488,9 @@ object AngConfigManager {
             val proxyUsername = SettingsManager.getSocksUsername()
             val proxyPassword = SettingsManager.getSocksPassword()
 
-            var configText = try {
+            var fetchResult = try {
                 val httpPort = SettingsManager.getHttpPort()
-                HttpUtil.getUrlContentWithUserAgent(
+                HttpUtil.getUrlContentWithUserAgentResult(
                     UrlContentRequest(
                         url = url,
                         userAgent = userAgent,
@@ -503,11 +503,11 @@ object AngConfigManager {
                 )
             } catch (e: Exception) {
                 LogUtil.e(AppConfig.ANG_PACKAGE, "Update subscription: proxy not ready or other error", e)
-                ""
+                null
             }
-            if (configText.isEmpty()) {
-                configText = try {
-                    HttpUtil.getUrlContentWithUserAgent(
+            if (fetchResult == null || fetchResult.body.isEmpty()) {
+                fetchResult = try {
+                    HttpUtil.getUrlContentWithUserAgentResult(
                         UrlContentRequest(
                             url = url,
                             userAgent = userAgent,
@@ -516,11 +516,16 @@ object AngConfigManager {
                     )
                 } catch (e: Exception) {
                     LogUtil.e(AppConfig.TAG, "Update subscription: Failed to get URL content with user agent", e)
-                    ""
+                    null
                 }
             }
+            val configText = fetchResult?.body.orEmpty()
             if (configText.isEmpty()) {
                 return SubscriptionUpdateResult(failureCount = 1)
+            }
+
+            fetchResult?.headers?.let { headers ->
+                SubscriptionUserinfoParser.applyHeaders(it.subscription, headers)
             }
 
             val count = parseConfigViaSub(configText, it.guid, false)
