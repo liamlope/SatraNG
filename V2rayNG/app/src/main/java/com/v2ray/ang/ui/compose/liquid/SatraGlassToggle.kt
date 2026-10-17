@@ -46,7 +46,14 @@ fun SatraGlassToggle(
     )
     val thumbOffset by animateDpAsState(
         targetValue = if (checked) 22.dp else 2.dp,
-        animationSpec = if (reduce) SatraMotionSpec.short() else SatraMotionSpec.pressGel,
+        animationSpec = if (reduce) {
+            androidx.compose.animation.core.tween(SatraMotionSpec.ShortMs)
+        } else {
+            androidx.compose.animation.core.spring(
+                dampingRatio = 0.68f,
+                stiffness = 500f,
+            )
+        },
         label = "toggleThumb",
     )
     Box(
