@@ -8,7 +8,7 @@ import com.v2ray.ang.handler.AngConfigManager
 import com.v2ray.ang.handler.GeoIpResolver
 import com.v2ray.ang.handler.MmkvManager
 
-internal data class ServerRowUiModel(
+data class ServerRowUiModel(
     val guid: String,
     val profile: ProfileItem,
     val remarks: String,

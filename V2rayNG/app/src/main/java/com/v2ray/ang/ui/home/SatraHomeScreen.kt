@@ -28,9 +28,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -196,17 +193,11 @@ fun SatraHomeScreen(
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
-                NavigationBar(
-                    containerColor = if (isDark) SatraColors.InkSoft.copy(alpha = 0.96f)
-                    else Color.White.copy(alpha = 0.94f),
-                    tonalElevation = 0.dp,
-                    modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars)
-                ) {
-                    NavItem(0, tab, R.string.satra_nav_home, R.drawable.ic_stat_name) { tab = 0 }
-                    NavItem(1, tab, R.string.satra_nav_locations, R.drawable.ic_routing_24dp) { tab = 1 }
-                    NavItem(2, tab, R.string.satra_nav_subs, R.drawable.ic_subscriptions_24dp) { tab = 2 }
-                    NavItem(3, tab, R.string.satra_nav_more, R.drawable.ic_more_vert_24dp) { tab = 3 }
-                }
+                SatraBottomNav(
+                    selected = tab,
+                    isDark = isDark,
+                    onSelect = { tab = it },
+                )
             }
         ) { padding ->
             when (tab) {
@@ -290,32 +281,58 @@ fun SatraHomeScreen(
 }
 
 @Composable
-private fun NavItem(
-    index: Int,
+private fun SatraBottomNav(
     selected: Int,
-    labelRes: Int,
-    iconRes: Int,
-    onClick: () -> Unit,
+    isDark: Boolean,
+    onSelect: (Int) -> Unit,
 ) {
-    NavigationBarItem(
-        selected = selected == index,
-        onClick = onClick,
-        icon = {
-            Icon(
-                painterResource(iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(22.dp)
-            )
-        },
-        label = { Text(stringResource(labelRes), style = MaterialTheme.typography.labelSmall) },
-        colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = SatraColors.TealDeep,
-            selectedTextColor = SatraColors.TealDeep,
-            indicatorColor = SatraColors.Teal.copy(alpha = 0.18f),
-            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+    val items = listOf(
+        Triple(0, R.string.satra_nav_home, R.drawable.ic_stat_name),
+        Triple(1, R.string.satra_nav_locations, R.drawable.ic_routing_24dp),
+        Triple(2, R.string.satra_nav_subs, R.drawable.ic_subscriptions_24dp),
+        Triple(3, R.string.satra_nav_more, R.drawable.ic_more_vert_24dp),
     )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .background(
+                if (isDark) SatraColors.InkSoft.copy(alpha = 0.96f)
+                else Color.White.copy(alpha = 0.94f)
+            )
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        items.forEach { (index, labelRes, iconRes) ->
+            val isSelected = selected == index
+            val tint = if (isSelected) SatraColors.TealDeep else MaterialTheme.colorScheme.onSurfaceVariant
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable { onSelect(index) }
+                    .background(
+                        if (isSelected) SatraColors.Teal.copy(alpha = 0.18f) else Color.Transparent
+                    )
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = stringResource(labelRes),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = tint,
+                )
+            }
+        }
+    }
 }
 
 @Composable

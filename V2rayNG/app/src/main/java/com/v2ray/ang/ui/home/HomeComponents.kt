@@ -137,7 +137,7 @@ fun LocationSelectCard(
             fontSize = 28.sp,
             modifier = Modifier.padding(end = 12.dp)
         )
-        Column(Modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.satra_choose_location),
                 style = MaterialTheme.typography.labelMedium,
