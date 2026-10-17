@@ -50,21 +50,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.ServersCache
 import com.v2ray.ang.dto.entities.SubscriptionItem
+import com.v2ray.ang.extension.toTrafficString
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import com.v2ray.ang.ui.compose.liquid.AtmosphereStateMachine
@@ -82,7 +89,6 @@ import com.v2ray.ang.ui.compose.liquid.powerCapsuleState
 import com.v2ray.ang.ui.compose.satra.SatraMotionSpec
 import com.v2ray.ang.ui.compose.satra.SatraPingBadge
 import com.v2ray.ang.ui.compose.satra.SatraTokens
-import com.v2ray.ang.ui.compose.satra.SatraUsageRing
 import com.v2ray.ang.ui.compose.satra.rememberReduceMotion
 import com.v2ray.ang.ui.logcat.LogcatActivity
 import com.v2ray.ang.ui.main.MainAction
@@ -315,6 +321,7 @@ fun SatraHomeScreen(
                                 }
                             },
                             onOpenEdit = { },
+                            onOpenManage = { onNavigate(MainDestination.Subscriptions) },
                         )
 
                         else -> SettingsEmbedTab(
@@ -335,7 +342,8 @@ fun SatraHomeScreen(
 
     LaunchedEffect(ceremony, isRunning) {
         if (!ceremony) return@LaunchedEffect
-        val minMs = SatraMotionSpec.CeremonyMs.toLong().coerceAtLeast(700L)
+        // At least 0.5s orange "connecting" halo before resolving to green/red.
+        val minMs = SatraMotionSpec.CeremonyMs.toLong().coerceAtLeast(500L)
         delay(minMs)
         if (isRunning) {
             ceremony = false
@@ -363,6 +371,7 @@ private fun LiquidHomeTab(
     onRefreshSub: () -> Unit,
 ) {
     val reduce = rememberReduceMotion()
+    val haptics = LocalHapticFeedback.current
     Column(
         Modifier
             .fillMaxSize()
@@ -385,13 +394,7 @@ private fun LiquidHomeTab(
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.weight(1f))
-            if (subscription != null && subscription.showUsage) {
-                SatraUsageRing(
-                    fraction = subscription.usageFraction(),
-                    warn = subscription.isNearQuota(0.9f) || subscription.isExpired(),
-                    size = 36.dp,
-                )
-            }
+            HomePingRing(delayMs = selectedRow?.testDelayMillis ?: 0L)
         }
 
         if (!hasAnySub) {
@@ -408,9 +411,27 @@ private fun LiquidHomeTab(
             return
         }
 
-        Spacer(Modifier.weight(0.35f))
+        Spacer(Modifier.weight(0.22f))
 
-        StatusOrb(state = capsuleState, reduce = reduce)
+        if (subscription != null) {
+            HomeSubMetrics(
+                subscription = subscription,
+                serverCount = serverCount,
+                onRefresh = onRefreshSub,
+            )
+            Spacer(Modifier.height(10.dp))
+        }
+
+        Spacer(Modifier.weight(0.12f))
+
+        StatusOrb(
+            state = capsuleState,
+            reduce = reduce,
+            onToggle = {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                onConnect()
+            },
+        )
 
         Spacer(Modifier.height(28.dp))
 
@@ -435,21 +456,6 @@ private fun LiquidHomeTab(
             modifier = Modifier.fillMaxWidth(0.86f),
         )
 
-        if (subscription != null) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                listOfNotNull(
-                    subscription.profileTitle?.takeIf { it.isNotBlank() } ?: subscription.remarks,
-                    stringResource(R.string.satra_sub_servers_count, serverCount),
-                ).joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = onGlassSecondary(),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.clickable(onClick = onRefreshSub),
-            )
-        }
-
         Spacer(Modifier.weight(0.55f))
 
         Row(
@@ -464,7 +470,7 @@ private fun LiquidHomeTab(
                 Icon(
                     painter = painterResource(R.drawable.ic_add_24dp),
                     contentDescription = stringResource(R.string.satra_home_add_config),
-                    tint = SatraTokens.TealDeep,
+                    tint = SatraTokens.Purple,
                     modifier = Modifier.size(26.dp),
                 )
             }
@@ -484,32 +490,224 @@ private fun LiquidHomeTab(
     }
 }
 
+private fun pingAccentColor(delayMs: Long): Color = when {
+    delayMs <= 0L -> SatraTokens.Purple.copy(alpha = 0.45f)
+    delayMs < 150L -> SatraTokens.Green
+    delayMs <= 250L -> SatraTokens.Amber
+    else -> SatraTokens.Danger
+}
+
 @Composable
-private fun StatusOrb(state: PowerCapsuleState, reduce: Boolean) {
+private fun HomePingRing(
+    delayMs: Long,
+    size: Dp = 40.dp,
+    stroke: Dp = 3.dp,
+) {
+    val accent = pingAccentColor(delayMs)
+    val hasPing = delayMs > 0L
+    val a11y = if (hasPing) {
+        stringResource(R.string.satra_home_ping_a11y, delayMs.toInt())
+    } else {
+        stringResource(R.string.satra_home_ping_none_a11y)
+    }
+    Box(
+        modifier = Modifier
+            .size(size)
+            .semantics { contentDescription = a11y },
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            val strokePx = stroke.toPx()
+            val arcSize = Size(this.size.minDimension - strokePx, this.size.minDimension - strokePx)
+            val topLeft = Offset(strokePx / 2f, strokePx / 2f)
+            if (hasPing) {
+                drawArc(
+                    color = accent.copy(alpha = 0.22f),
+                    startAngle = -90f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = strokePx, cap = StrokeCap.Round),
+                )
+                drawArc(
+                    color = accent,
+                    startAngle = -90f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = strokePx, cap = StrokeCap.Round),
+                )
+            } else {
+                // Flat ring when no ping yet.
+                drawArc(
+                    color = accent,
+                    startAngle = -90f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = strokePx * 0.7f, cap = StrokeCap.Round),
+                )
+            }
+        }
+        Text(
+            text = if (hasPing) {
+                if (delayMs >= 10_000L) "—" else "$delayMs"
+            } else {
+                "—"
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = if (hasPing) accent else onGlassSecondary(),
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun HomeSubMetrics(
+    subscription: SubscriptionItem,
+    serverCount: Int,
+    onRefresh: () -> Unit,
+) {
+    val used = subscription.usedBytes()
+    val rem = subscription.remainingBytes()
+    val days = subscriptionDaysLeft(subscription)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onRefresh),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            listOfNotNull(
+                subscription.profileTitle?.takeIf { it.isNotBlank() } ?: subscription.remarks.takeIf { it.isNotBlank() },
+                stringResource(R.string.satra_sub_servers_count, serverCount),
+            ).joinToString(" · "),
+            style = MaterialTheme.typography.labelLarge,
+            color = onGlassPrimary(),
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (subscription.showExpire) {
+                Text(
+                    when {
+                        days == null -> stringResource(R.string.satra_sub_no_expiry)
+                        days <= 0 -> stringResource(R.string.satra_sub_expired)
+                        else -> stringResource(R.string.satra_sub_days_left, days)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = when {
+                        days != null && days <= 0 -> SatraTokens.Danger
+                        days != null && days <= 3 -> SatraTokens.Amber
+                        else -> onGlassSecondary()
+                    },
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+            if (subscription.showUsage) {
+                Text(
+                    stringResource(R.string.satra_home_traffic_used, used.toTrafficString()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = onGlassSecondary(),
+                )
+                Text(
+                    if (rem != null) {
+                        stringResource(R.string.satra_home_traffic_left, rem.toTrafficString())
+                    } else {
+                        stringResource(R.string.satra_sub_unlimited)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = when {
+                        rem != null && subscription.isNearQuota(0.9f) -> SatraTokens.Danger
+                        rem != null && subscription.isNearQuota(0.75f) -> SatraTokens.Amber
+                        else -> onGlassSecondary()
+                    },
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
+    }
+}
+
+private fun subscriptionDaysLeft(subscription: SubscriptionItem): Int? {
+    if (subscription.expire <= 0L) return null
+    val expireMs = if (subscription.expire > 10_000_000_000L) {
+        subscription.expire
+    } else {
+        subscription.expire * 1000L
+    }
+    val left = expireMs - System.currentTimeMillis()
+    if (left <= 0L) return 0
+    return ((left + 86_399_999L) / 86_400_000L).toInt()
+}
+
+@Composable
+private fun StatusOrb(
+    state: PowerCapsuleState,
+    reduce: Boolean,
+    onToggle: () -> Unit,
+) {
     val breath = if (reduce || state == PowerCapsuleState.Off) {
         1f
     } else {
         val infinite = rememberInfiniteTransition(label = "orbBreath")
         infinite.animateFloat(
             initialValue = 0.96f,
-            targetValue = 1.04f,
+            targetValue = 1.05f,
             animationSpec = infiniteRepeatable(
-                animation = tween(SatraMotionSpec.EmptyPlusBreathMs),
+                animation = tween(
+                    if (state == PowerCapsuleState.Connecting) 700 else SatraMotionSpec.EmptyPlusBreathMs,
+                ),
                 repeatMode = RepeatMode.Reverse,
             ),
             label = "orbScale",
         ).value
     }
+    val haloPulse = if (reduce) {
+        0.42f
+    } else {
+        val infinite = rememberInfiniteTransition(label = "orbHalo")
+        infinite.animateFloat(
+            initialValue = 0.28f,
+            targetValue = when (state) {
+                PowerCapsuleState.Connecting -> 0.62f
+                PowerCapsuleState.On -> 0.48f
+                PowerCapsuleState.Failed -> 0.55f
+                PowerCapsuleState.Off -> 0.34f
+            },
+            animationSpec = infiniteRepeatable(
+                animation = tween(
+                    if (state == PowerCapsuleState.Connecting) 520 else 1600,
+                ),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "haloAlpha",
+        ).value
+    }
     val accent = when (state) {
-        PowerCapsuleState.On -> SatraTokens.Teal
+        PowerCapsuleState.On -> SatraTokens.Green
         PowerCapsuleState.Connecting -> SatraTokens.Amber
         PowerCapsuleState.Failed -> SatraTokens.Danger
-        PowerCapsuleState.Off -> SatraTokens.TealDeep.copy(alpha = 0.55f)
+        PowerCapsuleState.Off -> SatraTokens.Purple
     }
+    val orbA11y = stringResource(R.string.satra_orb_a11y)
     Box(
         modifier = Modifier
             .size(196.dp)
-            .scale(breath),
+            .scale(breath)
+            .clip(CircleShape)
+            .clickable(onClick = onToggle)
+            .semantics { contentDescription = orbA11y },
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.fillMaxSize()) {
@@ -517,12 +715,12 @@ private fun StatusOrb(state: PowerCapsuleState, reduce: Boolean) {
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        accent.copy(alpha = 0.35f),
-                        accent.copy(alpha = 0.08f),
+                        accent.copy(alpha = haloPulse),
+                        accent.copy(alpha = haloPulse * 0.35f),
                         Color.Transparent,
                     ),
-                    center = Offset(size.width * 0.42f, size.height * 0.38f),
-                    radius = r * 1.15f,
+                    center = Offset(size.width * 0.5f, size.height * 0.5f),
+                    radius = r * 1.05f,
                 ),
                 radius = r,
             )
@@ -625,13 +823,13 @@ private fun EmptyPlusButton(importing: Boolean, onClick: () -> Unit, reduce: Boo
             CircularProgressIndicator(
                 modifier = Modifier.size(28.dp),
                 strokeWidth = 2.dp,
-                color = SatraTokens.TealDeep,
+                color = SatraTokens.Purple,
             )
         } else {
             Icon(
                 painter = painterResource(R.drawable.ic_add_24dp),
                 contentDescription = stringResource(R.string.satra_home_add_config),
-                tint = SatraTokens.TealDeep,
+                tint = SatraTokens.Purple,
                 modifier = Modifier.size(40.dp),
             )
         }

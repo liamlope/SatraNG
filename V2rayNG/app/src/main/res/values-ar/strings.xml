@@ -592,6 +592,11 @@
     <string name="satra_home_headline_connecting">Securing your path…</string>
     <string name="satra_home_headline_failed">Could not connect</string>
     <string name="satra_home_region_fallback">Choose a location</string>
+    <string name="satra_home_traffic_used">Used %1$s</string>
+    <string name="satra_home_traffic_left">Left %1$s</string>
+    <string name="satra_home_ping_a11y">Current ping %1$d milliseconds</string>
+    <string name="satra_home_ping_none_a11y">No ping yet</string>
+    <string name="satra_orb_a11y">Toggle VPN</string>
     <string name="satra_settings_logs">Logs</string>
     <string name="satra_settings_logs_subtitle">Diagnostics and core output</string>
     <string name="satra_subs_title">Subscriptions</string>

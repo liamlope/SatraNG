@@ -138,8 +138,8 @@ fun SatraPingBadge(delayMs: Long, modifier: Modifier = Modifier) {
     val color by animateColorAsState(
         when {
             delayMs <= 0L -> MaterialTheme.colorScheme.onSurfaceVariant
-            delayMs < 150L -> SatraColors.TealDeep
-            delayMs < 400L -> SatraColors.Amber
+            delayMs < 150L -> SatraColors.GreenDeep
+            delayMs <= 250L -> SatraColors.Amber
             else -> SatraColors.Danger
         },
         label = "pingColor",

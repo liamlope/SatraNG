@@ -11,11 +11,17 @@ object SatraTokens {
     val Teal = SatraColors.Teal
     val TealDeep = SatraColors.TealDeep
     val TealSoft = SatraColors.TealSoft
+    val Green = SatraColors.Green
+    val GreenDeep = SatraColors.GreenDeep
+    val Purple = SatraColors.Purple
+    val PurpleDeep = SatraColors.PurpleDeep
+    val PurpleSoft = SatraColors.PurpleSoft
+    val PurpleMist = SatraColors.PurpleMist
     val Ink = SatraColors.Ink
     val InkSoft = SatraColors.InkSoft
     val Amber = SatraColors.Amber
     val Danger = SatraColors.Danger
-    val Success = Color(0xFF1FA97A)
+    val Success = SatraColors.GreenDeep
     val DividerOnGlass = Color.White.copy(alpha = 0.15f)
 
     val RadiusSm = 12.dp

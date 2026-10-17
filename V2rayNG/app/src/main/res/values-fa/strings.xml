@@ -24,6 +24,11 @@
     <string name="satra_home_headline_connecting">در حال امن‌سازی مسیر…</string>
     <string name="satra_home_headline_failed">اتصال برقرار نشد</string>
     <string name="satra_home_region_fallback">لوکیشن را انتخاب کنید</string>
+    <string name="satra_home_traffic_used">مصرف %1$s</string>
+    <string name="satra_home_traffic_left">باقی‌مانده %1$s</string>
+    <string name="satra_home_ping_a11y">پینگ فعلی %1$d میلی‌ثانیه</string>
+    <string name="satra_home_ping_none_a11y">هنوز پینگی نیست</string>
+    <string name="satra_orb_a11y">روشن/خاموش کردن VPN</string>
     <string name="satra_settings_logs">لاگ‌ها</string>
     <string name="satra_settings_logs_subtitle">تشخیص و خروجی هسته</string>
     <string name="satra_subs_title">اشتراک‌ها</string>
@@ -648,7 +653,7 @@
 
     <string name="satra_manage_subscription">Manage subscription</string>
     <string name="satra_sub_last_updated">Updated %1$s</string>
-    <string name="satra_sub_days_left">%1$d days left</string>
+    <string name="satra_sub_days_left">%1$d روز باقی‌مانده</string>
     <string name="satra_sub_hours_left">%1$d hours left</string>
     <string name="satra_notif_channels">Channels: VPN · subscription · test</string>
     <string name="satra_settings_hub_title">مرکز کنترل</string>

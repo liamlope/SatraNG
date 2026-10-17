@@ -42,7 +42,7 @@ fun satraChromeStyle(
 ): GlassStyle {
     val dark = LocalDarkTheme.current
     val tint = when {
-        connectedTint -> SatraTokens.Teal.copy(alpha = if (dark) 0.16f else 0.12f)
+        connectedTint -> SatraTokens.Green.copy(alpha = if (dark) 0.14f else 0.12f)
         dark -> Color(0x99141418)
         else -> Color(0xB3FFFFFF)
     }

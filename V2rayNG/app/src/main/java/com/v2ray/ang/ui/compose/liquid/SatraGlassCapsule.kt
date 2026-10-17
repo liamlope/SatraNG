@@ -57,9 +57,9 @@ fun SatraGlassCapsule(
     val haptics = LocalHapticFeedback.current
     val accent by animateColorAsState(
         targetValue = when (state) {
-            PowerCapsuleState.Off -> SatraTokens.TealDeep
+            PowerCapsuleState.Off -> SatraTokens.Purple
             PowerCapsuleState.Connecting -> SatraTokens.Amber
-            PowerCapsuleState.On -> SatraTokens.TealDeep
+            PowerCapsuleState.On -> SatraTokens.Green
             PowerCapsuleState.Failed -> SatraTokens.Danger
         },
         animationSpec = if (reduce) SatraMotionSpec.short() else SatraMotionSpec.capsuleStateMorph(),

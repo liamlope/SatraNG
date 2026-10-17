@@ -50,12 +50,14 @@ fun SatraSubsTab(
     onRefresh: () -> Unit,
     onToggleEnabled: (String, Boolean) -> Unit,
     onOpenEdit: (String?) -> Unit,
+    onOpenManage: () -> Unit = {},
 ) {
     val context = LocalContext.current
     Column(modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         Row(
             Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 stringResource(R.string.satra_subs_title),
@@ -66,6 +68,17 @@ fun SatraSubsTab(
             )
             TextButton(onClick = onRefresh) {
                 Text(stringResource(R.string.satra_sub_refresh), color = SatraTokens.TealDeep)
+            }
+            SatraGlassIconButton(
+                onClick = onOpenManage,
+                modifier = Modifier.size(44.dp).clip(CircleShape),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_settings_24dp),
+                    contentDescription = stringResource(R.string.satra_sub_settings),
+                    tint = SatraTokens.Purple,
+                    modifier = Modifier.size(22.dp),
+                )
             }
             SatraGlassIconButton(
                 onClick = {
@@ -156,6 +169,22 @@ fun SatraSubsTab(
                             }
                         }
                         Column(horizontalAlignment = Alignment.End) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_settings_24dp),
+                                contentDescription = stringResource(R.string.satra_sub_settings),
+                                tint = SatraTokens.Purple,
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clickable {
+                                        onOpenEdit(id)
+                                        context.startActivity(
+                                            Intent(context, SubEditActivity::class.java)
+                                                .putExtra("subId", id),
+                                        )
+                                    }
+                                    .padding(2.dp),
+                            )
+                            Spacer(Modifier.height(8.dp))
                             SatraGlassToggle(
                                 checked = sub.enabled,
                                 onCheckedChange = { onToggleEnabled(id, it) },

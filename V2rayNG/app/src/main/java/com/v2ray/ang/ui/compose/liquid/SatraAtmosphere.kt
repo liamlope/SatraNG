@@ -33,20 +33,21 @@ data class AtmospherePalette(
 
 fun atmospherePalette(state: ConnectionAtmosphereState, dark: Boolean): AtmospherePalette = when (state) {
     ConnectionAtmosphereState.Idle -> if (dark) {
-        AtmospherePalette(Color(0xFF000000), Color(0xFF07070A), Color(0xFF000000))
+        // Pure dark mixed with soft brand purple.
+        AtmospherePalette(Color(0xFF000000), Color(0xFF0C0816), Color(0xFF000000))
     } else {
-        AtmospherePalette(Color(0xFFFFFFFF), Color(0xFFF7F7F8), Color(0xFFEEEEF2))
+        AtmospherePalette(Color(0xFFFFFBFF), Color(0xFFF6F2FF), Color(0xFFEEE8FA))
     }
     ConnectionAtmosphereState.Connecting -> if (dark) {
-        AtmospherePalette(Color(0xFF0A0804), Color(0xFF1A1408), Color(0xFF050403))
+        AtmospherePalette(Color(0xFF0A0804), Color(0xFF1C1408), Color(0xFF050403))
     } else {
         AtmospherePalette(Color(0xFFFFF8F0), Color(0xFFFFF1E0), Color(0xFFF5E6D4))
     }
     ConnectionAtmosphereState.Connected -> if (dark) {
-        // Pure dark with a cool ice wash — never forest/neon green.
-        AtmospherePalette(Color(0xFF000000), Color(0xFF0A1220), Color(0xFF000000))
+        // Pure dark + soft green wash (connected).
+        AtmospherePalette(Color(0xFF000000), Color(0xFF07140F), Color(0xFF000000))
     } else {
-        AtmospherePalette(Color(0xFFF5F9FF), Color(0xFFE8F1FC), Color(0xFFDCE8F8))
+        AtmospherePalette(Color(0xFFF3FBF7), Color(0xFFE4F6EC), Color(0xFFD4EFDF))
     }
     ConnectionAtmosphereState.Failed -> if (dark) {
         AtmospherePalette(Color(0xFF0A0406), Color(0xFF1A0A0E), Color(0xFF050203))
