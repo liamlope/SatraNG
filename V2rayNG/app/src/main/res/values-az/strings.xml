@@ -581,9 +581,9 @@
     <string name="satra_capsule_a11y">VPN power: %1$s</string>
     <string name="satra_home_empty_hint">Paste a subscription link from clipboard</string>
     <string name="satra_home_headline_ready">Start your connection</string>
-    <string name="satra_home_headline_connected">You're protected</string>
+    <string name="satra_home_headline_connected">You are protected</string>
     <string name="satra_home_headline_connecting">Securing your path…</string>
-    <string name="satra_home_headline_failed">Couldn't connect</string>
+    <string name="satra_home_headline_failed">Could not connect</string>
     <string name="satra_home_region_fallback">Choose a location</string>
     <string name="satra_settings_logs">Logs</string>
     <string name="satra_settings_logs_subtitle">Diagnostics and core output</string>
