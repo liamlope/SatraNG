@@ -39,6 +39,8 @@ object SettingsManager {
 
     fun initApp(context: Context) {
         ensureDefaultSettings()
+        migrateLegacyLocalPorts()
+        seedSatraTunnelDefaults()
         //ensureDefaultSubscription()
         initRoutingRulesets(context)
         migrateServerListToSubscriptions()
@@ -411,7 +413,7 @@ object SettingsManager {
      * @return True if HEV TUN is used, false otherwise.
      */
     fun isUsingHevTun(): Boolean {
-        return MmkvManager.decodeSettingsBool(AppConfig.PREF_USE_HEV_TUNNEL, true)
+        return MmkvManager.decodeSettingsBool(AppConfig.PREF_USE_HEV_TUNNEL, AppConfig.DEFAULT_USE_HEV_TUNNEL)
     }
 
     /**
@@ -461,6 +463,7 @@ object SettingsManager {
         ensureDefaultValue(AppConfig.PREF_VPN_DNS, AppConfig.DNS_VPN)
         ensureDefaultValue(AppConfig.PREF_VPN_MTU, AppConfig.VPN_MTU.toString())
         ensureDefaultValue(AppConfig.PREF_SOCKS_PORT, AppConfig.PORT_SOCKS)
+        ensureDefaultValue(AppConfig.PREF_LOCAL_DNS_PORT, AppConfig.PORT_LOCAL_DNS)
         ensureDefaultValue(AppConfig.PREF_REMOTE_DNS, AppConfig.DNS_PROXY)
         ensureDefaultValue(AppConfig.PREF_DOMESTIC_DNS, AppConfig.DNS_DIRECT)
         ensureDefaultValue(AppConfig.PREF_DELAY_TEST_URL, AppConfig.DELAY_TEST_URL)
@@ -482,6 +485,54 @@ object SettingsManager {
         if (MmkvManager.decodeSettingsString(key).isNullOrEmpty()) {
             MmkvManager.encodeSettings(key, default)
         }
+    }
+
+    private fun ensureDefaultBool(key: String, default: Boolean) {
+        if (!MmkvManager.containsSettingsKey(key)) {
+            MmkvManager.encodeSettings(key, default)
+        }
+    }
+
+    /**
+     * Replace stock v2rayNG local ports (10808/10853) with SatraNG defaults once.
+     * Custom non-legacy ports are left unchanged.
+     */
+    private fun migrateLegacyLocalPorts() {
+        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SATRA_LOCAL_PORTS_MIGRATED, false)) {
+            return
+        }
+        val socks = MmkvManager.decodeSettingsString(AppConfig.PREF_SOCKS_PORT)
+        if (SatraLocalPortPolicy.shouldReplaceWithDefault(socks, AppConfig.LEGACY_PORT_SOCKS)) {
+            MmkvManager.encodeSettings(AppConfig.PREF_SOCKS_PORT, AppConfig.PORT_SOCKS)
+        }
+        val localDns = MmkvManager.decodeSettingsString(AppConfig.PREF_LOCAL_DNS_PORT)
+        if (SatraLocalPortPolicy.shouldReplaceWithDefault(localDns, AppConfig.LEGACY_PORT_LOCAL_DNS)) {
+            MmkvManager.encodeSettings(AppConfig.PREF_LOCAL_DNS_PORT, AppConfig.PORT_LOCAL_DNS)
+        }
+        val mtu = MmkvManager.decodeSettingsString(AppConfig.PREF_VPN_MTU)
+        if (SatraLocalPortPolicy.shouldReplaceMtu(mtu)) {
+            MmkvManager.encodeSettings(AppConfig.PREF_VPN_MTU, AppConfig.VPN_MTU.toString())
+        }
+        MmkvManager.encodeSettings(AppConfig.PREF_SATRA_LOCAL_PORTS_MIGRATED, true)
+    }
+
+    /**
+     * Seed stronger full-device tunnel defaults once for installs that never set these keys.
+     */
+    private fun seedSatraTunnelDefaults() {
+        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SATRA_TUNNEL_DEFAULTS_SEEDED, false)) {
+            return
+        }
+        ensureDefaultBool(AppConfig.PREF_LOCAL_DNS_ENABLED, AppConfig.DEFAULT_LOCAL_DNS_ENABLED)
+        ensureDefaultBool(AppConfig.PREF_SNIFFING_ENABLED, AppConfig.DEFAULT_SNIFFING_ENABLED)
+        ensureDefaultBool(AppConfig.PREF_USE_HEV_TUNNEL, AppConfig.DEFAULT_USE_HEV_TUNNEL)
+        ensureDefaultBool(AppConfig.PREF_SOCKS_ENABLE_UDP, AppConfig.DEFAULT_SOCKS_ENABLE_UDP)
+        ensureDefaultBool(AppConfig.PREF_APPEND_HTTP_PROXY, AppConfig.DEFAULT_APPEND_HTTP_PROXY)
+        ensureDefaultBool(AppConfig.PREF_IPV6_ENABLED, AppConfig.DEFAULT_IPV6_ENABLED)
+        ensureDefaultBool(AppConfig.PREF_PER_APP_PROXY, false)
+        ensureDefaultBool(AppConfig.PREF_MUX_ENABLED, false)
+        ensureDefaultBool(AppConfig.PREF_PROXY_SHARING, false)
+        MmkvManager.encodeSettings(AppConfig.PREF_SATRA_TUNNEL_DEFAULTS_SEEDED, true)
     }
 
     private fun migrateHysteria2PinSHA256() {

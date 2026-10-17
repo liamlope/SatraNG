@@ -165,8 +165,11 @@ object AppConfig {
     const val GEOIP_ONLY_CN_PRIVATE_URL = "$GITHUB_RAW_URL/Loyalsoldier/geoip/release/$GEOIP_ONLY_CN_PRIVATE_DAT"
 
     /** Ports and addresses for various services. */
-    const val PORT_LOCAL_DNS = "10853"
-    const val PORT_SOCKS = "10808"
+    /** Memorable SatraNG local ports (avoid clash with stock v2rayNG 10808/10853). */
+    const val PORT_LOCAL_DNS = "28853"
+    const val PORT_SOCKS = "28888"
+    const val LEGACY_PORT_LOCAL_DNS = "10853"
+    const val LEGACY_PORT_SOCKS = "10808"
     const val WIREGUARD_LOCAL_ADDRESS_V4 = "172.16.0.2/32"
     const val WIREGUARD_LOCAL_ADDRESS_V6 = "2606:4700:110:8f81:d551:a0:532e:a2b3/128"
     const val WIREGUARD_LOCAL_MTU = "1420"
@@ -175,10 +178,17 @@ object AppConfig {
 
     /** Shared defaults for settings shown in the UI and consumed by config generation. */
     const val DEFAULT_SOCKS_ENABLE_UDP = true
+    const val DEFAULT_LOCAL_DNS_ENABLED = true
+    const val DEFAULT_SNIFFING_ENABLED = true
+    const val DEFAULT_USE_HEV_TUNNEL = true
+    const val DEFAULT_APPEND_HTTP_PROXY = true
+    const val DEFAULT_IPV6_ENABLED = true
     const val DEFAULT_OUTBOUND_DOMAIN_RESOLVE_METHOD = "1"
     const val DEFAULT_VPN_BYPASS_LAN = "1"
     const val DEFAULT_HEV_TUNNEL_LOGLEVEL = "warn"
     const val DEFAULT_MUX_XUDP_CONCURRENCY = "8"
+    const val PREF_SATRA_LOCAL_PORTS_MIGRATED = "pref_satra_local_ports_migrated_v1"
+    const val PREF_SATRA_TUNNEL_DEFAULTS_SEEDED = "pref_satra_tunnel_defaults_seeded_v1"
 
     /** Message constants for communication. */
     const val MSG_REGISTER_CLIENT = 1
@@ -226,7 +236,8 @@ object AppConfig {
 
     /** Give a good name to this, IDK*/
     const val VPN = "VPN"
-    const val VPN_MTU = 1500
+    /** 1420 reduces fragmentation on cellular and common tunnel overheads vs 1500. */
+    const val VPN_MTU = 1420
 
     /** Root (system-wide) mode runtime constants. */
     const val ROOT_RUNTIME_DIR = "sys_cache"
