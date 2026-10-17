@@ -38,13 +38,40 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("satraRelease") {
+            val keystoreFile = rootProject.file("keystore/satra-release.p12")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = "SatraNG-Release-2026!"
+                keyAlias = "satrang"
+                keyPassword = "SatraNG-Release-2026!"
+                storeType = "PKCS12"
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // Keep minify off: Xray/Gson reflection breaks easily; Play Protect
+            // cares more about permissions + stable release signing.
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            val satraSigning = signingConfigs.findByName("satraRelease")
+            if (satraSigning?.storeFile?.exists() == true) {
+                signingConfig = satraSigning
+            }
+        }
+        debug {
+            // Prefer the same release cert when available so Play Protect
+            // reputation is stable across installs (not a fresh debug cert each machine).
+            val satraSigning = signingConfigs.findByName("satraRelease")
+            if (satraSigning?.storeFile?.exists() == true) {
+                signingConfig = satraSigning
+            }
         }
     }
 
