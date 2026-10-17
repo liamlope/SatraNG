@@ -1,18 +1,16 @@
 package com.v2ray.ang.handler
 
 import com.v2ray.ang.AppConfig
-import com.v2ray.ang.dto.IPAPIInfo
-import com.v2ray.ang.dto.UrlContentRequest
 import com.v2ray.ang.dto.entities.ProfileItem
-import com.v2ray.ang.util.HttpUtil
-import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
-import java.net.InetAddress
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Resolves a profile's server host to a country code (cached in affiliation + memory).
+ * Country display for servers.
+ *
+ * Flags must reflect the **exit IP after connect** (via local proxy), not the config host —
+ * many configs are Iran→abroad tunnels whose server IP is IR while the real exit is abroad.
  */
 object GeoIpResolver {
 
@@ -23,80 +21,80 @@ object GeoIpResolver {
         val countryCode: String?,
         val countryName: String?,
         val ip: String?,
+        val exitVerified: Boolean = false,
     )
 
-    fun resolveForProfile(guid: String, profile: ProfileItem, force: Boolean = false): GeoResult {
-        if (!force) {
-            MmkvManager.decodeServerAffiliationInfo(guid)?.let { aff ->
-                if (!aff.countryCode.isNullOrBlank() &&
-                    System.currentTimeMillis() - aff.geoUpdatedAt < CACHE_TTL_MS
-                ) {
-                    return GeoResult(aff.countryCode, aff.countryName, aff.resolvedIp)
-                }
+    /**
+     * UI-facing geo: prefer exit-verified cache; otherwise remarks hint only.
+     * Never DNS-resolves the profile server host.
+     */
+    fun displayForProfile(guid: String, profile: ProfileItem): GeoResult {
+        MmkvManager.decodeServerAffiliationInfo(guid)?.let { aff ->
+            if (aff.exitIpVerified &&
+                !aff.countryCode.isNullOrBlank() &&
+                System.currentTimeMillis() - aff.geoUpdatedAt < CACHE_TTL_MS
+            ) {
+                return GeoResult(aff.countryCode, aff.countryName, aff.resolvedIp, exitVerified = true)
             }
         }
-
-        val host = profile.server?.trim().orEmpty()
-        if (host.isBlank()) return GeoResult(null, null, null)
-
-        memoryCache[host.lowercase(Locale.US)]?.let { (code, name) ->
-            MmkvManager.encodeServerGeo(guid, code, name, null)
-            return GeoResult(code, name, null)
-        }
-
-        // Hint from remarks (e.g. "DE-Frankfurt", "Germany", flag emoji region)
-        guessFromRemarks(profile.remarks)?.let { hinted ->
-            memoryCache[host.lowercase(Locale.US)] = hinted.countryCode to hinted.countryName
-            MmkvManager.encodeServerGeo(guid, hinted.countryCode, hinted.countryName, null)
-            // Still try network resolve in background-friendly path below if needed
-            if (!force) return hinted
-        }
-
-        val ip = resolveHostToIp(host)
-        val remote = lookupGeo(ip ?: host)
-        val code = remote?.countryCode?.uppercase(Locale.US)
-        val name = remote?.countryName ?: countryNameForCode(code)
-        memoryCache[host.lowercase(Locale.US)] = code to name
-        MmkvManager.encodeServerGeo(guid, code, name, ip ?: remote?.ip)
-        return GeoResult(code, name, ip ?: remote?.ip)
+        return guessFromRemarks(profile.remarks) ?: GeoResult(null, null, null)
     }
 
-    private fun resolveHostToIp(host: String): String? = runCatching {
-        InetAddress.getByName(host).hostAddress
-    }.onFailure {
-        LogUtil.w(AppConfig.TAG, "GeoIp DNS failed for $host: ${it.message}")
-    }.getOrNull()
+    /**
+     * @deprecated Host-based geo is incorrect for tunnel configs; use [displayForProfile]
+     * and [resolveExitAfterConnect] instead.
+     */
+    fun resolveForProfile(guid: String, profile: ProfileItem, force: Boolean = false): GeoResult {
+        return displayForProfile(guid, profile)
+    }
 
-    private fun lookupGeo(query: String): GeoResult? {
+    /**
+     * After VPN/proxy is up, query the public IP through the local SOCKS/HTTP proxy
+     * and persist that country as the location flag for [guid].
+     */
+    fun resolveExitAfterConnect(guid: String): GeoResult {
+        if (guid.isBlank()) return GeoResult(null, null, null)
         return try {
-            val api = AppConfig.IP_API_URL.trimEnd('/')
-            val url = if (query.matches(Regex("""^\d{1,3}(\.\d{1,3}){3}$""")) || query.contains(":")) {
-                "$api/$query"
-            } else {
-                "$api/$query"
+            val remote = SpeedtestManager.getRemoteIPInfo()
+            val rawCountry = remote?.country?.trim().orEmpty()
+            val code = normalizeCountryCode(rawCountry)
+            val name = when {
+                code != null -> countryNameForCode(code)
+                rawCountry.length > 2 -> rawCountry
+                else -> null
             }
-            val content = HttpUtil.getUrlContent(
-                UrlContentRequest(url = url, timeout = 4000, httpPort = 0)
-            ) ?: return null
-            val info = JsonUtil.fromJsonSafe(content, IPAPIInfo::class.java) ?: return null
-            val code = listOf(info.country_code, info.countryCode, info.location?.country_code)
-                .firstOrNull { !it.isNullOrBlank() }
-                ?.uppercase(Locale.US)
-            val name = listOf(info.country_name, info.country)
-                .firstOrNull { !it.isNullOrBlank() }
-                ?: countryNameForCode(code)
-            val ip = listOf(info.ip, info.clientIp, info.ip_addr, info.query)
-                .firstOrNull { !it.isNullOrBlank() }
-            GeoResult(code, name, ip)
+            val ip = remote?.ipAddress
+            if (code != null || ip != null) {
+                MmkvManager.encodeServerGeo(
+                    guid = guid,
+                    countryCode = code,
+                    countryName = name,
+                    resolvedIp = ip,
+                    exitIpVerified = true,
+                )
+                if (code != null) {
+                    memoryCache[guid] = code to name
+                }
+            }
+            GeoResult(code, name, ip, exitVerified = code != null)
         } catch (e: Exception) {
-            LogUtil.w(AppConfig.TAG, "GeoIp lookup failed: ${e.message}")
-            null
+            LogUtil.w(AppConfig.TAG, "Exit geo lookup failed: ${e.message}")
+            GeoResult(null, null, null)
+        }
+    }
+
+    private fun normalizeCountryCode(raw: String): String? {
+        if (raw.isBlank()) return null
+        val upper = raw.uppercase(Locale.US)
+        if (upper.length == 2 && Locale.getISOCountries().contains(upper)) return upper
+        // Some APIs return full country name in the country field
+        return Locale.getISOCountries().firstOrNull { code ->
+            Locale("", code).displayCountry.equals(raw, ignoreCase = true)
         }
     }
 
     private fun guessFromRemarks(remarks: String): GeoResult? {
         val upper = remarks.uppercase(Locale.US)
-        // ISO-like token at start: "DE-", "US ", "NL|"
         val iso = Regex("""\b([A-Z]{2})\b""").find(upper)?.groupValues?.getOrNull(1)
         if (iso != null && Locale.getISOCountries().contains(iso)) {
             return GeoResult(iso, countryNameForCode(iso), null)

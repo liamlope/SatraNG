@@ -15,11 +15,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 
 object SatraMotionSpec {
-    const val EnterMs = 280
-    const val SettleMs = 420
-    const val PulseMs = 1400
-    const val ThemeCrossfadeMs = 380
-    const val ShortMs = 160
+    /** Apple-like soft settle for chrome / Liquid Glass transitions. */
+    const val EnterMs = 320
+    const val SettleMs = 480
+    const val PulseMs = 1600
+    const val ThemeCrossfadeMs = 420
+    const val ShortMs = 180
+    const val CeremonyMs = 900
 
     val EnterEasing: Easing = FastOutSlowInEasing
     val PulseEasing: Easing = LinearEasing
@@ -28,14 +30,20 @@ object SatraMotionSpec {
     fun <T> settle() = tween<T>(SettleMs, easing = EnterEasing)
     fun <T> short() = tween<T>(ShortMs, easing = EnterEasing)
     fun <T> pulse() = tween<T>(PulseMs, easing = PulseEasing)
+    fun <T> ceremony() = tween<T>(CeremonyMs, easing = EnterEasing)
 
     val snappy = spring<Float>(
-        dampingRatio = Spring.DampingRatioMediumBouncy,
+        dampingRatio = 0.72f,
         stiffness = Spring.StiffnessMediumLow,
     )
     val soft = spring<Float>(
-        dampingRatio = 0.82f,
+        dampingRatio = 0.86f,
         stiffness = Spring.StiffnessLow,
+    )
+    /** Tab indicator / liquid pill travel. */
+    val liquid = spring<Float>(
+        dampingRatio = 0.78f,
+        stiffness = 380f,
     )
 }
 

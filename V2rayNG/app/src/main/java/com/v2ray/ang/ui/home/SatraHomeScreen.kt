@@ -26,6 +26,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -62,7 +63,10 @@ import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import com.v2ray.ang.ui.compose.satra.SatraBottomNavBar
 import com.v2ray.ang.ui.compose.satra.SatraCard
+import com.v2ray.ang.ui.compose.satra.SatraGlassSurface
+import com.v2ray.ang.ui.compose.satra.SatraLiquid
 import com.v2ray.ang.ui.compose.satra.SatraOrb
+import com.v2ray.ang.ui.compose.satra.SatraOrbState
 import com.v2ray.ang.ui.compose.satra.SatraPingBadge
 import com.v2ray.ang.ui.compose.satra.SatraRowAction
 import com.v2ray.ang.ui.compose.satra.SatraShimmer
@@ -129,14 +133,11 @@ fun SatraHomeScreen(
     val allRows = remember { mutableStateOf<List<ServerRowUiModel>>(emptyList()) }
     val activeSub = remember { mutableStateOf<Pair<String, SubscriptionItem>?>(null) }
 
-    LaunchedEffect(uiState.groups, uiState.selectedGroupId, searchQuery, uiState.isTesting) {
+    LaunchedEffect(uiState.groups, uiState.selectedGroupId, searchQuery, uiState.isTesting, uiState.isRunning) {
         withContext(Dispatchers.IO) {
             val rows = mutableListOf<ServerRowUiModel>()
             uiState.groups.forEach { group ->
                 loadServersForGroup(group.id).forEach { server ->
-                    if (MmkvManager.decodeServerAffiliationInfo(server.guid)?.countryCode.isNullOrBlank()) {
-                        GeoIpResolver.resolveForProfile(server.guid, server.profile)
-                    }
                     val model = buildServerRowUiModel(server, group.remarks)
                     if (searchQuery.isBlank() ||
                         model.remarks.contains(searchQuery, true) ||
@@ -233,6 +234,11 @@ fun SatraHomeScreen(
                     onOpenSubs = { tab = 2 },
                     onRefreshSub = { onAction(MainAction.UpdateSubscriptions) },
                     onTestCurrent = { onAction(MainAction.TestCurrentServer) },
+                    onAddFromClipboard = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onAction(MainAction.ImportClipboard)
+                    },
+                    onAddSubscription = { tab = 2 },
                 )
 
                 1 -> LocationsPickerTab(
@@ -301,10 +307,23 @@ private fun CinematicHomeTab(
     onOpenSubs: () -> Unit,
     onRefreshSub: () -> Unit,
     onTestCurrent: () -> Unit,
+    onAddFromClipboard: () -> Unit,
+    onAddSubscription: () -> Unit,
 ) {
+    var ceremony by remember { mutableStateOf(false) }
+    LaunchedEffect(isRunning) {
+        if (isRunning) {
+            kotlinx.coroutines.delay(700)
+            ceremony = false
+        }
+    }
+    val orbState = when {
+        ceremony && !isRunning -> SatraOrbState.Connecting
+        else -> status.toOrbState(isRunning)
+    }
     val statusLabel = when {
         isRunning -> stringResource(R.string.satra_status_connected)
-        status == MainStatus.Testing -> stringResource(R.string.satra_status_connecting)
+        ceremony || status == MainStatus.Testing -> stringResource(R.string.satra_status_connecting)
         else -> stringResource(R.string.satra_status_ready)
     }
     Column(
@@ -342,9 +361,12 @@ private fun CinematicHomeTab(
         }
         Spacer(Modifier.height(24.dp))
         SatraOrb(
-            state = status.toOrbState(isRunning),
+            state = orbState,
             statusLabel = statusLabel,
-            onClick = onConnect,
+            onClick = {
+                if (!isRunning) ceremony = true
+                onConnect()
+            },
         )
         Text(
             statusText,
@@ -397,6 +419,40 @@ private fun CinematicHomeTab(
             onOpen = onOpenSubs,
             onRefresh = onRefreshSub,
         )
+        Spacer(Modifier.height(20.dp))
+        SatraGlassSurface(
+            shape = RoundedCornerShape(SatraLiquid.CapsuleRadius),
+            onClick = onAddFromClipboard,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_add_24dp),
+                    contentDescription = stringResource(R.string.satra_home_add_config),
+                    tint = SatraTokens.TealDeep,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.size(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.satra_home_add_config),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        stringResource(R.string.satra_home_add_config_sub),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
         Spacer(Modifier.height(28.dp))
     }
 }

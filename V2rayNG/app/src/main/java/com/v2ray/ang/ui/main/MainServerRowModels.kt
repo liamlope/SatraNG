@@ -6,8 +6,6 @@ import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.nullIfBlank
 import com.v2ray.ang.handler.AngConfigManager
 import com.v2ray.ang.handler.GeoIpResolver
-import com.v2ray.ang.handler.MmkvManager
-
 data class ServerRowUiModel(
     val guid: String,
     val profile: ProfileItem,
@@ -36,7 +34,7 @@ fun buildServerRowUiModel(
     subscriptionRemarks: String,
 ): ServerRowUiModel {
     val profile = server.profile
-    val aff = MmkvManager.decodeServerAffiliationInfo(server.guid)
+    val geo = GeoIpResolver.displayForProfile(server.guid, profile)
     return ServerRowUiModel(
         guid = server.guid,
         profile = profile,
@@ -46,8 +44,8 @@ fun buildServerRowUiModel(
         typeDescription = serverProtocolDescription(profile),
         testDelayMillis = server.testDelayMillis,
         subscriptionBadge = subscriptionRemarks.firstOrNull()?.toString().orEmpty(),
-        countryCode = aff?.countryCode,
-        countryName = aff?.countryName,
+        countryCode = geo.countryCode,
+        countryName = geo.countryName,
     )
 }
 

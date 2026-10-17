@@ -652,4 +652,7 @@
     <string name="satra_settings_play_protect_title">درباره هشدار Play Protect</string>
     <string name="satra_settings_play_protect_body">گوگل هنوز امضای این توسعه‌دهنده را به‌اندازه کافی ندیده است؛ این حکم بدافزار نیست. برای ادامه Install anyway را بزنید. اگر نمی‌خواهید APK آپلود شود Don\'t send را انتخاب کنید. با امضای پایدار این هشدار کمتر می‌شود.</string>
 
+<string name="satra_home_add_config">افزودن کانفیگ</string>
+    <string name="satra_home_add_config_sub">از کلیپ‌بورد — لینک اشتراک یا آدرس نود</string>
+
 </resources>

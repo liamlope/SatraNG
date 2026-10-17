@@ -650,4 +650,7 @@
     <string name="satra_settings_play_protect_title">About the Play Protect warning</string>
     <string name="satra_settings_play_protect_body">Play Protect has not verified this developer signature yet. That is not a malware verdict. Tap Install anyway to continue. Choose Don\'t send if you do not want to upload the APK. A stable release signature reduces this warning over time.</string>
 
+<string name="satra_home_add_config">Add config</string>
+    <string name="satra_home_add_config_sub">Paste from clipboard — subscription link or node URL</string>
+
 </resources>

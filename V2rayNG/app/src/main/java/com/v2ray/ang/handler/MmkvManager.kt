@@ -495,12 +495,14 @@ object MmkvManager {
         countryCode: String?,
         countryName: String?,
         resolvedIp: String?,
+        exitIpVerified: Boolean = false,
     ) {
         if (guid.isBlank()) return
         val aff = decodeServerAffiliationInfo(guid) ?: ServerAffiliationInfo()
         aff.countryCode = countryCode
         aff.countryName = countryName
         aff.resolvedIp = resolvedIp
+        aff.exitIpVerified = exitIpVerified
         aff.geoUpdatedAt = System.currentTimeMillis()
         serverAffStorage.encode(guid, JsonUtil.toJson(aff))
     }

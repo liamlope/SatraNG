@@ -1,8 +1,10 @@
 package com.v2ray.ang.ui.compose.satra
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.Canvas
@@ -12,12 +14,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -53,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
+import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.SatraColors
 import com.v2ray.ang.ui.main.MainStatus
 
@@ -231,31 +238,51 @@ fun SatraOrb(
     val reduce = rememberReduceMotion()
     val haptics = LocalHapticFeedback.current
     val infinite = rememberInfiniteTransition(label = "orb")
+    val connecting = state == SatraOrbState.Connecting
+    val connected = state == SatraOrbState.Connected
     val pulse by infinite.animateFloat(
         initialValue = 1f,
-        targetValue = if (state == SatraOrbState.Connecting && !reduce) 1.08f else 1f,
+        targetValue = when {
+            reduce -> 1f
+            connecting -> 1.1f
+            connected -> 1.04f
+            else -> 1f
+        },
         animationSpec = infiniteRepeatable(
             animation = SatraMotionSpec.pulse(),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "orbPulse",
     )
-    val connected = state == SatraOrbState.Connected
+    val ringSweep by infinite.animateFloat(
+        initialValue = 0f,
+        targetValue = if (connecting && !reduce) 360f else 0f,
+        animationSpec = infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "orbSweep",
+    )
     val core by animateColorAsState(
         when {
             connected -> SatraTokens.TealDeep
-            state == SatraOrbState.Connecting -> SatraTokens.Amber
+            connecting -> SatraTokens.Amber
             else -> SatraColors.Slate
         },
         label = "orbCore",
     )
-    val glow = core.copy(alpha = 0.35f)
+    val settleScale by animateFloatAsState(
+        targetValue = if (connected && !reduce) 1f else if (connecting) 0.94f else 1f,
+        animationSpec = SatraMotionSpec.soft,
+        label = "orbSettle",
+    )
+    val glow = core.copy(alpha = if (connecting) 0.5f else 0.35f)
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(168.dp)
-                .scale(pulse)
+                .size(188.dp)
+                .scale(pulse * settleScale)
                 .semantics {
                     contentDescription = statusLabel
                     role = Role.Button
@@ -267,13 +294,37 @@ fun SatraOrb(
                     onClick()
                 },
         ) {
+            if (connecting || connected) {
+                Canvas(Modifier.size(168.dp)) {
+                    val stroke = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                    drawArc(
+                        color = core.copy(alpha = 0.55f),
+                        startAngle = ringSweep - 90f,
+                        sweepAngle = if (connecting) 110f else 360f,
+                        useCenter = false,
+                        style = stroke,
+                        size = Size(size.minDimension, size.minDimension),
+                        topLeft = Offset(
+                            (size.width - size.minDimension) / 2f,
+                            (size.height - size.minDimension) / 2f,
+                        ),
+                    )
+                    if (connected) {
+                        drawCircle(
+                            color = SatraTokens.Teal.copy(alpha = 0.2f),
+                            radius = size.minDimension / 2f - 6.dp.toPx(),
+                            style = Stroke(width = 8.dp.toPx()),
+                        )
+                    }
+                }
+            }
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(118.dp)
                     .clip(CircleShape)
                     .background(Brush.verticalGradient(listOf(core, core.copy(alpha = 0.82f))))
-                    .border(2.dp, Color.White.copy(alpha = 0.22f), CircleShape),
+                    .border(2.dp, Color.White.copy(alpha = 0.28f), CircleShape),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_satra_mark),
@@ -306,21 +357,49 @@ fun SatraBottomNavBar(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
+    val dark = LocalDarkTheme.current
+    val reduce = rememberReduceMotion()
+    val haptics = LocalHapticFeedback.current
+    BoxWithConstraints(
+        modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.94f))
-            .padding(horizontal = 4.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .satraGlass(RoundedCornerShape(SatraLiquid.CapsuleRadius), dark)
+            .padding(horizontal = 6.dp, vertical = 6.dp)
+            .height(64.dp),
     ) {
-        items.forEach { (index, labelRes, iconRes) ->
-            SatraNavItem(
-                selected = selected == index,
-                labelRes = labelRes,
-                iconRes = iconRes,
-                onClick = { onSelect(index) },
-            )
+        val count = items.size.coerceAtLeast(1)
+        val slot = maxWidth / count
+        val indicatorOffset by animateFloatAsState(
+            targetValue = selected.toFloat(),
+            animationSpec = if (reduce) SatraMotionSpec.short() else SatraMotionSpec.liquid,
+            label = "navPill",
+        )
+        Box(
+            Modifier
+                .offset(x = slot * indicatorOffset)
+                .width(slot)
+                .fillMaxHeight()
+                .padding(4.dp)
+                .clip(RoundedCornerShape(SatraLiquid.CapsuleRadius))
+                .background(SatraTokens.Teal.copy(alpha = if (dark) 0.28f else 0.22f)),
+        )
+        Row(
+            Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            items.forEach { (index, labelRes, iconRes) ->
+                SatraNavItem(
+                    selected = selected == index,
+                    labelRes = labelRes,
+                    iconRes = iconRes,
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onSelect(index)
+                    },
+                )
+            }
         }
     }
 }
@@ -334,20 +413,26 @@ private fun RowScope.SatraNavItem(
 ) {
     val tint by animateColorAsState(
         if (selected) SatraTokens.TealDeep else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = SatraMotionSpec.short(),
         label = "navTint",
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1.06f else 1f,
+        animationSpec = SatraMotionSpec.snappy,
+        label = "navScale",
     )
     Column(
         modifier = Modifier
             .weight(1f)
+            .scale(scale)
             .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
-            .background(if (selected) SatraTokens.Teal.copy(alpha = 0.16f) else Color.Transparent)
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             painter = painterResource(iconRes),
-            contentDescription = null,
+            contentDescription = stringResource(labelRes),
             tint = tint,
             modifier = Modifier.size(22.dp),
         )

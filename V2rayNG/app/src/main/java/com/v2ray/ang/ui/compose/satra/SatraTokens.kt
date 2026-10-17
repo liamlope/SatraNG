@@ -16,10 +16,12 @@ object SatraTokens {
     val Amber = SatraColors.Amber
     val Danger = SatraColors.Danger
 
-    val RadiusSm = 10.dp
-    val RadiusMd = 16.dp
-    val RadiusLg = 20.dp
-    val RadiusXl = 28.dp
+    /** Continuous corners — closer to iOS Liquid Glass continuity than Material sharp radii. */
+    val RadiusSm = 12.dp
+    val RadiusMd = 18.dp
+    val RadiusLg = 24.dp
+    val RadiusXl = 32.dp
+    val RadiusCapsule = 999.dp
 
     val SpaceXs = 4.dp
     val SpaceSm = 8.dp

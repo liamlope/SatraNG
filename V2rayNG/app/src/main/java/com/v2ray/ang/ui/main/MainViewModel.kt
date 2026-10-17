@@ -18,6 +18,7 @@ import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.matchesPattern
 import com.v2ray.ang.extension.moveItem
+import com.v2ray.ang.handler.GeoIpResolver
 import com.v2ray.ang.ui.base.BaseViewModel
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.CancellationException
@@ -132,6 +133,7 @@ class MainViewModel(
             MainServiceEvent.StateStartSuccess -> {
                 toastSuccess(R.string.toast_services_success)
                 updateRunningState(true)
+                refreshExitGeoForSelectedServer()
             }
 
             is MainServiceEvent.StateStartFailure -> {
@@ -930,6 +932,22 @@ class MainViewModel(
                 status = if (!clearTestingText && state.isRunning == running) state.status
                 else if (running) MainStatus.Connected else MainStatus.Disconnected
             )
+        }
+    }
+
+    /**
+     * After connect, resolve the public exit IP through the local proxy and store country
+     * for the selected profile (tunnel configs must not use the inbound server IP).
+     */
+    private fun refreshExitGeoForSelectedServer() {
+        viewModelScope.launch(Dispatchers.IO) {
+            delay(900)
+            if (!uiState.value.isRunning) return@launch
+            val guid = dataSource.getSelectServer()?.takeIf { it.isNotBlank() } ?: return@launch
+            val result = GeoIpResolver.resolveExitAfterConnect(guid)
+            if (result.exitVerified) {
+                reloadServerList()
+            }
         }
     }
 
