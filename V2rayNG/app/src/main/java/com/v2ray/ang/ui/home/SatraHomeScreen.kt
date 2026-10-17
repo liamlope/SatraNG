@@ -31,7 +31,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -59,10 +58,7 @@ import com.v2ray.ang.dto.entities.SubscriptionItem
 import com.v2ray.ang.extension.toTrafficString
 import com.v2ray.ang.handler.GeoIpResolver
 import com.v2ray.ang.handler.MmkvManager
-import com.v2ray.ang.handler.TorConnectionMode
-import com.v2ray.ang.handler.TorManager
 import com.v2ray.ang.ui.compose.LocalDarkTheme
-import com.v2ray.ang.ui.compose.LocalTorProtected
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import com.v2ray.ang.ui.compose.satra.SatraBottomNavBar
 import com.v2ray.ang.ui.compose.satra.SatraCard
@@ -86,7 +82,6 @@ import com.v2ray.ang.ui.main.ServerRowUiModel
 import com.v2ray.ang.ui.main.ShareMethodDialog
 import com.v2ray.ang.ui.main.buildServerRowUiModel
 import com.v2ray.ang.ui.notification.NotificationControlActivity
-import com.v2ray.ang.ui.tor.TorHubScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
@@ -115,8 +110,6 @@ fun SatraHomeScreen(
     val confirmRemove = uiState.confirmRemove
     val shareQRCodeBitmap = uiState.shareQRCodeBitmap
     val isDark = LocalDarkTheme.current
-    val torState by TorManager.state.collectAsStateWithLifecycle()
-    val torProtected = torState.enabled
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
 
@@ -161,10 +154,6 @@ fun SatraHomeScreen(
         }
     }
 
-    LaunchedEffect(isRunning) {
-        TorManager.onVpnStateChanged(isRunning)
-    }
-
     val selectedRow = allRows.value.firstOrNull { it.guid == selectedGuid }
         ?: allRows.value.firstOrNull()
 
@@ -203,112 +192,96 @@ fun SatraHomeScreen(
     }
 
     val navItems = listOf(
-        Triple(0, R.string.satra_nav_home, R.drawable.ic_stat_name),
+        Triple(0, R.string.satra_nav_home, R.drawable.ic_stat_satra),
         Triple(1, R.string.satra_nav_locations, R.drawable.ic_routing_24dp),
         Triple(2, R.string.satra_nav_subs, R.drawable.ic_subscriptions_24dp),
-        Triple(3, R.string.satra_nav_tor, R.drawable.ic_privacy_24dp),
-        Triple(4, R.string.satra_nav_more, R.drawable.ic_more_vert_24dp),
+        Triple(3, R.string.satra_nav_more, R.drawable.ic_more_vert_24dp),
     )
 
-    CompositionLocalProvider(LocalTorProtected provides torProtected) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(satraBackgroundBrush(isDark, torProtected))
-        ) {
-            Scaffold(
-                containerColor = Color.Transparent,
-                bottomBar = {
-                    SatraBottomNavBar(
-                        selected = tab,
-                        items = navItems,
-                        torProtected = torProtected,
-                        onSelect = { tab = it },
-                        modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
-                    )
-                }
-            ) { padding ->
-                when (tab) {
-                    0 -> CinematicHomeTab(
-                        modifier = Modifier.padding(padding),
-                        isRunning = isRunning,
-                        status = uiState.status,
-                        statusText = displayText,
-                        selectedRow = selectedRow,
-                        subscription = activeSub.value?.second,
-                        serverCount = activeSub.value?.let { (id, _) ->
-                            allRows.value.count { it.profile.subscriptionId == id }
-                        } ?: allRows.value.size,
-                        torMode = torState.mode,
-                        onConnect = {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onAction(MainAction.ToggleService)
-                        },
-                        onOpenLocations = { tab = 1 },
-                        onOpenSubs = { tab = 2 },
-                        onOpenTor = { tab = 3 },
-                        onRefreshSub = { onAction(MainAction.UpdateSubscriptions) },
-                        onTestCurrent = { onAction(MainAction.TestCurrentServer) },
-                    )
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(satraBackgroundBrush(isDark))
+    ) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            bottomBar = {
+                SatraBottomNavBar(
+                    selected = tab,
+                    items = navItems,
+                    onSelect = { tab = it },
+                    modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
+                )
+            }
+        ) { padding ->
+            when (tab) {
+                0 -> CinematicHomeTab(
+                    modifier = Modifier.padding(padding),
+                    isRunning = isRunning,
+                    status = uiState.status,
+                    statusText = displayText,
+                    selectedRow = selectedRow,
+                    subscription = activeSub.value?.second,
+                    serverCount = activeSub.value?.let { (id, _) ->
+                        allRows.value.count { it.profile.subscriptionId == id }
+                    } ?: allRows.value.size,
+                    onConnect = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onAction(MainAction.ToggleService)
+                    },
+                    onOpenLocations = { tab = 1 },
+                    onOpenSubs = { tab = 2 },
+                    onRefreshSub = { onAction(MainAction.UpdateSubscriptions) },
+                    onTestCurrent = { onAction(MainAction.TestCurrentServer) },
+                )
 
-                    1 -> LocationsPickerTab(
-                        modifier = Modifier.padding(padding),
-                        rows = allRows.value,
-                        selectedGuid = selectedGuid,
-                        searchQuery = searchQuery,
-                        sortMode = locSort,
-                        isLoading = isLoading || uiState.isTesting,
-                        onSearch = { searchQuery = it },
-                        onSort = { locSort = it },
-                        onSelect = { guid ->
-                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onAction(MainAction.SelectServer(guid))
-                            tab = 0
-                        },
-                        onTestAll = { onAction(MainAction.TestRealAllServers) },
-                    )
+                1 -> LocationsPickerTab(
+                    modifier = Modifier.padding(padding),
+                    rows = allRows.value,
+                    selectedGuid = selectedGuid,
+                    searchQuery = searchQuery,
+                    sortMode = locSort,
+                    isLoading = isLoading || uiState.isTesting,
+                    onSearch = { searchQuery = it },
+                    onSort = { locSort = it },
+                    onSelect = { guid ->
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onAction(MainAction.SelectServer(guid))
+                        tab = 0
+                    },
+                    onTestAll = { onAction(MainAction.TestRealAllServers) },
+                )
 
-                    2 -> SubscriptionsHubTab(
-                        modifier = Modifier.padding(padding),
-                        onOpenEditor = { onNavigate(MainDestination.Subscriptions) },
-                        onRefreshAll = { onAction(MainAction.UpdateSubscriptions) },
-                        isLoading = isLoading,
-                    )
+                2 -> SubscriptionsHubTab(
+                    modifier = Modifier.padding(padding),
+                    onOpenEditor = { onNavigate(MainDestination.Subscriptions) },
+                    onRefreshAll = { onAction(MainAction.UpdateSubscriptions) },
+                    isLoading = isLoading,
+                )
 
-                    3 -> TorHubScreen(
-                        modifier = Modifier.padding(padding),
-                        vpnConnected = isRunning,
-                        onModeApplied = {
-                            if (isRunning || TorManager.state.value.mode == TorConnectionMode.TorOnly) {
-                                onAction(MainAction.RestartService)
-                            }
-                        },
-                    )
-
-                    else -> MoreTab(
-                        modifier = Modifier.padding(padding),
-                        onNavigate = onNavigate,
-                        onOpenNotif = {
-                            context.startActivity(Intent(context, NotificationControlActivity::class.java))
-                        },
-                        onMoreAction = { action ->
-                            when (action) {
-                                MainMoreMenuAction.DeleteAll -> showDelAllConfirm = true
-                                MainMoreMenuAction.DeleteDuplicate -> showDelDuplicateConfirm = true
-                                MainMoreMenuAction.DeleteInvalid -> showDelInvalidConfirm = true
-                                MainMoreMenuAction.ExportAll -> onAction(MainAction.ExportAll)
-                                MainMoreMenuAction.SortByTestResults -> onAction(MainAction.SortByTestResults)
-                                MainMoreMenuAction.TestAll -> onAction(MainAction.TestAllServers)
-                                MainMoreMenuAction.TestAllRealPing -> onAction(MainAction.TestRealAllServers)
-                                MainMoreMenuAction.UpdateSubscriptions -> onAction(MainAction.UpdateSubscriptions)
-                                MainMoreMenuAction.RestartService -> onAction(MainAction.RestartService)
-                                MainMoreMenuAction.LocateSelected -> onAction(MainAction.LocateSelectedServer)
-                            }
-                        },
-                        onImportQr = { onAction(MainAction.ImportQRcode) },
-                        onImportClipboard = { onAction(MainAction.ImportClipboard) },
-                    )
-                }
+                else -> MoreTab(
+                    modifier = Modifier.padding(padding),
+                    onNavigate = onNavigate,
+                    onOpenNotif = {
+                        context.startActivity(Intent(context, NotificationControlActivity::class.java))
+                    },
+                    onMoreAction = { action ->
+                        when (action) {
+                            MainMoreMenuAction.DeleteAll -> showDelAllConfirm = true
+                            MainMoreMenuAction.DeleteDuplicate -> showDelDuplicateConfirm = true
+                            MainMoreMenuAction.DeleteInvalid -> showDelInvalidConfirm = true
+                            MainMoreMenuAction.ExportAll -> onAction(MainAction.ExportAll)
+                            MainMoreMenuAction.SortByTestResults -> onAction(MainAction.SortByTestResults)
+                            MainMoreMenuAction.TestAll -> onAction(MainAction.TestAllServers)
+                            MainMoreMenuAction.TestAllRealPing -> onAction(MainAction.TestRealAllServers)
+                            MainMoreMenuAction.UpdateSubscriptions -> onAction(MainAction.UpdateSubscriptions)
+                            MainMoreMenuAction.RestartService -> onAction(MainAction.RestartService)
+                            MainMoreMenuAction.LocateSelected -> onAction(MainAction.LocateSelectedServer)
+                        }
+                    },
+                    onImportQr = { onAction(MainAction.ImportQRcode) },
+                    onImportClipboard = { onAction(MainAction.ImportClipboard) },
+                )
             }
         }
     }
@@ -323,17 +296,13 @@ private fun CinematicHomeTab(
     selectedRow: ServerRowUiModel?,
     subscription: SubscriptionItem?,
     serverCount: Int,
-    torMode: TorConnectionMode,
     onConnect: () -> Unit,
     onOpenLocations: () -> Unit,
     onOpenSubs: () -> Unit,
-    onOpenTor: () -> Unit,
     onRefreshSub: () -> Unit,
     onTestCurrent: () -> Unit,
 ) {
-    val torProtected = torMode != TorConnectionMode.Off
     val statusLabel = when {
-        torProtected && isRunning -> stringResource(R.string.satra_status_protected)
         isRunning -> stringResource(R.string.satra_status_connected)
         status == MainStatus.Testing -> stringResource(R.string.satra_status_connecting)
         else -> stringResource(R.string.satra_status_ready)
@@ -347,16 +316,13 @@ private fun CinematicHomeTab(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(12.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Image(
                 painter = painterResource(R.drawable.ic_satra_mark),
                 contentDescription = null,
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(40.dp),
             )
-            Spacer(Modifier.size(8.dp))
+            Spacer(Modifier.size(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     "SatraNG",
@@ -370,23 +336,22 @@ private fun CinematicHomeTab(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (torProtected) {
-                SatraStatusChip(stringResource(R.string.satra_status_protected), torProtected = true)
+            if (isRunning) {
+                SatraStatusChip(stringResource(R.string.satra_status_connected))
             }
         }
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
         SatraOrb(
-            state = status.toOrbState(isRunning, torProtected),
+            state = status.toOrbState(isRunning),
             statusLabel = statusLabel,
             onClick = onConnect,
-            torProtected = torProtected,
         )
         Text(
             statusText,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(24.dp))
 
         SatraCard(onClick = onOpenLocations) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -429,34 +394,10 @@ private fun CinematicHomeTab(
         HomeSubSummary(
             subscription = subscription,
             serverCount = serverCount,
-            torProtected = torProtected,
             onOpen = onOpenSubs,
             onRefresh = onRefreshSub,
         )
-
-        if (torProtected) {
-            Spacer(Modifier.height(12.dp))
-            SatraCard(onClick = onOpenTor) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        when (torMode) {
-                            TorConnectionMode.TorOnly -> stringResource(R.string.satra_status_tor_only)
-                            else -> stringResource(R.string.satra_status_vpn_tor)
-                        },
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        stringResource(R.string.satra_tor_chip_open),
-                        color = SatraTokens.accentDeep(true),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(28.dp))
     }
 }
 
@@ -464,7 +405,6 @@ private fun CinematicHomeTab(
 private fun HomeSubSummary(
     subscription: SubscriptionItem?,
     serverCount: Int,
-    torProtected: Boolean,
     onOpen: () -> Unit,
     onRefresh: () -> Unit,
 ) {
@@ -475,13 +415,18 @@ private fun HomeSubSummary(
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyMedium,
             )
+            Text(
+                stringResource(R.string.satra_manage_sub),
+                color = SatraTokens.TealDeep,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(top = 8.dp),
+            )
             return@SatraCard
         }
         val fraction = subscription.usageFraction()
         Row(verticalAlignment = Alignment.CenterVertically) {
             SatraUsageRing(
                 fraction = fraction,
-                torProtected = torProtected,
                 warn = subscription.isNearQuota(0.9f) || subscription.isExpired(),
             )
             Spacer(Modifier.size(12.dp))
@@ -510,7 +455,7 @@ private fun HomeSubSummary(
             }
             Text(
                 stringResource(R.string.satra_sub_refresh),
-                color = SatraTokens.accentDeep(torProtected),
+                color = SatraTokens.TealDeep,
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
@@ -529,7 +474,7 @@ private fun HomeSubSummary(
                 subscription.announce.orEmpty(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
         }
@@ -580,7 +525,9 @@ private fun LocationsPickerTab(
         when (sortMode) {
             1 -> rows.sortedBy { it.remarks.lowercase() }
             2 -> rows.sortedBy { it.countryCode.orEmpty() + it.countryName.orEmpty() }
-            else -> rows.sortedWith(compareBy<ServerRowUiModel> { if (it.testDelayMillis <= 0) Long.MAX_VALUE else it.testDelayMillis })
+            else -> rows.sortedWith(
+                compareBy { if (it.testDelayMillis <= 0) Long.MAX_VALUE else it.testDelayMillis }
+            )
         }
     }
     val grouped = remember(sorted) {
@@ -625,12 +572,7 @@ private fun LocationsPickerTab(
             TextButton(onClick = onTestAll) { Text(stringResource(R.string.satra_test_all_ping)) }
         }
         if (isLoading) {
-            SatraShimmer(
-                Modifier
-                    .padding(horizontal = 20.dp)
-                    .fillMaxWidth()
-                    .height(48.dp)
-            )
+            SatraShimmer(Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(48.dp))
             Spacer(Modifier.height(8.dp))
         }
         if (sorted.isEmpty()) {
@@ -715,6 +657,12 @@ private fun SubscriptionsHubTab(
             TextButton(onClick = onRefreshAll) { Text(stringResource(R.string.satra_sub_refresh)) }
             TextButton(onClick = onOpenEditor) { Text(stringResource(R.string.satra_sub_add)) }
         }
+        Text(
+            stringResource(R.string.satra_sub_hub_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
         if (subs.value.isEmpty()) {
             SatraCard(onClick = onOpenEditor) {
                 Text(stringResource(R.string.satra_sub_empty), color = MaterialTheme.colorScheme.onSurface)
@@ -730,14 +678,24 @@ private fun SubscriptionsHubTab(
                             SatraUsageRing(
                                 fraction = fraction,
                                 warn = sub.isNearQuota(0.9f) || sub.isExpired(),
+                                size = 84.dp,
                             )
-                            Spacer(Modifier.size(12.dp))
+                            Spacer(Modifier.size(14.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     sub.profileTitle?.takeIf { it.isNotBlank() } ?: sub.remarks,
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     fontWeight = FontWeight.SemiBold,
+                                )
+                                val used = sub.usedBytes()
+                                Text(
+                                    if (fraction != null)
+                                        "${used.toTrafficString()} / ${sub.total.toTrafficString()}"
+                                    else
+                                        "${used.toTrafficString()} · ${stringResource(R.string.satra_sub_unlimited)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 ExpireLine(sub)
                                 if (sub.profileUpdateInterval > 0) {
@@ -760,12 +718,16 @@ private fun SubscriptionsHubTab(
                                 }
                             }
                         }
+                        when {
+                            sub.isExpired() -> AlertLine(stringResource(R.string.satra_sub_expired), SatraTokens.Danger)
+                            sub.isNearQuota(0.9f) -> AlertLine(stringResource(R.string.satra_sub_low_quota), SatraTokens.Danger)
+                            sub.isNearExpire() -> AlertLine(stringResource(R.string.satra_sub_near_expire), SatraTokens.Amber)
+                        }
                         if (!sub.announce.isNullOrBlank()) {
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                "${stringResource(R.string.satra_sub_announce)}: ${sub.announce}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            Spacer(Modifier.height(10.dp))
+                            SatraSectionBanner(
+                                title = stringResource(R.string.satra_sub_announce),
+                                body = sub.announce.orEmpty(),
                             )
                         }
                         Row {
@@ -784,6 +746,21 @@ private fun SubscriptionsHubTab(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SatraSectionBanner(title: String, body: String) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(SatraTokens.Teal.copy(alpha = 0.10f))
+            .padding(12.dp)
+    ) {
+        Text(title, style = MaterialTheme.typography.labelLarge, color = SatraTokens.TealDeep, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(4.dp))
+        Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 

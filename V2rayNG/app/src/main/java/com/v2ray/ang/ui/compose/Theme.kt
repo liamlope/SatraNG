@@ -223,10 +223,8 @@ private val SatraTypography = Typography(
     ),
 )
 
-fun satraBackgroundBrush(dark: Boolean, torProtected: Boolean = false): Brush =
-    com.v2ray.ang.ui.compose.satra.SatraTokens.backgroundBrush(dark, torProtected)
-
-val LocalTorProtected = compositionLocalOf { false }
+fun satraBackgroundBrush(dark: Boolean): Brush =
+    com.v2ray.ang.ui.compose.satra.SatraTokens.backgroundBrush(dark)
 
 object ThemeManager {
     private val _themeMode = MutableStateFlow(
@@ -301,7 +299,6 @@ fun AppTheme(
 
     CompositionLocalProvider(
         LocalDarkTheme provides darkTheme,
-        LocalTorProtected provides false,
         LocalAppSnackbar provides snackbarController
     ) {
         MaterialTheme(

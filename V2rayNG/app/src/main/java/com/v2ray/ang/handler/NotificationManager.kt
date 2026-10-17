@@ -92,29 +92,15 @@ object NotificationManager {
             }
 
         val prefs = NotificationPrefs.state.value
-        val tor = TorManager.state.value
-        val torOn = tor.enabled
-        val title = when {
-            torOn -> service.getString(R.string.satra_notif_title_protected)
-            else -> service.getString(R.string.satra_notif_title_connected)
-        }
+        val title = service.getString(R.string.satra_notif_title_connected)
         val subtitle = buildString {
             if (prefs.showLocation && !currentConfig?.remarks.isNullOrBlank()) {
                 append(currentConfig?.remarks)
             }
-            if (prefs.showTor && torOn) {
-                if (isNotEmpty()) append(" · ")
-                append(
-                    when (tor.mode) {
-                        TorConnectionMode.TorOnly -> service.getString(R.string.satra_status_tor_only)
-                        else -> service.getString(R.string.satra_status_vpn_tor)
-                    }
-                )
-            }
             if (isEmpty()) append(service.getString(R.string.app_name))
         }
         mBuilder = NotificationCompat.Builder(service, channelId)
-            .setSmallIcon(R.drawable.ic_stat_name)
+            .setSmallIcon(R.drawable.ic_stat_satra)
             .setContentTitle(title)
             .setContentText(subtitle)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -207,7 +193,7 @@ object NotificationManager {
     private fun updateNotification(contentText: String?, proxyTraffic: Long, directTraffic: Long) {
         if (mBuilder != null) {
             if (proxyTraffic < NOTIFICATION_ICON_THRESHOLD && directTraffic < NOTIFICATION_ICON_THRESHOLD) {
-                mBuilder?.setSmallIcon(R.drawable.ic_stat_name)
+                mBuilder?.setSmallIcon(R.drawable.ic_stat_satra)
             } else if (proxyTraffic > directTraffic) {
                 mBuilder?.setSmallIcon(R.drawable.ic_stat_proxy)
             } else {

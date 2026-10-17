@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -55,9 +56,7 @@ import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.SatraColors
 import com.v2ray.ang.ui.main.MainStatus
 
-enum class SatraOrbState {
-    Ready, Connecting, Connected, Disconnecting, TorProtected
-}
+enum class SatraOrbState { Ready, Connecting, Connected }
 
 @Composable
 fun SatraCard(
@@ -90,16 +89,14 @@ fun SatraPill(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    torProtected: Boolean = false,
 ) {
     val bg by animateColorAsState(
-        if (selected) SatraTokens.accent(torProtected).copy(alpha = 0.22f)
+        if (selected) SatraTokens.Teal.copy(alpha = 0.22f)
         else MaterialTheme.colorScheme.surfaceContainerHighest,
         label = "pillBg",
     )
     val fg by animateColorAsState(
-        if (selected) SatraTokens.accentDeep(torProtected)
-        else MaterialTheme.colorScheme.onSurface,
+        if (selected) SatraTokens.TealDeep else MaterialTheme.colorScheme.onSurface,
         label = "pillFg",
     )
     Text(
@@ -116,22 +113,15 @@ fun SatraPill(
 }
 
 @Composable
-fun SatraStatusChip(
-    text: String,
-    torProtected: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val bg = if (torProtected) SatraTokens.PrivacyViolet.copy(0.18f)
-    else SatraTokens.Teal.copy(0.16f)
-    val fg = if (torProtected) SatraTokens.PrivacyVioletSoft else SatraTokens.TealDeep
+fun SatraStatusChip(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
-        color = fg,
+        color = SatraTokens.TealDeep,
         fontWeight = FontWeight.SemiBold,
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(bg)
+            .background(SatraTokens.Teal.copy(0.16f))
             .padding(horizontal = 12.dp, vertical = 6.dp),
     )
 }
@@ -170,17 +160,12 @@ fun SatraUsageRing(
     modifier: Modifier = Modifier,
     size: Dp = 72.dp,
     stroke: Dp = 7.dp,
-    torProtected: Boolean = false,
     warn: Boolean = false,
 ) {
     val reduce = rememberReduceMotion()
     val progress = satraAnimatedFraction(fraction ?: 0f, "usageRing", reduce)
     val track = MaterialTheme.colorScheme.surfaceContainerHighest
-    val active = when {
-        warn -> SatraColors.Danger
-        torProtected -> SatraTokens.PrivacyViolet
-        else -> SatraTokens.Teal
-    }
+    val active = if (warn) SatraColors.Danger else SatraTokens.Teal
     Canvas(modifier = modifier.size(size)) {
         val strokePx = stroke.toPx()
         val arcSize = Size(this.size.minDimension - strokePx, this.size.minDimension - strokePx)
@@ -242,7 +227,6 @@ fun SatraOrb(
     statusLabel: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    torProtected: Boolean = false,
 ) {
     val reduce = rememberReduceMotion()
     val haptics = LocalHapticFeedback.current
@@ -256,10 +240,9 @@ fun SatraOrb(
         ),
         label = "orbPulse",
     )
-    val connected = state == SatraOrbState.Connected || state == SatraOrbState.TorProtected
+    val connected = state == SatraOrbState.Connected
     val core by animateColorAsState(
         when {
-            torProtected || state == SatraOrbState.TorProtected -> SatraTokens.PrivacyViolet
             connected -> SatraTokens.TealDeep
             state == SatraOrbState.Connecting -> SatraTokens.Amber
             else -> SatraColors.Slate
@@ -278,9 +261,7 @@ fun SatraOrb(
                     role = Role.Button
                 }
                 .clip(CircleShape)
-                .background(
-                    Brush.radialGradient(listOf(glow, Color.Transparent))
-                )
+                .background(Brush.radialGradient(listOf(glow, Color.Transparent)))
                 .clickable {
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     onClick()
@@ -291,19 +272,14 @@ fun SatraOrb(
                 modifier = Modifier
                     .size(118.dp)
                     .clip(CircleShape)
-                    .background(
-                        Brush.verticalGradient(listOf(core, core.copy(alpha = 0.82f)))
-                    )
+                    .background(Brush.verticalGradient(listOf(core, core.copy(alpha = 0.82f))))
                     .border(2.dp, Color.White.copy(alpha = 0.22f), CircleShape),
             ) {
                 Icon(
-                    painter = painterResource(
-                        if (torProtected || state == SatraOrbState.TorProtected) R.drawable.ic_lock_24dp
-                        else R.drawable.ic_stat_name
-                    ),
+                    painter = painterResource(R.drawable.ic_satra_mark),
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(42.dp),
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(52.dp),
                 )
             }
         }
@@ -317,8 +293,7 @@ fun SatraOrb(
     }
 }
 
-fun MainStatus.toOrbState(isRunning: Boolean, torOn: Boolean): SatraOrbState = when {
-    torOn && isRunning -> SatraOrbState.TorProtected
+fun MainStatus.toOrbState(isRunning: Boolean): SatraOrbState = when {
     this == MainStatus.Testing || this is MainStatus.TestProgress -> SatraOrbState.Connecting
     isRunning -> SatraOrbState.Connected
     else -> SatraOrbState.Ready
@@ -328,18 +303,13 @@ fun MainStatus.toOrbState(isRunning: Boolean, torOn: Boolean): SatraOrbState = w
 fun SatraBottomNavBar(
     selected: Int,
     items: List<Triple<Int, Int, Int>>,
-    torProtected: Boolean,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val accent = SatraTokens.accentDeep(torProtected)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(
-                if (torProtected) SatraTokens.PrivacyIndigo.copy(alpha = 0.96f)
-                else MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)
-            )
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.94f))
             .padding(horizontal = 4.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
@@ -349,7 +319,6 @@ fun SatraBottomNavBar(
                 selected = selected == index,
                 labelRes = labelRes,
                 iconRes = iconRes,
-                accent = accent,
                 onClick = { onSelect(index) },
             )
         }
@@ -361,11 +330,10 @@ private fun RowScope.SatraNavItem(
     selected: Boolean,
     labelRes: Int,
     iconRes: Int,
-    accent: Color,
     onClick: () -> Unit,
 ) {
     val tint by animateColorAsState(
-        if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+        if (selected) SatraTokens.TealDeep else MaterialTheme.colorScheme.onSurfaceVariant,
         label = "navTint",
     )
     Column(
@@ -373,7 +341,7 @@ private fun RowScope.SatraNavItem(
             .weight(1f)
             .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
-            .background(if (selected) accent.copy(alpha = 0.16f) else Color.Transparent)
+            .background(if (selected) SatraTokens.Teal.copy(alpha = 0.16f) else Color.Transparent)
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -385,7 +353,7 @@ private fun RowScope.SatraNavItem(
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            text = androidx.compose.ui.res.stringResource(labelRes),
+            text = stringResource(labelRes),
             style = MaterialTheme.typography.labelSmall,
             color = tint,
             maxLines = 1,

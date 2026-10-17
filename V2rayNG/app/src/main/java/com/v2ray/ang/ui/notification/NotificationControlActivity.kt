@@ -34,7 +34,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.handler.NotificationPrefs
-import com.v2ray.ang.handler.TorManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.LocalDarkTheme
@@ -45,9 +44,7 @@ class NotificationControlActivity : BaseComponentActivity() {
     @Composable
     override fun ScreenContent() {
         val prefs by NotificationPrefs.state.collectAsStateWithLifecycle()
-        val tor by TorManager.state.collectAsStateWithLifecycle()
         val isDark = LocalDarkTheme.current
-        val torOn = tor.enabled
 
         Scaffold(
             topBar = {
@@ -59,7 +56,7 @@ class NotificationControlActivity : BaseComponentActivity() {
             containerColor = Color.Transparent,
             modifier = Modifier
                 .fillMaxSize()
-                .background(satraBackgroundBrush(isDark, torOn)),
+                .background(satraBackgroundBrush(isDark)),
         ) { padding ->
             Column(
                 Modifier
@@ -81,34 +78,25 @@ class NotificationControlActivity : BaseComponentActivity() {
                 )
                 Spacer(Modifier.height(8.dp))
                 NotifPreviewCard(
-                    title = if (torOn) stringResource(R.string.satra_notif_title_protected)
-                    else stringResource(R.string.satra_notif_title_connected),
+                    title = stringResource(R.string.satra_notif_title_connected),
                     subtitle = buildString {
                         if (prefs.showLocation) append("🇩🇪 Berlin · ")
                         append("SatraNG")
-                        if (prefs.showTor && torOn) append(" · Tor")
                         if (prefs.showSpeed) append("\n↑ 1.2 MB/s  ↓ 3.4 MB/s")
                     },
-                    torOn = torOn,
                 )
                 Spacer(Modifier.height(20.dp))
-                PrefSwitch(stringResource(R.string.satra_notif_show_speed), prefs.showSpeed, torOn) {
+                PrefSwitch(stringResource(R.string.satra_notif_show_speed), prefs.showSpeed) {
                     NotificationPrefs.update { it.copy(showSpeed = !it.showSpeed) }
                 }
-                PrefSwitch(stringResource(R.string.satra_notif_show_location), prefs.showLocation, torOn) {
+                PrefSwitch(stringResource(R.string.satra_notif_show_location), prefs.showLocation) {
                     NotificationPrefs.update { it.copy(showLocation = !it.showLocation) }
                 }
-                PrefSwitch(stringResource(R.string.satra_notif_show_tor), prefs.showTor, torOn) {
-                    NotificationPrefs.update { it.copy(showTor = !it.showTor) }
-                }
-                PrefSwitch(stringResource(R.string.satra_notif_action_stop), prefs.actionStop, torOn) {
+                PrefSwitch(stringResource(R.string.satra_notif_action_stop), prefs.actionStop) {
                     NotificationPrefs.update { it.copy(actionStop = !it.actionStop) }
                 }
-                PrefSwitch(stringResource(R.string.satra_notif_action_restart), prefs.actionRestart, torOn) {
+                PrefSwitch(stringResource(R.string.satra_notif_action_restart), prefs.actionRestart) {
                     NotificationPrefs.update { it.copy(actionRestart = !it.actionRestart) }
-                }
-                PrefSwitch(stringResource(R.string.satra_notif_action_tor), prefs.actionTor, torOn) {
-                    NotificationPrefs.update { it.copy(actionTor = !it.actionTor) }
                 }
                 Spacer(Modifier.height(12.dp))
                 TextButton(onClick = {
@@ -131,7 +119,7 @@ class NotificationControlActivity : BaseComponentActivity() {
 }
 
 @Composable
-private fun NotifPreviewCard(title: String, subtitle: String, torOn: Boolean) {
+private fun NotifPreviewCard(title: String, subtitle: String) {
     val shape = RoundedCornerShape(16.dp)
     Column(
         Modifier
@@ -144,7 +132,7 @@ private fun NotifPreviewCard(title: String, subtitle: String, torOn: Boolean) {
         Text(
             title,
             style = MaterialTheme.typography.titleMedium,
-            color = SatraTokens.accentDeep(torOn),
+            color = SatraTokens.TealDeep,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.height(4.dp))
@@ -157,7 +145,7 @@ private fun NotifPreviewCard(title: String, subtitle: String, torOn: Boolean) {
 }
 
 @Composable
-private fun PrefSwitch(title: String, checked: Boolean, torOn: Boolean, onToggle: () -> Unit) {
+private fun PrefSwitch(title: String, checked: Boolean, onToggle: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -175,7 +163,7 @@ private fun PrefSwitch(title: String, checked: Boolean, torOn: Boolean, onToggle
             onCheckedChange = { onToggle() },
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = SatraTokens.accent(torOn),
+                checkedTrackColor = SatraTokens.Teal,
             ),
         )
     }
