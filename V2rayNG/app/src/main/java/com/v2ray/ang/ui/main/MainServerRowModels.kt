@@ -31,7 +31,7 @@ internal data class ServerGroupUiState(
     val rows: List<ServerRowUiModel> = emptyList(),
 )
 
-internal fun buildServerRowUiModel(
+fun buildServerRowUiModel(
     server: ServersCache,
     subscriptionRemarks: String,
 ): ServerRowUiModel {
