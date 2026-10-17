@@ -570,6 +570,34 @@
     <string name="satra_nav_locations">Locations</string>
     <string name="satra_nav_subs">Subscriptions</string>
     <string name="satra_nav_more">More</string>
+    <string name="satra_nav_configs">Configs</string>
+    <string name="satra_nav_logs">Logs</string>
+    <string name="satra_nav_settings">Settings</string>
+    <string name="satra_capsule_connect">Connect</string>
+    <string name="satra_capsule_connecting">Connecting…</string>
+    <string name="satra_capsule_connected">Connected</string>
+    <string name="satra_capsule_failed">Connection failed</string>
+    <string name="satra_capsule_ready">Ready</string>
+    <string name="satra_capsule_a11y">VPN power: %1$s</string>
+    <string name="satra_home_empty_hint">Paste a subscription link from clipboard</string>
+    <string name="satra_auto_connect">Auto-connect</string>
+    <string name="satra_back">Back</string>
+    <string name="satra_sub_settings">Subscription settings</string>
+    <string name="satra_log_normal">Normal</string>
+    <string name="satra_log_debug">Debug</string>
+    <string name="satra_log_trace">Trace</string>
+    <string name="satra_log_copy">Copy</string>
+    <string name="satra_log_clear">Clear</string>
+    <string name="satra_log_share">Share</string>
+    <string name="satra_log_clear_confirm">Clear all log lines?</string>
+
+    <string name="satra_sub_show_usage">Show usage</string>
+    <string name="satra_sub_show_expire">Show expiry</string>
+    <string name="satra_sub_show_announce">Show announcement</string>
+    <string name="satra_sub_show_support">Show support links</string>
+    <string name="satra_sub_device_limit_note">Device limits are not sent in standard subscription headers</string>
+    <string name="satra_liquid_catalog">Liquid Glass catalog</string>
+
     <string name="satra_manage_subscription">Manage subscription</string>
     <string name="satra_sort_by_name">Name</string>
     <string name="satra_sort_by_ping">Ping</string>

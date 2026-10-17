@@ -15,8 +15,9 @@ object SatraTokens {
     val InkSoft = SatraColors.InkSoft
     val Amber = SatraColors.Amber
     val Danger = SatraColors.Danger
+    val Success = Color(0xFF1FA97A)
+    val DividerOnGlass = Color.White.copy(alpha = 0.15f)
 
-    /** Continuous corners — closer to iOS Liquid Glass continuity than Material sharp radii. */
     val RadiusSm = 12.dp
     val RadiusMd = 18.dp
     val RadiusLg = 24.dp
@@ -29,6 +30,9 @@ object SatraTokens {
     val SpaceLg = 16.dp
     val SpaceXl = 24.dp
     val SpaceXxl = 32.dp
+
+    val CapsuleHeight = 60.dp
+    val BottomBarMinHeight = 56.dp
 
     val ElevationCard: Dp = 0.dp
 

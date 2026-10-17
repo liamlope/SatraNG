@@ -228,6 +228,8 @@ fun SatraShimmer(modifier: Modifier = Modifier) {
     )
 }
 
+/** @deprecated ExpressVPN-style orb — Liquid Glass uses [com.v2ray.ang.ui.compose.liquid.SatraGlassCapsule]. */
+@Deprecated("Use SatraGlassCapsule on Home; orb is removed from primary UX")
 @Composable
 fun SatraOrb(
     state: SatraOrbState,

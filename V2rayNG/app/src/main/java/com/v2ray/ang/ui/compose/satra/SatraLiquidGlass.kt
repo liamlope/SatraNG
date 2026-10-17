@@ -25,13 +25,9 @@ import androidx.compose.ui.unit.dp
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 
 /**
- * Satra Liquid Glass surface — Apple Liquid Glass–inspired chrome for AndroidX Compose.
+ * Legacy lightweight glass helpers kept for non-shell screens.
  *
- * Engine strategy (see project plan):
- * - API 31+: frosted translucent fill + specular rim (RenderEffect blur when available via theme).
- * - Below: translucent scrim + rim (same visual language, no live lens).
- * Kyant0/backdrop (API 33+, CMP) and Abdullajon LiquidGlass (Maven pending) can replace
- * this facade once validated in CI without breaking minSdk 24.
+ * Prefer [com.v2ray.ang.ui.compose.liquid] (Abdullajon-backed SatraGlass facade) for Home chrome.
  */
 object SatraLiquid {
     val ContinuityRadius = 28.dp

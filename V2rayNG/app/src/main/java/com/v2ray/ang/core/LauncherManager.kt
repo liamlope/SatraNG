@@ -27,6 +27,7 @@ object LauncherManager {
             return false
         }
         try {
+            MmkvManager.encodeSettings(AppConfig.PREF_USER_REQUESTED_STOP, false)
             startContextService(context)
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "LauncherManager: ${e.message}", e)
@@ -44,6 +45,7 @@ object LauncherManager {
         }
 
         try {
+            MmkvManager.encodeSettings(AppConfig.PREF_USER_REQUESTED_STOP, false)
             startContextService(context)
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "LauncherManager: ${e.message}", e)
@@ -52,13 +54,19 @@ object LauncherManager {
     }
 
     fun stopService(context: Context) {
-        //context.toast(R.string.toast_services_stop)
+        // User-initiated stop (UI, QS, notification, widget) — blocks Auto reconnect.
+        MmkvManager.encodeSettings(AppConfig.PREF_USER_REQUESTED_STOP, true)
         MessageHelper.sendMsg2Service(context, AppConfig.MSG_STATE_STOP, "")
     }
 
     /** Restarts the active daemon without starting a stopped service. */
     fun restartService(context: Context) {
         MessageHelper.sendMsg2Service(context, AppConfig.MSG_STATE_RESTART, "")
+    }
+
+    fun startServiceClearingUserStop(context: Context, guid: String? = null) {
+        MmkvManager.encodeSettings(AppConfig.PREF_USER_REQUESTED_STOP, false)
+        startService(context, guid)
     }
 
     /** Restarts the active daemon, or delegates to the caller's permission-aware start flow. */

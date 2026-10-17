@@ -95,6 +95,25 @@ class MainActivity : HelperBaseComponentActivity() {
         mainViewModel.onAction(MainAction.Initialize)
 
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
+
+        lifecycleScope.launch {
+            var last = mainViewModel.autoReconnectRequest.value
+            mainViewModel.autoReconnectRequest.collect { tick ->
+                if (tick > last) {
+                    last = tick
+                    if (!mainViewModel.uiState.value.isRunning) {
+                        requestServiceStart()
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (mainViewModel.uiState.value.isRunning) {
+            mainViewModel.refreshExitGeoForSelectedServer(delayMs = 0L)
+        }
     }
 
     @Composable
@@ -160,8 +179,11 @@ class MainActivity : HelperBaseComponentActivity() {
 
     private fun handleFabAction() {
         if (mainViewModel.uiState.value.isRunning) {
+            mainViewModel.markUserRequestedStop()
             LauncherManager.stopService(this)
         } else {
+            mainViewModel.markUserRequestedStart()
+            mainViewModel.prepareConnectGuid()
             requestServiceStart()
         }
     }

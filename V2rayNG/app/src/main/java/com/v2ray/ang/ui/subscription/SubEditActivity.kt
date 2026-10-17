@@ -3,16 +3,20 @@ package com.v2ray.ang.ui.subscription
 import android.os.Bundle
 import android.text.TextUtils
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -137,6 +141,10 @@ fun SubEditScreen(
     var allowInsecureUrl by rememberSaveable { mutableStateOf(initial.allowInsecureUrl) }
     var prevProfile by rememberSaveable { mutableStateOf(initial.prevProfile ?: "") }
     var nextProfile by rememberSaveable { mutableStateOf(initial.nextProfile ?: "") }
+    var showUsage by rememberSaveable { mutableStateOf(initial.showUsage) }
+    var showExpire by rememberSaveable { mutableStateOf(initial.showExpire) }
+    var showAnnounce by rememberSaveable { mutableStateOf(initial.showAnnounce) }
+    var showSupportLinks by rememberSaveable { mutableStateOf(initial.showSupportLinks) }
 
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
     val confirmRemove = MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
@@ -155,6 +163,11 @@ fun SubEditScreen(
         subItem.prevProfile = prevProfile
         subItem.nextProfile = nextProfile
         subItem.allowInsecureUrl = allowInsecureUrl
+        subItem.showUsage = showUsage
+        subItem.showExpire = showExpire
+        subItem.showAnnounce = showAnnounce
+        subItem.showSupportLinks = showSupportLinks
+        subItem.displayPrefsVersion = 1
         return subItem
     }
 
@@ -246,6 +259,33 @@ fun SubEditScreen(
                 title = stringResource(R.string.sub_allow_insecure_url),
                 checked = allowInsecureUrl,
                 onCheckedChange = { allowInsecureUrl = it }
+            )
+            SettingsSwitchItem(
+                title = stringResource(R.string.satra_sub_show_usage),
+                checked = showUsage,
+                onCheckedChange = { showUsage = it }
+            )
+            SettingsSwitchItem(
+                title = stringResource(R.string.satra_sub_show_expire),
+                checked = showExpire,
+                onCheckedChange = { showExpire = it }
+            )
+            SettingsSwitchItem(
+                title = stringResource(R.string.satra_sub_show_announce),
+                checked = showAnnounce,
+                onCheckedChange = { showAnnounce = it }
+            )
+            SettingsSwitchItem(
+                title = stringResource(R.string.satra_sub_show_support),
+                checked = showSupportLinks,
+                onCheckedChange = { showSupportLinks = it }
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.satra_sub_device_limit_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
             FormDropdownField(
                 label = stringResource(R.string.sub_setting_pre_profile),

@@ -25,7 +25,30 @@ data class SubscriptionItem(
     var supportUrl: String? = null,
     var profileWebPageUrl: String? = null,
     var profileUpdateInterval: Long = 0L, // hours from Profile-Update-Interval
+
+    /**
+     * Per-sub Home display toggles (Liquid Glass 2D).
+     * Gson defaults missing booleans to false; [displayPrefsVersion] gates migration
+     * so older stored JSON keeps prior “show everything” UX.
+     */
+    var displayPrefsVersion: Int = 0,
+    var showUsage: Boolean = true,
+    var showExpire: Boolean = true,
+    var showAnnounce: Boolean = true,
+    var showSupportLinks: Boolean = true,
 ) {
+    /** Apply after Gson decode so missing toggles stay ON for legacy records. */
+    fun ensureDisplayDefaults(): SubscriptionItem {
+        if (displayPrefsVersion < 1) {
+            showUsage = true
+            showExpire = true
+            showAnnounce = true
+            showSupportLinks = true
+            displayPrefsVersion = 1
+        }
+        return this
+    }
+
     fun usedBytes(): Long = (upload + download).coerceAtLeast(0L)
 
     fun remainingBytes(): Long? {

@@ -18,7 +18,9 @@ import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.matchesPattern
 import com.v2ray.ang.extension.moveItem
+import com.v2ray.ang.handler.AutoConnectController
 import com.v2ray.ang.handler.GeoIpResolver
+import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.base.BaseViewModel
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.CancellationException
@@ -87,6 +89,10 @@ class MainViewModel(
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
+    private val _autoReconnectRequest = MutableStateFlow(0)
+    /** Increments when Auto policy wants Activity to restart the service. */
+    val autoReconnectRequest: StateFlow<Int> = _autoReconnectRequest.asStateFlow()
+
     // ---------- Keyword filtering ----------
     @Volatile
     private var keywordFilter: String = ""
@@ -126,13 +132,25 @@ class MainViewModel(
         }
     }
 
+    private var reconnectJob: Job? = null
+    private var reconnectAttempt = 0
+    @Volatile private var expectUserStop = false
+
     private fun handleServiceEvent(event: MainServiceEvent) {
         when (event) {
             MainServiceEvent.StateRunning -> updateRunningState(true, clearTestingText = false)
-            MainServiceEvent.StateNotRunning -> updateRunningState(false, clearTestingText = false)
+            MainServiceEvent.StateNotRunning -> {
+                val wasRunning = uiState.value.isRunning
+                updateRunningState(false, clearTestingText = false)
+                if (wasRunning) maybeScheduleAutoReconnect()
+            }
             MainServiceEvent.StateStartSuccess -> {
                 toastSuccess(R.string.toast_services_success)
                 updateRunningState(true)
+                reconnectAttempt = 0
+                expectUserStop = false
+                MmkvManager.encodeSettings(AppConfig.PREF_USER_REQUESTED_STOP, false)
+                _uiState.update { it.copy(autoReconnecting = false) }
                 refreshExitGeoForSelectedServer()
             }
 
@@ -143,9 +161,13 @@ class MainViewModel(
                     toastError(R.string.toast_services_failure)
                 }
                 updateRunningState(false)
+                maybeScheduleAutoReconnect()
             }
 
-            MainServiceEvent.StateStopSuccess -> updateRunningState(false)
+            MainServiceEvent.StateStopSuccess -> {
+                updateRunningState(false)
+                maybeScheduleAutoReconnect()
+            }
             is MainServiceEvent.MeasureDelayResult -> {
                 if (!uiState.value.isRunning || !testRequests.completeCurrent(event.requestId)) return
                 _uiState.update { it.copy(isTesting = testRequests.isTesting, status = MainStatus.ConnectionTest(event.result)) }
@@ -922,6 +944,84 @@ class MainViewModel(
         _uiState.update { it.copy(locateTarget = null) }
     }
 
+    // ---------- Auto-connect / user stop ----------
+    fun isAutoConnectEnabled(): Boolean =
+        MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_CONNECT, true)
+
+    fun setAutoConnectEnabled(enabled: Boolean) {
+        MmkvManager.encodeSettings(AppConfig.PREF_AUTO_CONNECT, enabled)
+    }
+
+    fun markUserRequestedStop() {
+        expectUserStop = true
+        reconnectJob?.cancel()
+        reconnectAttempt = 0
+        MmkvManager.encodeSettings(AppConfig.PREF_USER_REQUESTED_STOP, true)
+    }
+
+    fun markUserRequestedStart() {
+        expectUserStop = false
+        reconnectJob?.cancel()
+        reconnectAttempt = 0
+        MmkvManager.encodeSettings(AppConfig.PREF_USER_REQUESTED_STOP, false)
+    }
+
+    fun prepareConnectGuid(): String? {
+        val groupId = uiState.value.selectedGroupId
+        val candidates = if (groupId.isNotBlank()) {
+            MmkvManager.decodeServerList(groupId)
+        } else {
+            uiState.value.groups.flatMap { MmkvManager.decodeServerList(it.id) }
+        }
+        val now = System.currentTimeMillis()
+        val samples = candidates.mapNotNull { guid ->
+            val aff = MmkvManager.decodeServerAffiliationInfo(guid) ?: return@mapNotNull null
+            val delay = aff.testDelayMillis
+            if (delay <= 0L) return@mapNotNull null
+            // Prefer geoUpdatedAt as a proxy for last measurement age when available.
+            val measuredAt = aff.geoUpdatedAt.takeIf { it > 0L } ?: now
+            AutoConnectController.PingSample(guid, delay, measuredAt)
+        }
+        val fresh = samples.any { now - it.measuredAtMs <= AutoConnectController.PING_FRESH_MS }
+        if (isAutoConnectEnabled() && !fresh && candidates.isNotEmpty()) {
+            // Kick a real-ping pass so the next Best selection has fresh data.
+            testAllRealPing()
+        }
+        val best = AutoConnectController.selectBestGuid(
+            candidates = candidates,
+            samples = samples,
+            nowMs = now,
+            selectedGuid = uiState.value.selectedGuid,
+            autoConnect = isAutoConnectEnabled(),
+        )
+        if (best != null && best != uiState.value.selectedGuid) {
+            updateSelectedGuid(best)
+        }
+        return best ?: uiState.value.selectedGuid
+    }
+
+    private fun maybeScheduleAutoReconnect() {
+        val userStop = expectUserStop ||
+            MmkvManager.decodeSettingsBool(AppConfig.PREF_USER_REQUESTED_STOP, false)
+        if (!AutoConnectController.shouldReconnect(
+                autoConnect = isAutoConnectEnabled(),
+                userRequestedStop = userStop,
+                unexpectedDrop = true,
+            )
+        ) {
+            return
+        }
+        val delayMs = AutoConnectController.backoffMsForAttempt(reconnectAttempt) ?: return
+        reconnectJob?.cancel()
+        reconnectJob = viewModelScope.launch {
+            _uiState.update { it.copy(autoReconnecting = true, status = MainStatus.Testing) }
+            delay(delayMs)
+            reconnectAttempt++
+            prepareConnectGuid()
+            _autoReconnectRequest.update { it + 1 }
+        }
+    }
+
     // ---------- Running state ----------
     private fun updateRunningState(running: Boolean, clearTestingText: Boolean = true) {
         if (!running || clearTestingText) testRequests.invalidateCurrent()
@@ -939,9 +1039,10 @@ class MainViewModel(
      * After connect, resolve the public exit IP through the local proxy and store country
      * for the selected profile (tunnel configs must not use the inbound server IP).
      */
-    private fun refreshExitGeoForSelectedServer() {
+    /** Resolve exit-IP flag after connect, or on resume while the tunnel is up. */
+    fun refreshExitGeoForSelectedServer(delayMs: Long = 900L) {
         viewModelScope.launch(Dispatchers.IO) {
-            delay(900)
+            if (delayMs > 0L) delay(delayMs)
             if (!uiState.value.isRunning) return@launch
             val guid = dataSource.getSelectServer()?.takeIf { it.isNotBlank() } ?: return@launch
             val result = GeoIpResolver.resolveExitAfterConnect(guid)
@@ -957,6 +1058,7 @@ class MainViewModel(
         selectedGroupLoadJob?.cancel()
         reloadJob?.cancel()
         filterJob?.cancel()
+        reconnectJob?.cancel()
         cancelAllPing()
         dataSource.close()
         super.onCleared()

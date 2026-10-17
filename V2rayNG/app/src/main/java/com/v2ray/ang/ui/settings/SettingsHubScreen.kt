@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,8 +23,14 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.AppConfig
+import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
+import com.v2ray.ang.ui.compose.liquid.SatraGlassCard
+import com.v2ray.ang.ui.compose.liquid.SatraGlassProvider
+import com.v2ray.ang.ui.compose.liquid.SatraGlassToggle
+import com.v2ray.ang.ui.compose.liquid.onGlassPrimary
+import com.v2ray.ang.ui.compose.liquid.onGlassSecondary
 import com.v2ray.ang.ui.compose.satra.SatraCard
 import com.v2ray.ang.ui.compose.satra.SatraRowAction
 import com.v2ray.ang.ui.compose.satra.SatraSectionTitle
@@ -42,6 +46,7 @@ fun SettingsHubScreen(
     onOpenRouting: () -> Unit,
     onOpenNotifications: () -> Unit,
     onApplyTunnelPresets: () -> Unit,
+    onOpenLiquidCatalog: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val scroll = rememberScrollState()
@@ -62,24 +67,25 @@ fun SettingsHubScreen(
         stringResource(R.string.satra_settings_off)
     }
 
+    SatraGlassProvider(modifier = modifier) {
     Column(
-        modifier
+        Modifier
             .verticalScroll(scroll)
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        SatraCard {
+        SatraGlassCard {
             Text(
                 stringResource(R.string.satra_settings_hub_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = onGlassPrimary(),
             )
             Spacer(Modifier.height(6.dp))
             Text(
                 stringResource(R.string.satra_settings_hub_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = onGlassSecondary(),
             )
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -96,7 +102,7 @@ fun SettingsHubScreen(
         }
 
         SatraSectionTitle(stringResource(R.string.satra_settings_section_connection))
-        SatraCard {
+        SatraGlassCard {
             SatraRowAction(
                 title = stringResource(R.string.title_mode_settings),
                 subtitle = stringResource(R.string.satra_settings_cat_mode_sub),
@@ -118,7 +124,7 @@ fun SettingsHubScreen(
         }
 
         SatraSectionTitle(stringResource(R.string.satra_settings_section_apps))
-        SatraCard {
+        SatraGlassCard {
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -134,21 +140,19 @@ fun SettingsHubScreen(
                     Text(
                         stringResource(R.string.satra_settings_per_app_master),
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = onGlassPrimary(),
                     )
                     Text(
                         stringResource(R.string.satra_settings_per_app_master_sub),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = onGlassSecondary(),
                     )
                 }
-                Switch(
+                SatraGlassToggle(
                     checked = hubState.perAppProxyEnabled,
                     onCheckedChange = onPerAppToggle,
-                    colors = SwitchDefaults.colors(
-                        checkedTrackColor = SatraTokens.Teal.copy(alpha = 0.55f),
-                        checkedThumbColor = SatraTokens.TealDeep,
-                    ),
+                    onLabel = stringResource(R.string.satra_settings_on),
+                    offLabel = stringResource(R.string.satra_settings_off),
                 )
             }
             SatraRowAction(
@@ -160,7 +164,7 @@ fun SettingsHubScreen(
         }
 
         SatraSectionTitle(stringResource(R.string.satra_settings_section_experience))
-        SatraCard {
+        SatraGlassCard {
             SatraRowAction(
                 title = stringResource(R.string.title_ui_settings),
                 subtitle = stringResource(R.string.satra_settings_cat_ui_sub),
@@ -182,7 +186,7 @@ fun SettingsHubScreen(
         }
 
         SatraSectionTitle(stringResource(R.string.satra_settings_section_performance))
-        SatraCard {
+        SatraGlassCard {
             SatraRowAction(
                 title = stringResource(R.string.title_mux_settings),
                 subtitle = stringResource(R.string.satra_settings_cat_mux_sub),
@@ -204,7 +208,7 @@ fun SettingsHubScreen(
         }
 
         SatraSectionTitle(stringResource(R.string.satra_settings_section_system))
-        SatraCard {
+        SatraGlassCard {
             SatraRowAction(
                 title = stringResource(R.string.title_advanced),
                 subtitle = stringResource(R.string.satra_settings_cat_advanced_sub),
@@ -223,10 +227,19 @@ fun SettingsHubScreen(
                 iconRes = R.drawable.ic_privacy_24dp,
                 onClick = { onOpen(SettingsDestination.Safety) },
             )
+            if (BuildConfig.DEBUG && onOpenLiquidCatalog != null) {
+                SatraRowAction(
+                    title = stringResource(R.string.satra_liquid_catalog),
+                    subtitle = "Debug",
+                    iconRes = R.drawable.ic_stat_satra,
+                    onClick = onOpenLiquidCatalog,
+                )
+            }
         }
 
         Spacer(Modifier.height(8.dp))
         NavigationBarsSpacer()
+    }
     }
 }
 

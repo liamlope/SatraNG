@@ -100,6 +100,9 @@ class SettingsActivity : BaseComponentActivity() {
             onOpenPerAppManage = { startActivity(Intent(this, PerAppProxyActivity::class.java)) },
             onOpenRouting = { startActivity(Intent(this, RoutingSettingActivity::class.java)) },
             onOpenNotifications = { startActivity(Intent(this, NotificationControlActivity::class.java)) },
+            onOpenLiquidCatalog = {
+                startActivity(Intent(this, com.v2ray.ang.ui.catalog.LiquidCatalogActivity::class.java))
+            },
         )
     }
 }
@@ -114,6 +117,7 @@ fun SettingsScreen(
     onOpenPerAppManage: () -> Unit,
     onOpenRouting: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenLiquidCatalog: (() -> Unit)? = null,
 ) {
     val scrollState = rememberScrollState()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
@@ -278,6 +282,7 @@ fun SettingsScreen(
                         onOpenPerAppManage = onOpenPerAppManage,
                         onOpenRouting = onOpenRouting,
                         onOpenNotifications = onOpenNotifications,
+                        onOpenLiquidCatalog = onOpenLiquidCatalog,
                         onApplyTunnelPresets = {
                             viewModel.applySatraTunnelPresets()
                             localDns = AppConfig.DEFAULT_LOCAL_DNS_ENABLED

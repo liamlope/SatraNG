@@ -569,6 +569,34 @@
     <string name="satra_nav_locations">Locations</string>
     <string name="satra_nav_subs">Subscriptions</string>
     <string name="satra_nav_more">More</string>
+    <string name="satra_nav_configs">کانفیگ‌ها</string>
+    <string name="satra_nav_logs">لاگ</string>
+    <string name="satra_nav_settings">تنظیمات</string>
+    <string name="satra_capsule_connect">وصل شو</string>
+    <string name="satra_capsule_connecting">در حال اتصال…</string>
+    <string name="satra_capsule_connected">متصل</string>
+    <string name="satra_capsule_failed">اتصال ناموفق</string>
+    <string name="satra_capsule_ready">آماده</string>
+    <string name="satra_capsule_a11y">کنترل VPN: %1$s</string>
+    <string name="satra_home_empty_hint">لینک ساب را از کلیپ‌بورد جای‌گذاری کنید</string>
+    <string name="satra_auto_connect">اتصال خودکار</string>
+    <string name="satra_back">بازگشت</string>
+    <string name="satra_sub_settings">تنظیمات ساب</string>
+    <string name="satra_log_normal">عادی</string>
+    <string name="satra_log_debug">دیباگ</string>
+    <string name="satra_log_trace">تریس</string>
+    <string name="satra_log_copy">کپی</string>
+    <string name="satra_log_clear">پاک کردن</string>
+    <string name="satra_log_share">اشتراک‌گذاری</string>
+    <string name="satra_log_clear_confirm">همه خطوط لاگ پاک شوند؟</string>
+
+    <string name="satra_sub_show_usage">نمایش مصرف</string>
+    <string name="satra_sub_show_expire">نمایش انقضا</string>
+    <string name="satra_sub_show_announce">نمایش اطلاعیه</string>
+    <string name="satra_sub_show_support">نمایش لینک پشتیبانی</string>
+    <string name="satra_sub_device_limit_note">محدودیت دستگاه در هدر استاندارد ساب ارسال نمی‌شود</string>
+    <string name="satra_liquid_catalog">کاتالوگ Liquid Glass</string>
+
     <string name="satra_manage_subscription">Manage subscription</string>
     <string name="satra_sort_by_name">Name</string>
     <string name="satra_sort_by_ping">Ping</string>

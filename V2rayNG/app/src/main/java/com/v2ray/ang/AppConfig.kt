@@ -93,6 +93,10 @@ object AppConfig {
     const val PREF_AUTO_REMOVE_INVALID_AFTER_TEST = "pref_auto_remove_invalid_after_test"
     const val PREF_AUTO_SORT_AFTER_TEST = "pref_auto_sort_after_test"
     const val PREF_REAL_PING_CONCURRENCY = "pref_real_ping_concurrency"
+    /** Auto-select best config and reconnect after unexpected drop. Default ON. */
+    const val PREF_AUTO_CONNECT = "pref_auto_connect"
+    /** Persisted short flag: user stopped VPN manually — blocks auto reconnect. */
+    const val PREF_USER_REQUESTED_STOP = "pref_user_requested_stop"
 
     /** Cache keys. */
     const val CACHE_SUBSCRIPTION_ID = "cache_subscription_id"

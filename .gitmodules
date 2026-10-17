@@ -4,3 +4,6 @@
 [submodule "hev-socks5-tunnel"]
 	path = hev-socks5-tunnel
 	url = https://github.com/heiher/hev-socks5-tunnel
+[submodule "third_party/Abdullajon-LiquidGlass"]
+	path = third_party/Abdullajon-LiquidGlass
+	url = https://github.com/Abdullajon1881/LiquidGlass.git

@@ -239,6 +239,9 @@ dependencies {
     // Reorderable list
     implementation(libs.reorderable)
 
+    // Abdullajon LiquidGlass (pinned submodule via :liquidglass-compose)
+    implementation(project(":liquidglass-compose"))
+
     // Testing Libraries
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)

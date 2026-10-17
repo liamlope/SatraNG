@@ -670,7 +670,8 @@ object MmkvManager {
         decodeSubsList().forEach { key ->
             val json = subStorage.decodeString(key)
             if (!json.isNullOrBlank()) {
-                val item = JsonUtil.fromJsonSafe(json, SubscriptionItem::class.java) ?: SubscriptionItem()
+                val item = (JsonUtil.fromJsonSafe(json, SubscriptionItem::class.java) ?: SubscriptionItem())
+                    .ensureDisplayDefaults()
                 subscriptions.add(SubscriptionCache(key, item))
             }
         }
@@ -716,7 +717,7 @@ object MmkvManager {
      */
     fun decodeSubscription(subscriptionId: String): SubscriptionItem? {
         val json = subStorage.decodeString(subscriptionId) ?: return null
-        return JsonUtil.fromJsonSafe(json, SubscriptionItem::class.java)
+        return JsonUtil.fromJsonSafe(json, SubscriptionItem::class.java)?.ensureDisplayDefaults()
     }
 
     /**
