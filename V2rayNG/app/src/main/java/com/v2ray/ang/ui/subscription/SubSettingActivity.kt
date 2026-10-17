@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,16 +14,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,9 +32,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,14 +46,21 @@ import com.v2ray.ang.extension.toast
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
 import com.v2ray.ang.ui.base.BaseComponentActivity
-import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
-import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
+import com.v2ray.ang.ui.compose.liquid.ConnectionAtmosphereState
+import com.v2ray.ang.ui.compose.liquid.SatraAtmosphere
+import com.v2ray.ang.ui.compose.liquid.SatraGlassCard
+import com.v2ray.ang.ui.compose.liquid.SatraGlassIconButton
+import com.v2ray.ang.ui.compose.liquid.SatraGlassProvider
+import com.v2ray.ang.ui.compose.liquid.SatraGlassToggle
+import com.v2ray.ang.ui.compose.liquid.onGlassPrimary
+import com.v2ray.ang.ui.compose.liquid.onGlassSecondary
+import com.v2ray.ang.ui.compose.satra.SatraTokens
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.Utils
 import sh.calvin.reorderable.ReorderableItem
@@ -104,7 +114,7 @@ class SubSettingActivity : BaseComponentActivity() {
 @Composable
 fun SubSettingScreen(
     viewModel: SubscriptionsViewModel,
-    isLoading: Boolean,
+    @Suppress("UNUSED_PARAMETER") isLoading: Boolean,
     onBackClick: () -> Unit,
     onAddClick: () -> Unit,
     onSubUpdate: () -> Unit,
@@ -126,121 +136,180 @@ fun SubSettingScreen(
         viewModel.move(from.index, to.index)
     }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0),
-        topBar = {
-            AppTopBar(
-                title = stringResource(R.string.title_sub_setting),
-                onBackClick = onBackClick,
-                isLoading = isLoading,
-                actions = {
-                    IconButton(onClick = onAddClick) {
-                        Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add_subscription))
-                    }
-                    IconButton(onClick = { showUpdateDialog = true }) {
-                        Icon(painterResource(R.drawable.ic_restore_24dp), contentDescription = stringResource(R.string.acc_update_subscriptions))
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            state = lazyListState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScrollbar(lazyListState),
-            contentPadding = NavigationBarsBottomPadding()
-        ) {
-            itemsIndexed(
-                items = subscriptions,
-                key = { _, item -> item.guid }
-            ) { _, subCache ->
-                ReorderableItem(reorderableState, key = subCache.guid) { isDragging ->
-                    ReorderableListItem(
-                        scope = this,
-                        isDragging = isDragging
+    SatraAtmosphere(state = ConnectionAtmosphereState.Idle) {
+        SatraGlassProvider {
+            Scaffold(
+                containerColor = Color.Transparent,
+                contentWindowInsets = WindowInsets(0),
+            ) { innerPadding ->
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(horizontal = 20.dp),
+                ) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        SatraGlassIconButton(
+                            onClick = onBackClick,
+                            modifier = Modifier.size(44.dp).clip(CircleShape),
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = subCache.subscription.remarks,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                if (subCache.subscription.url.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = subCache.subscription.url,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = Utils.formatTimestamp(subCache.subscription.lastUpdated),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Icon(
+                                painterResource(R.drawable.ic_arrow_back_24dp),
+                                contentDescription = stringResource(R.string.satra_back),
+                                tint = onGlassPrimary(),
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                        Spacer(Modifier.size(12.dp))
+                        Text(
+                            stringResource(R.string.satra_subs_title),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = onGlassPrimary(),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f),
+                        )
+                        SatraGlassIconButton(
+                            onClick = onAddClick,
+                            modifier = Modifier.size(44.dp).clip(CircleShape),
+                        ) {
+                            Icon(
+                                painterResource(R.drawable.ic_add_24dp),
+                                contentDescription = stringResource(R.string.acc_add_subscription),
+                                tint = SatraTokens.TealDeep,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                        Spacer(Modifier.size(8.dp))
+                        SatraGlassIconButton(
+                            onClick = { showUpdateDialog = true },
+                            modifier = Modifier.size(44.dp).clip(CircleShape),
+                        ) {
+                            Icon(
+                                painterResource(R.drawable.ic_restore_24dp),
+                                contentDescription = stringResource(R.string.acc_update_subscriptions),
+                                tint = SatraTokens.TealDeep,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                    }
 
-                            Column(
-                                horizontalAlignment = Alignment.End,
-                                modifier = Modifier.padding(start = 8.dp)
-                            ) {
-                                Row {
-                                    if (subCache.subscription.url.isNotEmpty()) {
-                                        IconButton(onClick = {
-                                            shareTarget = Pair(subCache.guid, subCache.subscription.url)
-                                        }) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_share_24dp),
-                                                contentDescription = stringResource(R.string.acc_share_subscription)
-                                            )
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScrollbar(lazyListState),
+                        contentPadding = NavigationBarsBottomPadding(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        itemsIndexed(
+                            items = subscriptions,
+                            key = { _, item -> item.guid }
+                        ) { _, subCache ->
+                            ReorderableItem(reorderableState, key = subCache.guid) { isDragging ->
+                                ReorderableListItem(
+                                    scope = this,
+                                    isDragging = isDragging,
+                                ) {
+                                    SatraGlassCard {
+                                        Row(
+                                            Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Column(Modifier.weight(1f)) {
+                                                Text(
+                                                    text = subCache.subscription.remarks,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = onGlassPrimary(),
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                                if (subCache.subscription.url.isNotEmpty()) {
+                                                    Spacer(Modifier.height(4.dp))
+                                                    Text(
+                                                        text = subCache.subscription.url,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = onGlassSecondary(),
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                    )
+                                                }
+                                                Spacer(Modifier.height(4.dp))
+                                                Text(
+                                                    text = Utils.formatTimestamp(subCache.subscription.lastUpdated),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = onGlassSecondary(),
+                                                )
+                                            }
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                Row {
+                                                    if (subCache.subscription.url.isNotEmpty()) {
+                                                        Icon(
+                                                            painter = painterResource(R.drawable.ic_share_24dp),
+                                                            contentDescription = stringResource(R.string.acc_share_subscription),
+                                                            tint = onGlassSecondary(),
+                                                            modifier = Modifier
+                                                                .size(36.dp)
+                                                                .clickable {
+                                                                    shareTarget = Pair(
+                                                                        subCache.guid,
+                                                                        subCache.subscription.url,
+                                                                    )
+                                                                }
+                                                                .padding(6.dp),
+                                                        )
+                                                    }
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.ic_edit_24dp),
+                                                        contentDescription = stringResource(R.string.acc_edit),
+                                                        tint = onGlassSecondary(),
+                                                        modifier = Modifier
+                                                            .size(36.dp)
+                                                            .clickable { onEditSub(subCache.guid) }
+                                                            .padding(6.dp),
+                                                    )
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.ic_delete_24dp),
+                                                        contentDescription = stringResource(R.string.acc_delete),
+                                                        tint = SatraTokens.Danger,
+                                                        modifier = Modifier
+                                                            .size(36.dp)
+                                                            .clickable {
+                                                                if (confirmRemove) {
+                                                                    removeTarget = SubscriptionDeleteTarget(
+                                                                        subCache.guid,
+                                                                        subCache.subscription.remarks,
+                                                                    )
+                                                                } else {
+                                                                    onRemoveSub(subCache.guid)
+                                                                }
+                                                            }
+                                                            .padding(6.dp),
+                                                    )
+                                                }
+                                                Spacer(Modifier.height(6.dp))
+                                                SatraGlassToggle(
+                                                    checked = subCache.subscription.enabled,
+                                                    onCheckedChange = { checked ->
+                                                        val updated = subCache.subscription.copy()
+                                                        updated.enabled = checked
+                                                        viewModel.update(subCache.guid, updated)
+                                                    },
+                                                    onLabel = stringResource(R.string.satra_settings_on),
+                                                    offLabel = stringResource(R.string.satra_settings_off),
+                                                )
+                                            }
                                         }
                                     }
-                                    IconButton(onClick = { onEditSub(subCache.guid) }) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_edit_24dp),
-                                            contentDescription = stringResource(R.string.acc_edit)
-                                        )
-                                    }
-                                    IconButton(onClick = {
-                                        if (confirmRemove) removeTarget = SubscriptionDeleteTarget(subCache.guid, subCache.subscription.remarks)
-                                        else onRemoveSub(subCache.guid)
-                                    }) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_delete_24dp),
-                                            contentDescription = stringResource(R.string.acc_delete)
-                                        )
-                                    }
                                 }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Switch(
-                                    checked = subCache.subscription.enabled,
-                                    onCheckedChange = { checked ->
-                                        val updated = subCache.subscription.copy()
-                                        updated.enabled = checked
-                                        viewModel.update(subCache.guid, updated)
-                                    },
-                                    modifier = Modifier.scale(0.7f),
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                                        checkedTrackColor = MaterialTheme.colorScheme.secondary
-                                    )
-                                )
                             }
                         }
                     }
-                    ItemDivider()
                 }
             }
         }
@@ -262,7 +331,6 @@ fun SubSettingScreen(
         )
     }
 
-    // QR Code Dialog
     if (qrCodeBitmap != null) {
         QRCodeDialog(
             bitmap = qrCodeBitmap,
@@ -283,7 +351,6 @@ fun SubSettingScreen(
     }
 
     if (showUpdateDialog) {
-
         var updateSubscription by rememberMmkvBool(AppConfig.PREF_UPDATE_SUBSCRIPTION, false)
         var autoTestAfterUpdateSubscription by rememberMmkvBool(AppConfig.PREF_AUTO_TEST_AFTER_UPDATE_SUBSCRIPTION, false)
         var autoRemoveInvalidAfterTest by rememberMmkvBool(AppConfig.PREF_AUTO_REMOVE_INVALID_AFTER_TEST, false)

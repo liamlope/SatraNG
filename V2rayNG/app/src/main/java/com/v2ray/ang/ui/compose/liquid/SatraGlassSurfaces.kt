@@ -42,9 +42,9 @@ fun satraChromeStyle(
 ): GlassStyle {
     val dark = LocalDarkTheme.current
     val tint = when {
-        connectedTint -> SatraTokens.Teal.copy(alpha = if (dark) 0.12f else 0.10f)
-        dark -> Color(0x99142433)
-        else -> Color(0xA6F5FAF8)
+        connectedTint -> SatraTokens.Teal.copy(alpha = if (dark) 0.16f else 0.12f)
+        dark -> Color(0x99141418)
+        else -> Color(0xB3FFFFFF)
     }
     return GlassStyle.Regular.copy(
         shape = if (capsule) GlassShape.Capsule else GlassShape.RoundedRectangle(corner),
@@ -99,8 +99,8 @@ fun SatraGlassSurface(
         )
     } else {
         val dark = LocalDarkTheme.current
-        val fill = if (dark) Color(0xCC142433) else Color(0xD9F5FAF8)
-        val border = if (dark) Color.White.copy(0.18f) else Color.White.copy(0.42f)
+        val fill = if (dark) Color(0xCC16161A) else Color(0xE6FFFFFF)
+        val border = if (dark) Color.White.copy(0.12f) else Color.Black.copy(0.06f)
         Modifier.clip(clipShape).background(fill, clipShape).border(1.dp, border, clipShape)
     }
 

@@ -19,6 +19,16 @@
     <string name="satra_capsule_ready">آماده</string>
     <string name="satra_capsule_a11y">کنترل VPN: %1$s</string>
     <string name="satra_home_empty_hint">لینک ساب را از کلیپ‌بورد جای‌گذاری کنید</string>
+    <string name="satra_home_headline_ready">اتصال را شروع کنید</string>
+    <string name="satra_home_headline_connected">شما محافظت می‌شوید</string>
+    <string name="satra_home_headline_connecting">در حال امن‌سازی مسیر…</string>
+    <string name="satra_home_headline_failed">اتصال برقرار نشد</string>
+    <string name="satra_home_region_fallback">لوکیشن را انتخاب کنید</string>
+    <string name="satra_settings_logs">لاگ‌ها</string>
+    <string name="satra_settings_logs_subtitle">تشخیص و خروجی هسته</string>
+    <string name="satra_subs_title">اشتراک‌ها</string>
+    <string name="satra_subs_add">افزودن</string>
+    <string name="satra_subs_enabled">فعال</string>
     <string name="satra_auto_connect">اتصال خودکار</string>
     <string name="satra_back">بازگشت</string>
     <string name="satra_sub_settings">تنظیمات ساب</string>

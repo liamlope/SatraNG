@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -40,11 +42,15 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -52,13 +58,13 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.ServersCache
 import com.v2ray.ang.dto.entities.SubscriptionItem
-import com.v2ray.ang.extension.toTrafficString
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import com.v2ray.ang.ui.compose.liquid.AtmosphereStateMachine
@@ -69,6 +75,7 @@ import com.v2ray.ang.ui.compose.liquid.SatraGlassCapsule
 import com.v2ray.ang.ui.compose.liquid.SatraGlassCard
 import com.v2ray.ang.ui.compose.liquid.SatraGlassIconButton
 import com.v2ray.ang.ui.compose.liquid.SatraGlassProvider
+import com.v2ray.ang.ui.compose.liquid.SatraGlassSurface
 import com.v2ray.ang.ui.compose.liquid.onGlassPrimary
 import com.v2ray.ang.ui.compose.liquid.onGlassSecondary
 import com.v2ray.ang.ui.compose.liquid.powerCapsuleState
@@ -77,20 +84,21 @@ import com.v2ray.ang.ui.compose.satra.SatraPingBadge
 import com.v2ray.ang.ui.compose.satra.SatraTokens
 import com.v2ray.ang.ui.compose.satra.SatraUsageRing
 import com.v2ray.ang.ui.compose.satra.rememberReduceMotion
+import com.v2ray.ang.ui.logcat.LogcatActivity
 import com.v2ray.ang.ui.main.MainAction
 import com.v2ray.ang.ui.main.MainDestination
 import com.v2ray.ang.ui.main.MainDialogs
 import com.v2ray.ang.ui.main.MainStatus
 import com.v2ray.ang.ui.main.MainViewModel
 import com.v2ray.ang.ui.main.ServerDeleteTarget
-import com.v2ray.ang.ui.main.ServerRowUiModel
 import com.v2ray.ang.ui.main.ShareMethodDialog
+import com.v2ray.ang.ui.main.ServerRowUiModel
 import com.v2ray.ang.ui.main.buildServerRowUiModel
 import com.v2ray.ang.ui.settings.SettingsActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.concurrent.TimeUnit
 
 private fun loadServersForGroup(groupId: String): List<ServersCache> {
     return MmkvManager.decodeServerList(groupId).mapNotNull { guid ->
@@ -115,6 +123,7 @@ fun SatraHomeScreen(
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
     val reduce = rememberReduceMotion()
+    val scope = rememberCoroutineScope()
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var ceremony by remember { mutableStateOf(false) }
@@ -123,7 +132,6 @@ fun SatraHomeScreen(
     var autoConnect by remember {
         mutableStateOf(mainViewModel.isAutoConnectEnabled())
     }
-    var openConfigsSubId by remember { mutableStateOf<String?>(null) }
     var showDelAllConfirm by remember { mutableStateOf(false) }
     var showDelDuplicateConfirm by remember { mutableStateOf(false) }
     var showDelInvalidConfirm by remember { mutableStateOf(false) }
@@ -137,8 +145,9 @@ fun SatraHomeScreen(
     val allRows = remember { mutableStateOf<List<ServerRowUiModel>>(emptyList()) }
     val subs = remember { mutableStateOf<List<Pair<String, SubscriptionItem>>>(emptyList()) }
     val activeSub = remember { mutableStateOf<Pair<String, SubscriptionItem>?>(null) }
+    var subsEpoch by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(uiState.groups, uiState.selectedGroupId, uiState.isTesting, uiState.isRunning) {
+    LaunchedEffect(uiState.groups, uiState.selectedGroupId, uiState.isTesting, uiState.isRunning, subsEpoch) {
         withContext(Dispatchers.IO) {
             val rows = mutableListOf<ServerRowUiModel>()
             uiState.groups.forEach { group ->
@@ -215,10 +224,11 @@ fun SatraHomeScreen(
         QRCodeDialog(bitmap = shareQRCodeBitmap, onDismiss = { onAction(MainAction.DismissQRCodeDialog) })
     }
 
+    // Home · Configs · Subs · Settings
     val navItems = listOf(
         Triple(0, R.string.satra_nav_home, R.drawable.ic_stat_satra),
-        Triple(1, R.string.satra_nav_configs, R.drawable.ic_subscriptions_24dp),
-        Triple(2, R.string.satra_nav_logs, R.drawable.ic_logcat_24dp),
+        Triple(1, R.string.satra_nav_configs, R.drawable.ic_flash_on_24dp),
+        Triple(2, R.string.satra_nav_subs, R.drawable.ic_subscriptions_24dp),
         Triple(3, R.string.satra_nav_settings, R.drawable.ic_settings_24dp),
     )
 
@@ -246,7 +256,6 @@ fun SatraHomeScreen(
                 ) { current ->
                     when (current) {
                         0 -> LiquidHomeTab(
-                            isRunning = isRunning,
                             capsuleState = capsule,
                             selectedRow = selectedRow,
                             subscription = activeSub.value?.second,
@@ -266,10 +275,7 @@ fun SatraHomeScreen(
                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onAction(MainAction.ImportClipboard)
                             },
-                            onOpenConfigs = { subId ->
-                                openConfigsSubId = subId
-                                tab = 1
-                            },
+                            onOpenConfigs = { tab = 1 },
                             onRefreshSub = { onAction(MainAction.UpdateSubscriptions) },
                         )
 
@@ -278,9 +284,9 @@ fun SatraHomeScreen(
                             subscriptions = subs.value,
                             rows = allRows.value,
                             selectedGuid = selectedGuid,
+                            selectedGroupId = uiState.selectedGroupId,
                             autoConnect = autoConnect,
                             isTesting = uiState.isTesting,
-                            initialSubId = openConfigsSubId,
                             onAutoConnectChange = {
                                 autoConnect = it
                                 mainViewModel.setAutoConnectEnabled(it)
@@ -291,17 +297,33 @@ fun SatraHomeScreen(
                             },
                             onPingAll = { onAction(MainAction.TestRealAllServers) },
                             onRefreshSubs = { onAction(MainAction.UpdateSubscriptions) },
-                            onOpenSubSettings = {
-                                onNavigate(MainDestination.Subscriptions)
-                            },
                         )
 
-                        2 -> SatraLogsTab(modifier = Modifier.fillMaxSize().statusBarsPadding())
+                        2 -> SatraSubsTab(
+                            modifier = Modifier.fillMaxSize().statusBarsPadding(),
+                            subscriptions = subs.value,
+                            serverCounts = allRows.value
+                                .groupingBy { it.profile.subscriptionId }
+                                .eachCount(),
+                            onRefresh = { onAction(MainAction.UpdateSubscriptions) },
+                            onToggleEnabled = { id, enabled ->
+                                scope.launch(Dispatchers.IO) {
+                                    val sub = MmkvManager.decodeSubscription(id) ?: return@launch
+                                    sub.enabled = enabled
+                                    MmkvManager.encodeSubscription(id, sub)
+                                    withContext(Dispatchers.Main) { subsEpoch++ }
+                                }
+                            },
+                            onOpenEdit = { },
+                        )
 
                         else -> SettingsEmbedTab(
                             modifier = Modifier.fillMaxSize().statusBarsPadding(),
                             onOpenFullSettings = {
                                 context.startActivity(Intent(context, SettingsActivity::class.java))
+                            },
+                            onOpenLogs = {
+                                context.startActivity(Intent(context, LogcatActivity::class.java))
                             },
                             onNavigate = onNavigate,
                         )
@@ -311,7 +333,6 @@ fun SatraHomeScreen(
         }
     }
 
-    // Minimum connect ceremony (~700–900ms) even if the service ACKs early.
     LaunchedEffect(ceremony, isRunning) {
         if (!ceremony) return@LaunchedEffect
         val minMs = SatraMotionSpec.CeremonyMs.toLong().coerceAtLeast(700L)
@@ -330,7 +351,6 @@ fun SatraHomeScreen(
 
 @Composable
 private fun LiquidHomeTab(
-    isRunning: Boolean,
     capsuleState: PowerCapsuleState,
     selectedRow: ServerRowUiModel?,
     subscription: SubscriptionItem?,
@@ -339,24 +359,23 @@ private fun LiquidHomeTab(
     importing: Boolean,
     onConnect: () -> Unit,
     onAddClipboard: () -> Unit,
-    onOpenConfigs: (String?) -> Unit,
+    onOpenConfigs: () -> Unit,
     onRefreshSub: () -> Unit,
 ) {
     val reduce = rememberReduceMotion()
     Column(
         Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .statusBarsPadding()
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Image(
                 painter = painterResource(R.drawable.ic_satra_mark),
                 contentDescription = null,
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(32.dp),
             )
             Spacer(Modifier.size(10.dp))
             Text(
@@ -365,70 +384,220 @@ private fun LiquidHomeTab(
                 color = onGlassPrimary(),
                 fontWeight = FontWeight.Bold,
             )
+            Spacer(Modifier.weight(1f))
+            if (subscription != null && subscription.showUsage) {
+                SatraUsageRing(
+                    fraction = subscription.usageFraction(),
+                    warn = subscription.isNearQuota(0.9f) || subscription.isExpired(),
+                    size = 36.dp,
+                )
+            }
         }
 
         if (!hasAnySub) {
-            Spacer(Modifier.height(72.dp))
+            Spacer(Modifier.weight(1f))
             EmptyPlusButton(importing = importing, onClick = onAddClipboard, reduce = reduce)
             Spacer(Modifier.height(16.dp))
             Text(
                 stringResource(R.string.satra_home_empty_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = onGlassSecondary(),
+                textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.weight(1f))
             return
         }
 
+        Spacer(Modifier.weight(0.35f))
+
+        StatusOrb(state = capsuleState, reduce = reduce)
+
         Spacer(Modifier.height(28.dp))
-        HomeSubMetricCard(
-            subscription = subscription,
-            serverCount = serverCount,
-            connectedTint = isRunning,
-            onOpen = { onOpenConfigs(null) },
-            onRefresh = onRefreshSub,
+
+        RegionPill(
+            row = selectedRow,
+            onClick = onOpenConfigs,
         )
-        Spacer(Modifier.height(16.dp))
-        if (selectedRow != null) {
-            ExitLocationRow(row = selectedRow, connected = isRunning)
-            Spacer(Modifier.height(16.dp))
-        }
-        SatraGlassCapsule(
-            state = capsuleState,
-            subtitle = when (capsuleState) {
-                PowerCapsuleState.Off -> stringResource(R.string.satra_capsule_ready)
-                PowerCapsuleState.On -> selectedRow?.remarks
-                else -> null
+
+        Spacer(Modifier.height(18.dp))
+
+        Text(
+            text = when (capsuleState) {
+                PowerCapsuleState.Off -> stringResource(R.string.satra_home_headline_ready)
+                PowerCapsuleState.Connecting -> stringResource(R.string.satra_home_headline_connecting)
+                PowerCapsuleState.On -> stringResource(R.string.satra_home_headline_connected)
+                PowerCapsuleState.Failed -> stringResource(R.string.satra_home_headline_failed)
             },
-            pingLabel = selectedRow?.takeIf { it.testDelayMillis > 0 }?.let { "${it.testDelayMillis}ms" },
-            onToggle = onConnect,
+            style = MaterialTheme.typography.headlineSmall,
+            color = onGlassPrimary(),
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(0.86f),
         )
-        Spacer(Modifier.height(20.dp))
-        SatraGlassIconButton(
-            onClick = onAddClipboard,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
+
+        if (subscription != null) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                listOfNotNull(
+                    subscription.profileTitle?.takeIf { it.isNotBlank() } ?: subscription.remarks,
+                    stringResource(R.string.satra_sub_servers_count, serverCount),
+                ).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = onGlassSecondary(),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.clickable(onClick = onRefreshSub),
+            )
+        }
+
+        Spacer(Modifier.weight(0.55f))
+
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Row(
-                Modifier.padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
+            SatraGlassIconButton(
+                onClick = onAddClipboard,
+                modifier = Modifier.size(56.dp).clip(CircleShape),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_add_24dp),
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.satra_home_add_config),
                     tint = SatraTokens.TealDeep,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(26.dp),
                 )
-                Spacer(Modifier.size(8.dp))
-                Text(
-                    stringResource(R.string.satra_home_add_config),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = onGlassPrimary(),
-                    fontWeight = FontWeight.SemiBold,
+            }
+            SatraGlassCapsule(
+                state = capsuleState,
+                subtitle = when (capsuleState) {
+                    PowerCapsuleState.Off -> stringResource(R.string.satra_capsule_ready)
+                    PowerCapsuleState.On -> selectedRow?.remarks
+                    else -> null
+                },
+                pingLabel = selectedRow?.takeIf { it.testDelayMillis > 0 }?.let { "${it.testDelayMillis}ms" },
+                onToggle = onConnect,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(18.dp))
+    }
+}
+
+@Composable
+private fun StatusOrb(state: PowerCapsuleState, reduce: Boolean) {
+    val breath = if (reduce || state == PowerCapsuleState.Off) {
+        1f
+    } else {
+        val infinite = rememberInfiniteTransition(label = "orbBreath")
+        infinite.animateFloat(
+            initialValue = 0.96f,
+            targetValue = 1.04f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(SatraMotionSpec.EmptyPlusBreathMs),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "orbScale",
+        ).value
+    }
+    val accent = when (state) {
+        PowerCapsuleState.On -> SatraTokens.Teal
+        PowerCapsuleState.Connecting -> SatraTokens.Amber
+        PowerCapsuleState.Failed -> SatraTokens.Danger
+        PowerCapsuleState.Off -> SatraTokens.TealDeep.copy(alpha = 0.55f)
+    }
+    Box(
+        modifier = Modifier
+            .size(196.dp)
+            .scale(breath),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            val r = size.minDimension / 2f
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        accent.copy(alpha = 0.35f),
+                        accent.copy(alpha = 0.08f),
+                        Color.Transparent,
+                    ),
+                    center = Offset(size.width * 0.42f, size.height * 0.38f),
+                    radius = r * 1.15f,
+                ),
+                radius = r,
+            )
+        }
+        SatraGlassSurface(
+            modifier = Modifier.size(148.dp),
+            corner = 999.dp,
+            capsule = true,
+            connectedTint = state == PowerCapsuleState.On,
+            contentAlignment = Alignment.Center,
+        ) {
+            when (state) {
+                PowerCapsuleState.Connecting -> CircularProgressIndicator(
+                    modifier = Modifier.size(36.dp),
+                    strokeWidth = 2.5.dp,
+                    color = accent,
+                )
+                PowerCapsuleState.On -> Icon(
+                    painter = painterResource(R.drawable.ic_fab_check),
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(40.dp),
+                )
+                PowerCapsuleState.Failed -> Icon(
+                    painter = painterResource(R.drawable.ic_stop_24dp),
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(36.dp),
+                )
+                PowerCapsuleState.Off -> Icon(
+                    painter = painterResource(R.drawable.ic_play_24dp),
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(40.dp),
                 )
             }
         }
-        Spacer(Modifier.height(28.dp))
+    }
+}
+
+@Composable
+private fun RegionPill(row: ServerRowUiModel?, onClick: () -> Unit) {
+    SatraGlassSurface(
+        onClick = onClick,
+        capsule = true,
+        modifier = Modifier.height(40.dp),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                row?.flag?.takeIf { it.isNotBlank() } ?: "🌐",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(Modifier.size(8.dp))
+            Text(
+                row?.let {
+                    listOfNotNull(
+                        it.countryName?.takeIf { n -> n.isNotBlank() },
+                        it.remarks.takeIf { r -> r.isNotBlank() },
+                    ).joinToString(" · ").ifBlank { it.remarks }
+                } ?: stringResource(R.string.satra_home_region_fallback),
+                style = MaterialTheme.typography.labelLarge,
+                color = onGlassPrimary(),
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (row != null && row.testDelayMillis > 0) {
+                Spacer(Modifier.size(10.dp))
+                SatraPingBadge(row.testDelayMillis)
+            }
+        }
     }
 }
 
@@ -450,7 +619,7 @@ private fun EmptyPlusButton(importing: Boolean, onClick: () -> Unit, reduce: Boo
     }
     SatraGlassIconButton(
         onClick = onClick,
-        modifier = Modifier.size(88.dp).scale(breath),
+        modifier = Modifier.size(96.dp).scale(breath).clip(CircleShape),
     ) {
         if (importing) {
             CircularProgressIndicator(
@@ -463,160 +632,17 @@ private fun EmptyPlusButton(importing: Boolean, onClick: () -> Unit, reduce: Boo
                 painter = painterResource(R.drawable.ic_add_24dp),
                 contentDescription = stringResource(R.string.satra_home_add_config),
                 tint = SatraTokens.TealDeep,
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(40.dp),
             )
         }
     }
-}
-
-@Composable
-private fun HomeSubMetricCard(
-    subscription: SubscriptionItem?,
-    serverCount: Int,
-    connectedTint: Boolean,
-    onOpen: () -> Unit,
-    onRefresh: () -> Unit,
-) {
-    SatraGlassCard(onClick = onOpen, connectedTint = connectedTint) {
-        if (subscription == null) {
-            Text(stringResource(R.string.satra_sub_empty), color = onGlassPrimary())
-            return@SatraGlassCard
-        }
-        val showUsage = subscription.showUsage
-        val showExpire = subscription.showExpire
-        val showAnnounce = subscription.showAnnounce
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (showUsage) {
-                SatraUsageRing(
-                    fraction = subscription.usageFraction(),
-                    warn = subscription.isNearQuota(0.9f) || subscription.isExpired(),
-                )
-                Spacer(Modifier.size(12.dp))
-            }
-            Column(Modifier.weight(1f)) {
-                Text(
-                    subscription.profileTitle?.takeIf { it.isNotBlank() } ?: subscription.remarks,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = onGlassPrimary(),
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    stringResource(R.string.satra_sub_servers_count, serverCount),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = onGlassSecondary(),
-                )
-                if (showUsage) {
-                    val used = subscription.usedBytes()
-                    Text(
-                        if (subscription.usageFraction() != null)
-                            "${used.toTrafficString()} / ${subscription.total.toTrafficString()}"
-                        else
-                            "${used.toTrafficString()} · ${stringResource(R.string.satra_sub_unlimited)}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = onGlassPrimary(),
-                        maxLines = 1,
-                    )
-                }
-                if (showExpire) {
-                    ExpireLineCompact(subscription)
-                }
-            }
-            Text(
-                stringResource(R.string.satra_sub_refresh),
-                color = SatraTokens.TealDeep,
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier
-                    .clickable(onClick = onRefresh)
-                    .padding(8.dp),
-            )
-        }
-        when {
-            subscription.isExpired() -> WarnLine(stringResource(R.string.satra_sub_expired), SatraTokens.Danger)
-            subscription.isNearQuota(0.9f) -> WarnLine(stringResource(R.string.satra_sub_low_quota), SatraTokens.Amber)
-            subscription.isNearExpire() -> WarnLine(stringResource(R.string.satra_sub_near_expire), SatraTokens.Amber)
-        }
-        if (showAnnounce && !subscription.announce.isNullOrBlank()) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                subscription.announce.orEmpty(),
-                style = MaterialTheme.typography.bodySmall,
-                color = onGlassSecondary(),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ExitLocationRow(row: ServerRowUiModel, connected: Boolean) {
-    val reduce = rememberReduceMotion()
-    val reveal by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = if (reduce) SatraMotionSpec.short() else SatraMotionSpec.flagReveal(),
-        label = "flagReveal",
-    )
-    SatraGlassCard(connectedTint = connected) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.scale(0.85f + 0.15f * reveal)) {
-            Text(row.flag.ifBlank { "🌐" }, style = MaterialTheme.typography.headlineSmall)
-            Spacer(Modifier.size(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    listOfNotNull(
-                        row.countryName?.takeIf { it.isNotBlank() },
-                        row.locationLabel.takeIf { it.isNotBlank() },
-                    ).joinToString(" · ").ifBlank { row.remarks },
-                    style = MaterialTheme.typography.titleSmall,
-                    color = onGlassPrimary(),
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    row.remarks,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = onGlassSecondary(),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            SatraPingBadge(row.testDelayMillis)
-        }
-    }
-}
-
-@Composable
-private fun ExpireLineCompact(subscription: SubscriptionItem) {
-    if (subscription.expire <= 0L) {
-        Text(
-            stringResource(R.string.satra_sub_no_expiry),
-            style = MaterialTheme.typography.labelSmall,
-            color = onGlassSecondary(),
-        )
-        return
-    }
-    val ms = if (subscription.expire > 10_000_000_000L) subscription.expire else subscription.expire * 1000L
-    val left = ms - System.currentTimeMillis()
-    val text = if (left <= 0) stringResource(R.string.satra_sub_expired)
-    else {
-        val days = TimeUnit.MILLISECONDS.toDays(left)
-        stringResource(R.string.satra_sub_days_left, days.toInt())
-    }
-    Text(text, style = MaterialTheme.typography.labelSmall, color = onGlassSecondary())
-}
-
-@Composable
-private fun WarnLine(text: String, color: Color) {
-    Spacer(Modifier.height(6.dp))
-    Text(text, style = MaterialTheme.typography.labelMedium, color = color, fontWeight = FontWeight.SemiBold)
 }
 
 @Composable
 private fun SettingsEmbedTab(
     modifier: Modifier,
     onOpenFullSettings: () -> Unit,
+    onOpenLogs: () -> Unit,
     onNavigate: (MainDestination) -> Unit,
 ) {
     Column(
@@ -646,6 +672,20 @@ private fun SettingsEmbedTab(
             )
         }
         Spacer(Modifier.height(12.dp))
+        SatraGlassCard(onClick = onOpenLogs, modifier = Modifier.padding(bottom = 10.dp)) {
+            Text(
+                stringResource(R.string.satra_settings_logs),
+                style = MaterialTheme.typography.titleSmall,
+                color = onGlassPrimary(),
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                stringResource(R.string.satra_settings_logs_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = onGlassSecondary(),
+            )
+        }
         listOf(
             MainDestination.PerAppProxy,
             MainDestination.Routing,

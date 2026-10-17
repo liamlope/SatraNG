@@ -33,24 +33,25 @@ data class AtmospherePalette(
 
 fun atmospherePalette(state: ConnectionAtmosphereState, dark: Boolean): AtmospherePalette = when (state) {
     ConnectionAtmosphereState.Idle -> if (dark) {
-        AtmospherePalette(Color(0xFF0A1826), SatraTokens.Ink, Color(0xFF06141F))
+        AtmospherePalette(Color(0xFF000000), Color(0xFF07070A), Color(0xFF000000))
     } else {
-        AtmospherePalette(Color(0xFFECF5F2), Color(0xFFE8EEF4), Color(0xFFDCE8F0))
+        AtmospherePalette(Color(0xFFFFFFFF), Color(0xFFF7F7F8), Color(0xFFEEEEF2))
     }
     ConnectionAtmosphereState.Connecting -> if (dark) {
-        AtmospherePalette(Color(0xFF2A1A0A), Color(0xFF3D2810), Color(0xFF1A1208))
+        AtmospherePalette(Color(0xFF0A0804), Color(0xFF1A1408), Color(0xFF050403))
     } else {
-        AtmospherePalette(Color(0xFFFFF0E0), Color(0xFFFFE4C4), Color(0xFFF5D9B0))
+        AtmospherePalette(Color(0xFFFFF8F0), Color(0xFFFFF1E0), Color(0xFFF5E6D4))
     }
     ConnectionAtmosphereState.Connected -> if (dark) {
-        AtmospherePalette(Color(0xFF062820), Color(0xFF0A3D30), Color(0xFF041A14))
+        // Pure dark with a cool ice wash — never forest/neon green.
+        AtmospherePalette(Color(0xFF000000), Color(0xFF0A1220), Color(0xFF000000))
     } else {
-        AtmospherePalette(Color(0xFFD4F5E8), Color(0xFFB8EBD4), Color(0xFF9ADFC0))
+        AtmospherePalette(Color(0xFFF5F9FF), Color(0xFFE8F1FC), Color(0xFFDCE8F8))
     }
     ConnectionAtmosphereState.Failed -> if (dark) {
-        AtmospherePalette(Color(0xFF2A0C10), Color(0xFF3A1218), Color(0xFF1A080A))
+        AtmospherePalette(Color(0xFF0A0406), Color(0xFF1A0A0E), Color(0xFF050203))
     } else {
-        AtmospherePalette(Color(0xFFFFE8EA), Color(0xFFFFD0D4), Color(0xFFF5C0C6))
+        AtmospherePalette(Color(0xFFFFF5F6), Color(0xFFFFE8EA), Color(0xFFF8D8DC))
     }
 }
 

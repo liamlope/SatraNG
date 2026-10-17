@@ -38,11 +38,11 @@ object SatraTokens {
 
     fun backgroundBrush(dark: Boolean): Brush = if (dark) {
         Brush.verticalGradient(
-            listOf(Color(0xFF0A1826), SatraColors.Ink, Color(0xFF06141F))
+            listOf(Color(0xFF000000), SatraColors.Ink, Color(0xFF07070A))
         )
     } else {
         Brush.verticalGradient(
-            listOf(Color(0xFFECF5F2), SatraColors.Mist, Color(0xFFE8EEF4))
+            listOf(Color(0xFFFFFFFF), SatraColors.Mist, Color(0xFFEEEEF2))
         )
     }
 }

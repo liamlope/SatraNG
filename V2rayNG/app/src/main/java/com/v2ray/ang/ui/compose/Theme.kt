@@ -32,23 +32,27 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** SatraNG brand tokens — deep ink + teal connect, amber signal. */
+/**
+ * SatraNG brand tokens — pure dark / clean light with ice-sapphire accent
+ * (no neon green; connected state reads cool and calm).
+ */
 object SatraColors {
-    val Ink = Color(0xFF071018)
-    val InkSoft = Color(0xFF0B1B2B)
-    val Slate = Color(0xFF14283C)
-    val Mist = Color(0xFFF3F6F9)
-    val MistDeep = Color(0xFFE6ECF2)
-    val Teal = Color(0xFF2DD4A8)
-    val TealDeep = Color(0xFF0F9F7E)
-    val TealSoft = Color(0xFF7EEADF)
-    val Amber = Color(0xFFF5A524)
+    val Ink = Color(0xFF000000)
+    val InkSoft = Color(0xFF0C0C0E)
+    val Slate = Color(0xFF1A1A1F)
+    val Mist = Color(0xFFF7F7F8)
+    val MistDeep = Color(0xFFEBEBEF)
+    /** Ice sapphire accent (kept name Teal for call-site stability). */
+    val Teal = Color(0xFF6EB6FF)
+    val TealDeep = Color(0xFF4A9EFF)
+    val TealSoft = Color(0xFFB5D9FF)
+    val Amber = Color(0xFFF0A94A)
     val AmberSoft = Color(0xFFFFD78A)
-    val Danger = Color(0xFFE5484D)
-    val TextDark = Color(0xFF102033)
-    val TextMutedDark = Color(0xFF5B6B7C)
-    val TextLight = Color(0xFFEAF2F8)
-    val TextMutedLight = Color(0xFF9BB0C3)
+    val Danger = Color(0xFFFF5A5F)
+    val TextDark = Color(0xFF111114)
+    val TextMutedDark = Color(0xFF6B6B76)
+    val TextLight = Color(0xFFF2F2F4)
+    val TextMutedLight = Color(0xFF9A9AA6)
 }
 
 private val LightColor = lightColorScheme(
@@ -58,8 +62,8 @@ private val LightColor = lightColorScheme(
     onPrimaryContainer = SatraColors.InkSoft,
     secondary = SatraColors.TealDeep,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFD5F7EE),
-    onSecondaryContainer = Color(0xFF043B30),
+    secondaryContainer = Color(0xFFD6E8FF),
+    onSecondaryContainer = Color(0xFF0A2A4A),
     tertiary = SatraColors.Amber,
     onTertiary = SatraColors.Ink,
     tertiaryContainer = Color(0xFFFFE8C2),
@@ -70,22 +74,22 @@ private val LightColor = lightColorScheme(
     onErrorContainer = Color(0xFF410002),
     background = SatraColors.Mist,
     onBackground = SatraColors.TextDark,
-    surface = Color(0xFFF8FBFD),
+    surface = Color(0xFFFFFFFF),
     onSurface = SatraColors.TextDark,
     surfaceVariant = SatraColors.MistDeep,
     onSurfaceVariant = SatraColors.TextMutedDark,
-    outline = Color(0xFFB7C5D3),
-    outlineVariant = Color(0xFFD5DEE8),
+    outline = Color(0xFFCFCFD6),
+    outlineVariant = Color(0xFFE4E4EA),
     inverseSurface = SatraColors.InkSoft,
     inverseOnSurface = SatraColors.TextLight,
     inversePrimary = SatraColors.TealSoft,
     scrim = Color(0xFF000000),
     surfaceTint = SatraColors.TealDeep,
     surfaceContainerLowest = Color.White,
-    surfaceContainerLow = Color(0xFFF5F8FB),
-    surfaceContainer = Color(0xFFEEF3F7),
-    surfaceContainerHigh = Color(0xFFE6ECF2),
-    surfaceContainerHighest = Color(0xFFDDE5ED),
+    surfaceContainerLow = Color(0xFFF5F5F7),
+    surfaceContainer = Color(0xFFEEEEF1),
+    surfaceContainerHigh = Color(0xFFE6E6EA),
+    surfaceContainerHighest = Color(0xFFDCDCE2),
 )
 
 private val DarkColor = darkColorScheme(
@@ -95,7 +99,7 @@ private val DarkColor = darkColorScheme(
     onPrimaryContainer = SatraColors.TealSoft,
     secondary = SatraColors.Teal,
     onSecondary = SatraColors.Ink,
-    secondaryContainer = Color(0xFF0A4F40),
+    secondaryContainer = Color(0xFF16324A),
     onSecondaryContainer = SatraColors.TealSoft,
     tertiary = SatraColors.AmberSoft,
     onTertiary = SatraColors.Ink,
@@ -111,18 +115,18 @@ private val DarkColor = darkColorScheme(
     onSurface = SatraColors.TextLight,
     surfaceVariant = SatraColors.Slate,
     onSurfaceVariant = SatraColors.TextMutedLight,
-    outline = Color(0xFF5A7084),
-    outlineVariant = Color(0xFF24384C),
+    outline = Color(0xFF3A3A44),
+    outlineVariant = Color(0xFF222228),
     inverseSurface = SatraColors.Mist,
     inverseOnSurface = SatraColors.InkSoft,
     inversePrimary = SatraColors.TealDeep,
     scrim = Color(0xFF000000),
     surfaceTint = SatraColors.Teal,
-    surfaceContainerLowest = Color(0xFF040A10),
-    surfaceContainerLow = Color(0xFF0A1520),
-    surfaceContainer = Color(0xFF0F1C2A),
-    surfaceContainerHigh = Color(0xFF152436),
-    surfaceContainerHighest = Color(0xFF1C2E42),
+    surfaceContainerLowest = Color(0xFF000000),
+    surfaceContainerLow = Color(0xFF0A0A0C),
+    surfaceContainer = Color(0xFF121214),
+    surfaceContainerHigh = Color(0xFF1A1A1E),
+    surfaceContainerHighest = Color(0xFF242428),
 )
 
 val colorPing = SatraColors.TealDeep

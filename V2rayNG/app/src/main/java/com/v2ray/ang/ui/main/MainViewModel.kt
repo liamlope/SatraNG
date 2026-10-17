@@ -917,7 +917,20 @@ class MainViewModel(
     private fun onTestsFinished(requestId: String) {
         if (testRequests.completeBulk(requestId) == null) return
         resetTestStatus()
+        val groupId = uiState.value.selectedGroupId
         viewModelScope.launch(ioDispatcher) {
+            // After ping, resolve a flag for every successful node (remarks → soft host geo).
+            // Exit-verified cache from a live connect is never overwritten.
+            val guids = MmkvManager.decodeServerList(groupId)
+            guids.forEach { guid ->
+                val aff = MmkvManager.decodeServerAffiliationInfo(guid) ?: return@forEach
+                if (aff.testDelayMillis <= 0L) return@forEach
+                val profile = MmkvManager.decodeServerConfig(guid) ?: return@forEach
+                GeoIpResolver.enrichAfterPing(guid, profile)
+            }
+            if (uiState.value.isRunning) {
+                refreshExitGeoForSelectedServer(delayMs = 200L)
+            }
             cacheMutex.withLock { groupDataCache.clear() }
             reloadAllGroups(_uiState.value.groups.map { it.id })
         }

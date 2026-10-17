@@ -2,6 +2,7 @@ package com.v2ray.ang.ui.compose.liquid
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,13 +35,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.v2ray.ang.ui.compose.satra.SatraMotionSpec
 import com.v2ray.ang.ui.compose.satra.SatraTokens
 import com.v2ray.ang.ui.compose.satra.rememberReduceMotion
-import androidx.compose.foundation.background
 
 /**
- * Four-tab glass bottom bar with liquid pill indicator (retargets on rapid taps).
+ * Four-tab glass bottom bar with liquid pill indicator.
+ * Height + internal padding sized so labels are never clipped by the capsule edge.
  * @param items Triple(index, labelRes, iconRes)
  */
 @Composable
@@ -55,15 +57,15 @@ fun SatraGlassBottomBar(
     SatraGlassSurface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .height(64.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .height(72.dp),
         capsule = true,
         contentAlignment = Alignment.Center,
     ) {
         BoxWithConstraints(
             Modifier
                 .fillMaxSize()
-                .padding(horizontal = 6.dp, vertical = 6.dp),
+                .padding(horizontal = 4.dp, vertical = 4.dp),
         ) {
             val count = items.size.coerceAtLeast(1)
             val slot = maxWidth / count
@@ -77,9 +79,9 @@ fun SatraGlassBottomBar(
                     .offset(x = slot * indicatorOffset)
                     .width(slot)
                     .fillMaxHeight()
-                    .padding(4.dp)
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
                     .clip(RoundedCornerShape(SatraTokens.RadiusCapsule))
-                    .background(SatraTokens.Teal.copy(alpha = 0.24f)),
+                    .background(SatraTokens.Teal.copy(alpha = 0.22f)),
             )
             Row(
                 Modifier.fillMaxSize(),
@@ -115,7 +117,7 @@ private fun RowScope.GlassNavItem(
         label = "navTint",
     )
     val scale by animateFloatAsState(
-        targetValue = if (selected) 1.06f else 1f,
+        targetValue = if (selected) 1.04f else 1f,
         animationSpec = SatraMotionSpec.pressGel,
         label = "navScale",
     )
@@ -123,10 +125,11 @@ private fun RowScope.GlassNavItem(
         modifier = Modifier
             .weight(1f)
             .scale(scale)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
         Icon(
             painter = painterResource(iconRes),
@@ -134,10 +137,10 @@ private fun RowScope.GlassNavItem(
             tint = tint,
             modifier = Modifier.size(22.dp),
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(2.dp))
         Text(
             text = stringResource(labelRes),
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 13.sp),
             color = tint,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
