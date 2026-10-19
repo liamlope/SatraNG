@@ -1,0 +1,189 @@
+package com.v2ray.ang.handler
+
+import com.google.gson.Gson
+import com.tencent.mmkv.MMKV
+import com.v2ray.ang.AppConfig
+import com.v2ray.ang.util.LogUtil
+
+data class DayUsage(
+    val dayKey: String,
+    val startMs: Long,
+    val upBytes: Long,
+    val downBytes: Long,
+    val connectedSec: Long,
+) {
+    val totalBytes: Long get() = upBytes + downBytes
+}
+
+data class SessionRecord(
+    val startMs: Long = 0L,
+    val endMs: Long = 0L,
+    val upBytes: Long = 0L,
+    val downBytes: Long = 0L,
+    val server: String = "",
+)
+
+/** Live numbers published by the daemon's [UsageSampler] once per second. */
+data class LiveUsage(
+    val running: Boolean = false,
+    val upBps: Long = 0L,
+    val downBps: Long = 0L,
+    val sessionStartMs: Long = 0L,
+    val sessionUp: Long = 0L,
+    val sessionDown: Long = 0L,
+    val updatedAt: Long = 0L,
+)
+
+/**
+ * Multi-process ledger for everything the usage screens show. The daemon process is the only
+ * writer of traffic counters; the UI reads them. Keys are small and flat on purpose.
+ */
+object UsageStore {
+    private const val ID = "satra_usage"
+    private const val MAX_SESSIONS = 100
+    private val gson = Gson()
+    private val kv: MMKV by lazy { MMKV.mmkvWithID(ID, MMKV.MULTI_PROCESS_MODE) }
+
+    fun getString(key: String): String? = kv.decodeString(key)
+    fun putString(key: String, value: String) { kv.encode(key, value) }
+    fun getLong(key: String, def: Long = 0L): Long = kv.decodeLong(key, def)
+    fun putLong(key: String, value: Long) { kv.encode(key, value) }
+    fun getBool(key: String, def: Boolean = false): Boolean = kv.decodeBool(key, def)
+    fun putBool(key: String, value: Boolean) { kv.encode(key, value) }
+    fun remove(key: String) { kv.removeValueForKey(key) }
+
+    // ---------- ledger ----------
+
+    fun addTraffic(nowMs: Long, up: Long, down: Long) {
+        if (up <= 0L && down <= 0L) return
+        val day = UsagePeriods.dayKey(nowMs)
+        val hour = UsagePeriods.hourOfDay(nowMs)
+        if (up > 0) kv.encode("d:$day:up", kv.decodeLong("d:$day:up", 0L) + up)
+        if (down > 0) kv.encode("d:$day:dn", kv.decodeLong("d:$day:dn", 0L) + down)
+        val hk = "h:$day:$hour"
+        kv.encode(hk, kv.decodeLong(hk, 0L) + up.coerceAtLeast(0L) + down.coerceAtLeast(0L))
+    }
+
+    fun addConnectedSeconds(nowMs: Long, seconds: Long) {
+        if (seconds <= 0L) return
+        val k = "d:${UsagePeriods.dayKey(nowMs)}:s"
+        kv.encode(k, kv.decodeLong(k, 0L) + seconds)
+    }
+
+    fun day(dayKey: String, startMs: Long = 0L) = DayUsage(
+        dayKey, startMs,
+        kv.decodeLong("d:$dayKey:up", 0L),
+        kv.decodeLong("d:$dayKey:dn", 0L),
+        kv.decodeLong("d:$dayKey:s", 0L),
+    )
+
+    /** The last [n] days including today, oldest first (empty days included). */
+    fun days(n: Int, nowMs: Long = System.currentTimeMillis()): List<DayUsage> {
+        val keys = UsagePeriods.lastDayKeys(n, nowMs)
+        val starts = UsagePeriods.lastDayStarts(n, nowMs)
+        return keys.mapIndexed { i, k -> day(k, starts[i]) }
+    }
+
+    /** Bytes per hour of the local day containing [nowMs]. */
+    fun hourly(nowMs: Long = System.currentTimeMillis()): LongArray {
+        val day = UsagePeriods.dayKey(nowMs)
+        return LongArray(24) { kv.decodeLong("h:$day:$it", 0L) }
+    }
+
+    /** Total tunnelled bytes since [startMs] (local midnight aligned) up to now. */
+    fun totalSince(startMs: Long, nowMs: Long = System.currentTimeMillis()): Long {
+        var sum = 0L
+        var t = UsagePeriods.startOfDay(startMs)
+        var guard = 0
+        while (t <= nowMs && guard++ < 400) {
+            sum += day(UsagePeriods.dayKey(t)).totalBytes
+            t = UsagePeriods.nextReset(LimitPeriod.DAILY, t)
+        }
+        return sum
+    }
+
+    // ---------- sessions ----------
+
+    fun sessions(): List<SessionRecord> = try {
+        getString("sessions")?.let { gson.fromJson(it, Array<SessionRecord>::class.java)?.toList() }.orEmpty()
+    } catch (e: Exception) {
+        LogUtil.e(AppConfig.TAG, "UsageStore: sessions parse", e)
+        emptyList()
+    }
+
+    fun appendSession(record: SessionRecord) {
+        if (record.endMs - record.startMs < 3_000L) return
+        val list = (sessions() + record).takeLast(MAX_SESSIONS)
+        putString("sessions", gson.toJson(list))
+    }
+
+    // ---------- live ----------
+
+    fun publishLive(live: LiveUsage) {
+        kv.encode("live:run", live.running)
+        kv.encode("live:up", live.upBps)
+        kv.encode("live:dn", live.downBps)
+        kv.encode("live:ss", live.sessionStartMs)
+        kv.encode("live:su", live.sessionUp)
+        kv.encode("live:sd", live.sessionDown)
+        kv.encode("live:ts", live.updatedAt)
+    }
+
+    fun live(nowMs: Long = System.currentTimeMillis()): LiveUsage {
+        val ts = kv.decodeLong("live:ts", 0L)
+        val running = kv.decodeBool("live:run", false) && nowMs - ts < 6_000L
+        if (!running) return LiveUsage(running = false, updatedAt = ts)
+        return LiveUsage(
+            true,
+            kv.decodeLong("live:up", 0L), kv.decodeLong("live:dn", 0L),
+            kv.decodeLong("live:ss", 0L), kv.decodeLong("live:su", 0L), kv.decodeLong("live:sd", 0L), ts,
+        )
+    }
+
+    // ---------- rule runtime ----------
+
+    fun ruleRuntime(id: String): RuleRuntime? {
+        val pk = kv.decodeString("r:$id:pk") ?: return null
+        return RuleRuntime(
+            pk,
+            kv.decodeLong("r:$id:used", 0L),
+            kv.decodeBool("r:$id:blk", false),
+            kv.decodeBool("r:$id:warn", false),
+            kv.decodeLong("r:$id:bonus", 0L),
+        )
+    }
+
+    fun putRuleRuntime(id: String, rt: RuleRuntime) {
+        kv.encode("r:$id:pk", rt.periodKey)
+        kv.encode("r:$id:used", rt.used)
+        kv.encode("r:$id:blk", rt.blocked)
+        kv.encode("r:$id:warn", rt.warned)
+        kv.encode("r:$id:bonus", rt.bonus)
+    }
+
+    /** Called by the notification action (UI process). The daemon sees the bonus on its next tick. */
+    fun addBonus(id: String, bytes: Long) {
+        val k = "r:$id:bonus"
+        kv.encode(k, kv.decodeLong(k, 0L) + bytes)
+    }
+
+    fun clearRule(id: String) {
+        listOf("pk", "used", "blk", "warn", "bonus").forEach { kv.removeValueForKey("r:$id:$it") }
+    }
+
+    // ---------- housekeeping ----------
+
+    /** Drops ledger keys older than [keepDays]. Cheap; run occasionally from the daemon. */
+    fun prune(keepDays: Int = 400, nowMs: Long = System.currentTimeMillis()) {
+        val cutoff = UsagePeriods.dayKey(nowMs - keepDays * 86_400_000L)
+        kv.allKeys()?.filter { it.startsWith("d:") || it.startsWith("h:") }?.forEach { k ->
+            val day = k.split(':').getOrNull(1) ?: return@forEach
+            if (day < cutoff) kv.removeValueForKey(k)
+        }
+    }
+
+    fun clearLedger() {
+        kv.allKeys()?.filter { it.startsWith("d:") || it.startsWith("h:") }?.forEach { kv.removeValueForKey(it) }
+        kv.removeValueForKey("sessions")
+    }
+}

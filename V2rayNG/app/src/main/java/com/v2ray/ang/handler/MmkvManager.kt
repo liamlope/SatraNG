@@ -507,6 +507,24 @@ object MmkvManager {
         serverAffStorage.encode(guid, JsonUtil.toJson(aff))
     }
 
+    /** Records that a geo lookup was attempted now, so failures are retried with a backoff. */
+    fun markServerGeoAttempt(guid: String) {
+        if (guid.isBlank()) return
+        val aff = decodeServerAffiliationInfo(guid) ?: ServerAffiliationInfo()
+        aff.geoAttemptAt = System.currentTimeMillis()
+        serverAffStorage.encode(guid, JsonUtil.toJson(aff))
+    }
+
+    fun isServerFavorite(guid: String): Boolean = decodeServerAffiliationInfo(guid)?.favorite == true
+
+    fun setServerFavorite(guid: String, favorite: Boolean) {
+        if (guid.isBlank()) return
+        val aff = decodeServerAffiliationInfo(guid) ?: ServerAffiliationInfo()
+        if (aff.favorite == favorite) return
+        aff.favorite = favorite
+        serverAffStorage.encode(guid, JsonUtil.toJson(aff))
+    }
+
     /**
      * Clears all test delay results.
      *

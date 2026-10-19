@@ -19,8 +19,13 @@ import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.matchesPattern
 import com.v2ray.ang.extension.moveItem
 import com.v2ray.ang.handler.AutoConnectController
+import com.v2ray.ang.core.LauncherManager
 import com.v2ray.ang.handler.GeoIpResolver
+import com.v2ray.ang.handler.LiveUsage
 import com.v2ray.ang.handler.MmkvManager
+import com.v2ray.ang.handler.SettingsManager
+import com.v2ray.ang.handler.UsagePeriods
+import com.v2ray.ang.handler.UsageStore
 import com.v2ray.ang.ui.base.BaseViewModel
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.CancellationException
@@ -34,6 +39,9 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -69,6 +77,34 @@ private fun applyTestDelayResultsToRows(
     }
 }
 
+/** Live numbers for Home: current speeds, a rolling history for the graph, and today's total. */
+data class LiveUiState(
+    val running: Boolean = false,
+    val upBps: Long = 0L,
+    val downBps: Long = 0L,
+    val sessionStartMs: Long = 0L,
+    val sessionBytes: Long = 0L,
+    val todayBytes: Long = 0L,
+    val history: List<Float> = emptyList(),
+) {
+    fun next(live: LiveUsage): LiveUiState {
+        val today = UsageStore.day(UsagePeriods.dayKey(System.currentTimeMillis())).totalBytes
+        if (!live.running) return LiveUiState(todayBytes = today)
+        val point = (live.upBps + live.downBps).toFloat()
+        return LiveUiState(
+            running = true,
+            upBps = live.upBps,
+            downBps = live.downBps,
+            sessionStartMs = live.sessionStartMs,
+            sessionBytes = live.sessionUp + live.sessionDown,
+            todayBytes = today,
+            history = (history + point).takeLast(HISTORY_POINTS),
+        )
+    }
+
+    companion object { const val HISTORY_POINTS = 48 }
+}
+
 class MainViewModel(
     application: Application,
     private val dataSource: MainDataSource
@@ -92,6 +128,73 @@ class MainViewModel(
     private val _autoReconnectRequest = MutableStateFlow(0)
     /** Increments when Auto policy wants Activity to restart the service. */
     val autoReconnectRequest: StateFlow<Int> = _autoReconnectRequest.asStateFlow()
+
+    // ---------- Live stats (published by the daemon's UsageSampler) ----------
+    val liveState: StateFlow<LiveUiState> = flow {
+        var n = 0
+        while (true) {
+            emit(UsageStore.live())
+            if (++n % 10 == 0 && uiState.value.isRunning) refreshSelectedRow()
+            delay(1000)
+        }
+    }
+        .flowOn(Dispatchers.IO)
+        .scan(LiveUiState()) { acc, live -> acc.next(live) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LiveUiState())
+
+    // ---------- Connect phase ----------
+    private var phaseJob: Job? = null
+    private val geoDispatcher: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(1)
+    private val geoInFlight: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    private var pendingDeleteJob: Job? = null
+    private var pendingDeleteGuid: String? = null
+
+    /** The user pressed connect: animate immediately, give the core a bounded time to come up. */
+    fun beginConnect() {
+        phaseJob?.cancel()
+        _uiState.update { it.copy(phase = ConnectPhase.Connecting, errorMessage = null) }
+        phaseJob = viewModelScope.launch {
+            delay(CONNECT_TIMEOUT_MS)
+            if (uiState.value.phase == ConnectPhase.Connecting) {
+                LauncherManager.stopService(getApplication())
+                failConnect(dataSource.getString(R.string.sx_connect_timeout))
+            }
+        }
+    }
+
+    /** VPN permission refused or the start was abandoned. */
+    fun cancelConnect() {
+        phaseJob?.cancel()
+        _uiState.update { it.copy(phase = if (it.isRunning) ConnectPhase.Connected else ConnectPhase.Idle) }
+    }
+
+    fun beginDisconnect() {
+        phaseJob?.cancel()
+        _uiState.update { it.copy(phase = ConnectPhase.Disconnecting, errorMessage = null) }
+        phaseJob = viewModelScope.launch {
+            delay(DISCONNECT_TIMEOUT_MS)
+            if (uiState.value.phase == ConnectPhase.Disconnecting) {
+                _uiState.update { it.copy(phase = if (it.isRunning) ConnectPhase.Connected else ConnectPhase.Idle) }
+            }
+        }
+    }
+
+    private fun failConnect(message: String?) {
+        phaseJob?.cancel()
+        _uiState.update {
+            it.copy(
+                phase = ConnectPhase.Failed,
+                errorMessage = message?.takeIf { m -> m.isNotBlank() },
+                autoReconnecting = false,
+            )
+        }
+        phaseJob = viewModelScope.launch {
+            delay(FAILED_SHOWN_MS)
+            if (uiState.value.phase == ConnectPhase.Failed) {
+                _uiState.update { it.copy(phase = ConnectPhase.Idle) }
+            }
+        }
+    }
 
     // ---------- Keyword filtering ----------
     @Volatile
@@ -145,7 +248,6 @@ class MainViewModel(
                 if (wasRunning) maybeScheduleAutoReconnect()
             }
             MainServiceEvent.StateStartSuccess -> {
-                toastSuccess(R.string.toast_services_success)
                 updateRunningState(true)
                 reconnectAttempt = 0
                 expectUserStop = false
@@ -155,12 +257,8 @@ class MainViewModel(
             }
 
             is MainServiceEvent.StateStartFailure -> {
-                if (!event.message.isNullOrBlank()) {
-                    toastError(event.message)
-                } else {
-                    toastError(R.string.toast_services_failure)
-                }
                 updateRunningState(false)
+                failConnect(event.message?.takeIf { it.isNotBlank() } ?: dataSource.getString(R.string.toast_services_failure))
                 maybeScheduleAutoReconnect()
             }
 
@@ -315,6 +413,19 @@ class MainViewModel(
             is MainAction.Search -> filterConfig(action.query)
             is MainAction.ImportBatchConfig -> importBatchConfig(action.configText)
             MainAction.LocateHandled -> consumeLocateTarget()
+            is MainAction.ToggleFavorite -> toggleFavorite(action.guid)
+            is MainAction.SetSort -> {
+                _uiState.update { it.copy(sort = action.sort) }
+                reapplyViewOptions()
+            }
+            is MainAction.SetFavoritesOnly -> {
+                _uiState.update { it.copy(favoritesOnly = action.enabled) }
+                reapplyViewOptions()
+            }
+            is MainAction.DeleteWithUndo -> deleteWithUndo(action.guid)
+            MainAction.UndoDelete -> undoDelete()
+            MainAction.UndoHandled -> _uiState.update { it.copy(undoName = null) }
+            is MainAction.RecheckServer -> recheckServer(action.guid)
             is MainAction.ShareQRCode -> {
                 val bitmap = dataSource.share2QRCode(action.guid)
                 _uiState.update { it.copy(shareQRCodeBitmap = bitmap) }
@@ -413,10 +524,169 @@ class MainViewModel(
 
     private fun updateGroupUi(groupId: String, servers: List<ServersCache>) {
         val filteredServers = applyKeywordFilter(servers)
+        val rows = buildServerRows(groupId, filteredServers)
+        val state = uiState.value
+        val order = rows.indices
+            .filter { !state.favoritesOnly || rows[it].favorite }
+            .sortedWith(rowComparator(rows, state.sort))
         mutableServerGroupState(groupId).value = ServerGroupUiState(
-            servers = filteredServers,
-            rows = buildServerRows(groupId, filteredServers)
+            servers = order.map { filteredServers[it] },
+            rows = order.map { rows[it] },
         )
+        scheduleGeoFill(groupId, order.map { rows[it] })
+        refreshSelectedRow()
+    }
+
+    private fun rowComparator(rows: List<ServerRowUiModel>, sort: ServerSort): Comparator<Int> {
+        // Starred configs are always pinned to the top; the chosen sort orders each block.
+        val byFavorite = compareByDescending<Int> { rows[it].favorite }
+        return when (sort) {
+            ServerSort.Default -> byFavorite
+            ServerSort.Ping -> byFavorite.thenBy {
+                val d = rows[it].testDelayMillis
+                if (d > 0L) d else Long.MAX_VALUE
+            }
+            ServerSort.Name -> byFavorite.thenBy { rows[it].remarks.lowercase() }
+        }
+    }
+
+    /** Fills in missing flags lazily: server address -> IP -> country. Never blocks the UI. */
+    private fun scheduleGeoFill(groupId: String, rows: List<ServerRowUiModel>) {
+        val todo = rows.filter { it.countryCode == null && it.guid !in geoInFlight }.take(GEO_FILL_BATCH)
+        if (todo.isEmpty()) return
+        viewModelScope.launch(geoDispatcher) {
+            val now = System.currentTimeMillis()
+            for (row in todo) {
+                ensureActive()
+                val aff = MmkvManager.decodeServerAffiliationInfo(row.guid)
+                if (!GeoIpResolver.needsLookup(aff, now)) continue
+                if (!geoInFlight.add(row.guid)) continue
+                try {
+                    val port = if (uiState.value.isRunning) SettingsManager.getHttpPort() else 0
+                    val result = GeoIpResolver.resolveHostSoft(row.guid, row.profile, port)
+                    if (result.countryCode != null) patchRowGeo(groupId, row.guid, result)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    LogUtil.w(AppConfig.TAG, "Geo fill failed: ${e.message}")
+                } finally {
+                    geoInFlight.remove(row.guid)
+                }
+            }
+        }
+    }
+
+    private fun patchRowGeo(groupId: String, guid: String, geo: GeoIpResolver.GeoResult) {
+        mutableServerGroupState(groupId).update { current ->
+            current.copy(
+                rows = current.rows.map { row ->
+                    if (row.guid != guid) row
+                    else row.copy(countryCode = geo.countryCode, countryName = geo.countryName, exitVerified = geo.exitVerified)
+                },
+            )
+        }
+        if (guid == uiState.value.selectedGuid) refreshSelectedRow()
+    }
+
+    /** Rebuilds the row for the active config (Home hero card). */
+    fun refreshSelectedRow() {
+        viewModelScope.launch(ioDispatcher) {
+            val guid = dataSource.getSelectServer()
+            val row = guid?.let { g ->
+                val profile = dataSource.decodeServerConfig(g) ?: return@let null
+                val aff = dataSource.decodeAffiliationInfo(g)
+                buildServerRowUiModel(
+                    ServersCache(g, profile.copy(), aff?.testDelayMillis ?: 0L),
+                    subscriptionRemarks = dataSource.getSubscriptionItem(profile.subscriptionId)?.remarks.orEmpty(),
+                )
+            }
+            val quota = guid?.let { g ->
+                val subId = dataSource.decodeServerConfig(g)?.subscriptionId?.takeIf { it.isNotBlank() } ?: return@let null
+                val sub = dataSource.getSubscriptionItem(subId) ?: return@let null
+                if (sub.total <= 0L && sub.expire <= 0L) return@let null
+                val used = com.v2ray.ang.handler.HybridUsageTracker.displayFor(subId, sub)
+                QuotaUi(
+                    name = sub.remarks,
+                    usedBytes = used.displayUsed,
+                    totalBytes = sub.total,
+                    expireMs = if (sub.expire <= 0L) 0L else if (sub.expire > 10_000_000_000L) sub.expire else sub.expire * 1000L,
+                )
+            }
+            _uiState.update { it.copy(selectedRow = row, quota = quota) }
+        }
+    }
+
+    private fun reapplyViewOptions() {
+        viewModelScope.launch(defaultDispatcher) {
+            val snapshot = cacheMutex.withLock { groupDataCache.toMap() }
+            snapshot.forEach { (groupId, servers) -> updateGroupUi(groupId, servers) }
+        }
+    }
+
+    fun toggleFavorite(guid: String) {
+        viewModelScope.launch(ioDispatcher) {
+            MmkvManager.setServerFavorite(guid, !MmkvManager.isServerFavorite(guid))
+            reapplyViewOptions()
+        }
+    }
+
+    fun deleteWithUndo(guid: String) {
+        if (guid == uiState.value.selectedGuid && uiState.value.isRunning) {
+            toast(R.string.toast_action_not_allowed)
+            return
+        }
+        commitPendingDelete()
+        val name = dataSource.decodeServerConfig(guid)?.remarks.orEmpty()
+        pendingDeleteGuid = guid
+        _uiState.update { it.copy(hiddenGuids = it.hiddenGuids + guid, undoName = name.ifBlank { "·" }) }
+        pendingDeleteJob = viewModelScope.launch {
+            delay(UNDO_WINDOW_MS)
+            commitPendingDelete()
+        }
+    }
+
+    fun undoDelete() {
+        val guid = pendingDeleteGuid ?: return
+        pendingDeleteJob?.cancel()
+        pendingDeleteGuid = null
+        pendingDeleteJob = null
+        _uiState.update { it.copy(hiddenGuids = it.hiddenGuids - guid, undoName = null) }
+    }
+
+    /** Actually removes a config whose undo window has closed (or is being superseded). */
+    private fun commitPendingDelete() {
+        val guid = pendingDeleteGuid ?: return
+        pendingDeleteJob?.cancel()
+        pendingDeleteGuid = null
+        pendingDeleteJob = null
+        viewModelScope.launch(ioDispatcher) {
+            if (guid == uiState.value.selectedGuid && uiState.value.isRunning) {
+                _uiState.update { it.copy(hiddenGuids = it.hiddenGuids - guid, undoName = null) }
+                return@launch
+            }
+            dataSource.removeServer(guid)
+            cacheMutex.withLock { groupDataCache.clear() }
+            setupGroupTab(forceRefresh = true).join()
+            _uiState.update { it.copy(hiddenGuids = it.hiddenGuids - guid, undoName = null) }
+        }
+    }
+
+    fun recheckServer(guid: String) {
+        // Re-ping one config; the test worker also refreshes its exit country.
+        val request = testRequests.beginBulk(uiState.value.selectedGroupId)
+        _uiState.update { it.copy(isTesting = true, status = MainStatus.Testing) }
+        viewModelScope.launch {
+            withContext(ioDispatcher) { dataSource.clearAllTestDelayResults(listOf(guid)) }
+            dataSource.sendMsg2TestService(
+                TestServiceMessage(
+                    key = AppConfig.MSG_MEASURE_CONFIG_START,
+                    subscriptionId = "",
+                    serverGuids = listOf(guid),
+                    onlyTcp = false,
+                ),
+                request.id,
+            )
+        }
     }
 
     private fun buildServerRows(groupId: String, servers: List<ServersCache>): List<ServerRowUiModel> {
@@ -791,6 +1061,7 @@ class MainViewModel(
     fun updateSelectedGuid(guid: String) {
         dataSource.setSelectServer(guid)
         _uiState.update { it.copy(selectedGuid = guid) }
+        refreshSelectedRow()
     }
 
     fun refreshSelectedGuid() {
@@ -927,15 +1198,7 @@ class MainViewModel(
         resetTestStatus()
         val groupId = uiState.value.selectedGroupId
         viewModelScope.launch(ioDispatcher) {
-            // After ping, resolve a flag for every successful node (remarks → soft host geo).
-            // Exit-verified cache from a live connect is never overwritten.
-            val guids = MmkvManager.decodeServerList(groupId)
-            guids.forEach { guid ->
-                val aff = MmkvManager.decodeServerAffiliationInfo(guid) ?: return@forEach
-                if (aff.testDelayMillis <= 0L) return@forEach
-                val profile = MmkvManager.decodeServerConfig(guid) ?: return@forEach
-                GeoIpResolver.enrichAfterPing(guid, profile)
-            }
+            // The test worker already measured each answering config's exit country.
             if (uiState.value.isRunning) {
                 refreshExitGeoForSelectedServer(delayMs = 200L)
             }
@@ -1035,7 +1298,7 @@ class MainViewModel(
         val delayMs = AutoConnectController.backoffMsForAttempt(reconnectAttempt) ?: return
         reconnectJob?.cancel()
         reconnectJob = viewModelScope.launch {
-            _uiState.update { it.copy(autoReconnecting = true, status = MainStatus.Testing) }
+            _uiState.update { it.copy(autoReconnecting = true, status = MainStatus.Testing, phase = ConnectPhase.Connecting) }
             delay(delayMs)
             reconnectAttempt++
             prepareConnectGuid()
@@ -1046,12 +1309,19 @@ class MainViewModel(
     // ---------- Running state ----------
     private fun updateRunningState(running: Boolean, clearTestingText: Boolean = true) {
         if (!running || clearTestingText) testRequests.invalidateCurrent()
+        if (running) phaseJob?.cancel()
         _uiState.update { state ->
             state.copy(
                 isRunning = running,
                 isTesting = testRequests.isTesting,
                 status = if (!clearTestingText && state.isRunning == running) state.status
-                else if (running) MainStatus.Connected else MainStatus.Disconnected
+                else if (running) MainStatus.Connected else MainStatus.Disconnected,
+                phase = when {
+                    running -> ConnectPhase.Connected
+                    state.phase == ConnectPhase.Connecting || state.phase == ConnectPhase.Failed -> state.phase
+                    else -> ConnectPhase.Idle
+                },
+                errorMessage = if (running) null else state.errorMessage,
             )
         }
     }
@@ -1097,6 +1367,11 @@ class MainViewModel(
     }
 
     private companion object {
+        const val CONNECT_TIMEOUT_MS = 30_000L
+        const val DISCONNECT_TIMEOUT_MS = 6_000L
+        const val FAILED_SHOWN_MS = 3_600L
+        const val UNDO_WINDOW_MS = 5_000L
+        const val GEO_FILL_BATCH = 80
         const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
     }
 }

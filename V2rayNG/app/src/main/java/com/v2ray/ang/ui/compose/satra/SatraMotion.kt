@@ -1,101 +1,153 @@
 package com.v2ray.ang.ui.compose.satra
 
 import android.content.Context
+import android.os.Build
 import android.provider.Settings
-import android.view.accessibility.AccessibilityManager
-import androidx.compose.animation.core.Easing
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
+import android.view.HapticFeedbackConstants
+import android.view.View
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.Role
 
-/**
- * Named motion tokens (Motion bible). Reduce Motion collapses infinite / shake / breath.
- */
-object SatraMotionSpec {
+/** Motion spec: every interaction is a spring; durations are only used for fades. */
+object SatraMotion {
+    const val FadeMs = 200
     const val EnterMs = 320
-    const val SettleMs = 480
-    const val PulseMs = 1600
-    const val ThemeCrossfadeMs = 420
-    const val ShortMs = 180
-    /** Minimum Connecting ceremony so the orange shield anim is always visible (~0.8s). */
-    const val CeremonyMs = 800
-    const val CapsuleMorphMs = 320
-    const val FlagRevealMs = 280
-    const val UsageRingMs = 600
-    const val LogLineMs = 120
-    const val EmptyPlusBreathMs = 1800
-    const val PingPulseMs = 1200
-    const val TabCrossfadeMs = 220
-    const val ToastMs = 180
-    const val ErrorShakeMs = 280
 
-    val EnterEasing: Easing = FastOutSlowInEasing
-    val PulseEasing: Easing = LinearEasing
+    /** Fast, slightly bouncy feedback for presses. */
+    fun <T> press(): SpringSpec<T> = spring(dampingRatio = 0.62f, stiffness = 700f)
 
-    fun <T> enter() = tween<T>(EnterMs, easing = EnterEasing)
-    fun <T> settle() = tween<T>(SettleMs, easing = EnterEasing)
-    fun <T> short() = tween<T>(ShortMs, easing = EnterEasing)
-    fun <T> pulse() = tween<T>(PulseMs, easing = PulseEasing)
-    fun <T> ceremony() = tween<T>(CeremonyMs, easing = EnterEasing)
-    fun <T> atmosphereLerp(ms: Int = SettleMs) = tween<T>(ms, easing = EnterEasing)
-    fun <T> tabContentCrossfade() = tween<T>(TabCrossfadeMs, easing = EnterEasing)
-    fun <T> capsuleStateMorph() = tween<T>(CapsuleMorphMs, easing = EnterEasing)
-    fun <T> flagReveal() = tween<T>(FlagRevealMs, easing = EnterEasing)
-    fun <T> usageRingFill() = tween<T>(UsageRingMs, easing = EnterEasing)
-    fun <T> logLineAppend() = tween<T>(LogLineMs, easing = EnterEasing)
-    fun <T> toastGlass() = tween<T>(ToastMs, easing = EnterEasing)
+    /** Default layout / state spring. */
+    fun <T> soft(): SpringSpec<T> = spring(dampingRatio = 0.82f, stiffness = 380f)
 
-    /** pressGel — damping 0.68 · stiffness 500 */
-    val pressGel = spring<Float>(dampingRatio = 0.68f, stiffness = 500f)
+    /** Playful overshoot for success / selection. */
+    fun <T> bouncy(): SpringSpec<T> = spring(dampingRatio = 0.5f, stiffness = 260f)
 
-    /** liquidPill — damping 0.78 · stiffness 380 */
-    val liquidPill = spring<Float>(dampingRatio = 0.78f, stiffness = 380f)
+    /** Critically damped, no overshoot, used for charts and progress. */
+    fun <T> smooth(): SpringSpec<T> = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 120f)
 
-    /** sheetPresent — damping 0.86 */
-    val sheetPresent = spring<Float>(dampingRatio = 0.86f, stiffness = Spring.StiffnessMediumLow)
-
-    val drillPush = spring<Float>(dampingRatio = 0.8f, stiffness = 420f)
-    val drillPop = spring<Float>(dampingRatio = 0.82f, stiffness = 380f)
-    val listItemEnter = spring<Float>(dampingRatio = 0.84f, stiffness = 360f)
-
-    // Back-compat aliases used by older satra chrome
-    val snappy = pressGel
-    val soft = sheetPresent
-    val liquid = liquidPill
+    fun <T> fade(ms: Int = FadeMs): FiniteAnimationSpec<T> = tween(ms)
 }
 
+/** True when the user disabled system animations (Settings → Remove animations). */
 @Composable
 fun rememberReduceMotion(): Boolean {
     val context = LocalContext.current
     return remember(context) { context.isReduceMotionEnabled() }
 }
 
-fun Context.isReduceMotionEnabled(): Boolean {
-    @Suppress("UNUSED_VARIABLE")
-    val am = getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-    val scale = Settings.Global.getFloat(
-        contentResolver,
-        Settings.Global.ANIMATOR_DURATION_SCALE,
-        1f,
+fun Context.isReduceMotionEnabled(): Boolean = Settings.Global.getFloat(
+    contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f,
+) == 0f
+
+/** Haptic vocabulary. Falls back to older constants on older Android versions. */
+class SatraHaptics(private val view: View) {
+    fun tap() = perform(HapticFeedbackConstants.VIRTUAL_KEY)
+    fun tick() = perform(
+        if (Build.VERSION.SDK_INT >= 34) HapticFeedbackConstants.SEGMENT_TICK
+        else HapticFeedbackConstants.CLOCK_TICK,
     )
-    return scale == 0f
+    fun select() = perform(HapticFeedbackConstants.CLOCK_TICK)
+    fun heavy() = perform(HapticFeedbackConstants.LONG_PRESS)
+    fun confirm() = perform(
+        if (Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.CONFIRM
+        else HapticFeedbackConstants.LONG_PRESS,
+    )
+    fun reject() = perform(
+        if (Build.VERSION.SDK_INT >= 30) HapticFeedbackConstants.REJECT
+        else HapticFeedbackConstants.LONG_PRESS,
+    )
+
+    private fun perform(constant: Int) {
+        view.performHapticFeedback(constant)
+    }
 }
 
+val LocalSatraHaptics = staticCompositionLocalOf<SatraHaptics?> { null }
+
 @Composable
-fun satraAnimatedFraction(
-    target: Float,
-    label: String,
-    reduceMotion: Boolean = rememberReduceMotion(),
-): Float {
-    return animateFloatAsState(
-        targetValue = target,
-        animationSpec = if (reduceMotion) SatraMotionSpec.short() else SatraMotionSpec.usageRingFill(),
-        label = label,
-    ).value
+fun rememberSatraHaptics(): SatraHaptics {
+    val view = LocalView.current
+    return remember(view) { SatraHaptics(view) }
+}
+
+/** Scales its content down while pressed, springing back with a slight overshoot. */
+fun Modifier.pressScale(
+    interactionSource: MutableInteractionSource,
+    pressedScale: Float = 0.96f,
+): Modifier = composed {
+    val pressed by interactionSource.collectIsPressedAsState()
+    val reduce = rememberReduceMotion()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed && !reduce) pressedScale else 1f,
+        animationSpec = SatraMotion.press(),
+        label = "pressScale",
+    )
+    graphicsLayer { scaleX = scale; scaleY = scale }
+}
+
+/**
+ * Standard Satra tap target: press-scale animation, tick haptic, no ripple (Apple-style),
+ * optional long-click.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+fun Modifier.satraClickable(
+    enabled: Boolean = true,
+    role: Role? = Role.Button,
+    pressedScale: Float = 0.97f,
+    haptic: Boolean = true,
+    onLongClick: (() -> Unit)? = null,
+    onClick: () -> Unit,
+): Modifier = composed {
+    val source = remember { MutableInteractionSource() }
+    val haptics = rememberSatraHaptics()
+    this
+        .pressScale(source, pressedScale)
+        .combinedClickable(
+            interactionSource = source,
+            indication = null,
+            enabled = enabled,
+            role = role,
+            onLongClick = onLongClick?.let { lc ->
+                {
+                    if (haptic) haptics.heavy()
+                    lc()
+                }
+            },
+            onClick = {
+                if (haptic) haptics.tap()
+                onClick()
+            },
+        )
+}
+
+/** One-shot attention "pop" (scale overshoot) when [trigger] changes. */
+@Composable
+fun rememberPop(trigger: Any?, from: Float = 0.82f): Float {
+    val reduce = rememberReduceMotion()
+    val anim = remember { Animatable(1f) }
+    androidx.compose.runtime.LaunchedEffect(trigger) {
+        if (reduce) return@LaunchedEffect
+        anim.snapTo(from)
+        anim.animateTo(1f, SatraMotion.bouncy())
+    }
+    return anim.value
 }

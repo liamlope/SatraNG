@@ -11,4 +11,8 @@ data class ServerAffiliationInfo(
      * (through the local proxy), not from resolving the config server host.
      */
     var exitIpVerified: Boolean = false,
+    /** User starred this config (kept in the affiliation record so it survives list reloads). */
+    var favorite: Boolean = false,
+    /** Last time a geo lookup was attempted (success or not), used to rate-limit retries. */
+    var geoAttemptAt: Long = 0L,
 )

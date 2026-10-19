@@ -18,7 +18,6 @@ import com.v2ray.ang.contracts.ServiceControl
 import com.v2ray.ang.contracts.Tun2SocksControl
 import com.v2ray.ang.core.CoreServiceManager
 import com.v2ray.ang.handler.AppLocaleManager
-import com.v2ray.ang.handler.HybridAppLimitManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.handler.SettingsManager
@@ -270,15 +269,6 @@ class CoreVpnService : VpnService(), ServiceControl {
      */
     private fun configurePerAppProxy(builder: Builder) {
         val selfPackageName = BuildConfig.APPLICATION_ID
-
-        // Limit-blocked apps always stay outside the VPN tunnel.
-        HybridAppLimitManager.blockedPackages().forEach { pkg ->
-            try {
-                builder.addDisallowedApplication(pkg)
-            } catch (e: PackageManager.NameNotFoundException) {
-                LogUtil.e(AppConfig.TAG, "StartCore-VPN: limit-blocked package missing", e)
-            }
-        }
 
         // If per-app proxy is not enabled, disallow the VPN service's own package and return
         if (MmkvManager.decodeSettingsBool(AppConfig.PREF_PER_APP_PROXY) == false) {

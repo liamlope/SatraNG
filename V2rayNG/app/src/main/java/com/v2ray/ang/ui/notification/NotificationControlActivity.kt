@@ -37,7 +37,7 @@ import com.v2ray.ang.handler.NotificationPrefs
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.LocalDarkTheme
-import com.v2ray.ang.ui.compose.satra.SatraTokens
+import com.v2ray.ang.ui.compose.SatraColors
 import com.v2ray.ang.ui.compose.satraBackgroundBrush
 
 class NotificationControlActivity : BaseComponentActivity() {
@@ -132,7 +132,7 @@ private fun NotifPreviewCard(title: String, subtitle: String) {
         Text(
             title,
             style = MaterialTheme.typography.titleMedium,
-            color = SatraTokens.TealDeep,
+            color = SatraColors.TealDeep,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.height(4.dp))
@@ -163,7 +163,7 @@ private fun PrefSwitch(title: String, checked: Boolean, onToggle: () -> Unit) {
             onCheckedChange = { onToggle() },
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = SatraTokens.Teal,
+                checkedTrackColor = SatraColors.Teal,
             ),
         )
     }

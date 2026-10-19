@@ -20,7 +20,7 @@ import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.BrowserDialerMode
 import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isNotNullEmpty
-import com.v2ray.ang.handler.HybridAppLimitManager
+import com.v2ray.ang.handler.UsageSampler
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.handler.SettingsManager
@@ -55,8 +55,7 @@ object CoreServiceManager {
     private var networkMonitor: NetworkMonitor? = null
     private val connectionTestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    @Volatile
-    private var isReloading = false
+    @Volatile private var isReloading = false
 
     /** Tun descriptor the core was started with, null in the proxy only and root run modes. */
     private var currentVpnInterface: ParcelFileDescriptor? = null
@@ -182,7 +181,7 @@ object CoreServiceManager {
             MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, "")
         }
         NotificationManager.startSpeedNotification()
-        HybridAppLimitManager.startMonitoring()
+        UsageSampler.start(service)
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core started successfully")
     }
 
@@ -218,7 +217,7 @@ object CoreServiceManager {
 
         MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_STOP_SUCCESS, "")
         NotificationManager.cancelNotification()
-        HybridAppLimitManager.stopMonitoring()
+        UsageSampler.stop()
 
         try {
             service.unregisterReceiver(mMsgReceive)
@@ -282,13 +281,18 @@ object CoreServiceManager {
         }
     }
 
+    /** Rebuilds the config (usage rules, routing) and swaps the core in place; the tunnel stays up. */
+    fun reloadForPolicyChange() {
+        CoroutineScope(Dispatchers.IO).launch { reloadCore() }
+    }
+
     /**
      * Queries and resets all outbound traffic counters in one core call.
      * Go side format: tag,direction,value;tag,direction,value;
      */
     fun queryAllOutboundTrafficStats(): List<OutboundTrafficStat> {
         // The stats manager is gone once the core stops, querying it then reaches into freed state.
-        if (!isRunning()) return emptyList()
+        if (!isRunning() || isReloading) return emptyList()
 
         val payload = coreController.queryAllOutboundTrafficStats()
 
@@ -477,6 +481,11 @@ object CoreServiceManager {
 
                 AppConfig.MSG_STATE_START -> {
                     // nothing to do
+                }
+
+                AppConfig.MSG_STATE_RELOAD -> {
+                    LogUtil.i(AppConfig.TAG, "StartCore-Manager: Policy reload")
+                    reloadForPolicyChange()
                 }
 
                 AppConfig.MSG_STATE_STOP -> {

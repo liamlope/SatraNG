@@ -59,6 +59,11 @@ object LauncherManager {
         MessageHelper.sendMsg2Service(context, AppConfig.MSG_STATE_STOP, "")
     }
 
+    /** Re-applies usage rules / routing policy to a running core without dropping the tunnel. */
+    fun reloadPolicy(context: Context) {
+        MessageHelper.sendMsg2Service(context, AppConfig.MSG_STATE_RELOAD, "")
+    }
+
     /** Restarts the active daemon without starting a stopped service. */
     fun restartService(context: Context) {
         MessageHelper.sendMsg2Service(context, AppConfig.MSG_STATE_RESTART, "")

@@ -35,6 +35,7 @@ object NotificationManager {
     private const val QUERY_INTERVAL_MS = 3000L
 
     private var lastQueryTime = 0L
+    private var lastTotals = UsageSampler.Totals()
     private var mBuilder: NotificationCompat.Builder? = null
     private var speedNotificationJob: Job? = null
     private var mNotificationManager: NotificationManager? = null
@@ -50,6 +51,7 @@ object NotificationManager {
         if (speedNotificationJob != null || CoreServiceManager.isRunning() == false) return
 
         var lastZeroSpeed = false
+        lastTotals = UsageSampler.totals
 
         speedNotificationJob = CoroutineScope(Dispatchers.IO).launch {
             while (isActive) {
@@ -254,29 +256,13 @@ object NotificationManager {
         }
         val sinceLastQueryInSeconds = sinceLastQueryIn / 1000.0
 
-        var proxyUplink = 0L
-        var proxyDownlink = 0L
-        var directUplink = 0L
-        var directDownlink = 0L
-
-        HybridUsageTracker.consumeOutboundStats().forEach { stat ->
-            when {
-                stat.tag == AppConfig.TAG_DIRECT -> {
-                    when (stat.direction) {
-                        AppConfig.UPLINK -> directUplink += stat.value
-                        AppConfig.DOWNLINK -> directDownlink += stat.value
-                    }
-                }
-
-                // Accumulate stats for all proxy outbounds (including custom subscription tags)
-                stat.tag != AppConfig.TAG_BLOCKED -> {
-                    when (stat.direction) {
-                        AppConfig.UPLINK -> proxyUplink += stat.value
-                        AppConfig.DOWNLINK -> proxyDownlink += stat.value
-                    }
-                }
-            }
-        }
+        val now = UsageSampler.totals
+        val prev = lastTotals
+        lastTotals = now
+        val proxyUplink = now.proxyUp - prev.proxyUp
+        val proxyDownlink = now.proxyDown - prev.proxyDown
+        val directUplink = now.directUp - prev.directUp
+        val directDownlink = now.directDown - prev.directDown
 
         val proxyTotal = proxyUplink + proxyDownlink
         val directTotal = directUplink + directDownlink

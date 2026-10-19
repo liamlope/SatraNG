@@ -1,0 +1,231 @@
+package com.v2ray.ang.ui.usage
+
+import android.app.Application
+import android.os.Build
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.v2ray.ang.core.LauncherManager
+import com.v2ray.ang.handler.AppUsage
+import com.v2ray.ang.handler.AppUsageReader
+import com.v2ray.ang.handler.DayUsage
+import com.v2ray.ang.handler.GlobalLimit
+import com.v2ray.ang.handler.RuleKind
+import com.v2ray.ang.handler.UsageLimitEngine
+import com.v2ray.ang.handler.UsagePeriods
+import com.v2ray.ang.handler.UsageRule
+import com.v2ray.ang.handler.UsageRulesRepository
+import com.v2ray.ang.handler.UsageStore
+import com.v2ray.ang.handler.LimitPeriod
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+data class AppUsageRow(
+    val uid: Int,
+    val packageName: String?,
+    val label: String,
+    val rxBytes: Long,
+    val txBytes: Long,
+) {
+    val totalBytes: Long get() = rxBytes + txBytes
+}
+
+data class RuleRow(
+    val rule: UsageRule,
+    val usedBytes: Long,
+    val bonusBytes: Long,
+    val blocked: Boolean,
+    val nextResetMs: Long,
+    /** Packages are shown with their launcher icon; domain rules use a generic glyph. */
+    val iconPackage: String?,
+    /** App rule that the core cannot enforce yet (needs Xray TUN engine). */
+    val needsEngine: Boolean,
+) {
+    val capBytes: Long get() = rule.limitBytes + bonusBytes
+    val fraction: Float get() = if (rule.limitBytes > 0L) (usedBytes.toDouble() / capBytes).toFloat().coerceIn(0f, 1f) else 1f
+}
+
+data class GlobalRow(val limit: GlobalLimit, val usedBytes: Long, val nextResetMs: Long)
+
+data class UsageUiState(
+    val rangeDays: Int = 7,
+    val days: List<DayUsage> = emptyList(),
+    val totalBytes: Long = 0L,
+    val averageBytes: Long = 0L,
+    val connectedSeconds: Long = 0L,
+    val apps: List<AppUsageRow> = emptyList(),
+    val hasUsageAccess: Boolean = false,
+    val appsLoading: Boolean = false,
+    val rules: List<RuleRow> = emptyList(),
+    val global: GlobalRow = GlobalRow(GlobalLimit(), 0L, 0L),
+    val appRulesSupported: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q,
+    val engineReady: Boolean = false,
+)
+
+class UsageViewModel(app: Application) : AndroidViewModel(app) {
+
+    private val _state = MutableStateFlow(UsageUiState(hasUsageAccess = AppUsageReader.hasAccess(app)))
+    val state: StateFlow<UsageUiState> = _state.asStateFlow()
+
+    /** Last 7 days for the Home card. */
+    val week: StateFlow<List<DayUsage>> = flow {
+        while (true) {
+            emit(UsageStore.days(7))
+            delay(5_000)
+        }
+    }.flowOn(Dispatchers.IO).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private var appsJob: Job? = null
+    private var tickJob: Job? = null
+    private val labelCache = HashMap<String, String>()
+
+    fun onVisible() {
+        if (tickJob?.isActive == true) return
+        tickJob = viewModelScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                refreshLedger()
+                delay(2_000)
+            }
+        }
+        refreshApps()
+    }
+
+    fun onHidden() {
+        tickJob?.cancel()
+        tickJob = null
+    }
+
+    fun setRange(days: Int) {
+        if (_state.value.rangeDays == days) return
+        _state.update { it.copy(rangeDays = days) }
+        viewModelScope.launch(Dispatchers.IO) { refreshLedger() }
+        refreshApps()
+    }
+
+    fun onAccessMaybeChanged() {
+        val has = AppUsageReader.hasAccess(getApplication())
+        _state.update { it.copy(hasUsageAccess = has) }
+        if (has) refreshApps()
+    }
+
+    private fun refreshLedger() {
+        val now = System.currentTimeMillis()
+        val range = _state.value.rangeDays
+        val days = UsageStore.days(range, now)
+        val total = days.sumOf { it.totalBytes }
+        val rules = UsageRulesRepository.rules().map { rule ->
+            val used = UsageLimitEngine.usedNow(rule, now)
+            val blocked = UsageLimitEngine.isBlockedNow(rule, now)
+            RuleRow(
+                rule = rule,
+                usedBytes = used,
+                bonusBytes = UsageLimitEngine.bonusNow(rule, now),
+                blocked = blocked,
+                nextResetMs = UsagePeriods.nextReset(rule.period, now),
+                iconPackage = rule.packageName.takeIf { rule.kind == RuleKind.APP },
+                needsEngine = rule.kind == RuleKind.APP && rule.enabled && !UsageLimitEngine.canEnforceAppRules(),
+            )
+        }
+        val g = UsageRulesRepository.global()
+        val gUsed = if (g.enabled) UsageStore.totalSince(UsagePeriods.periodStart(g.period, now), now) else 0L
+        _state.update {
+            it.copy(
+                days = days,
+                totalBytes = total,
+                averageBytes = if (range > 0) total / range else 0L,
+                connectedSeconds = days.sumOf { d -> d.connectedSec },
+                rules = rules,
+                global = GlobalRow(g, gUsed, UsagePeriods.nextReset(g.period, now)),
+                engineReady = UsageLimitEngine.canEnforceAppRules(),
+            )
+        }
+    }
+
+    fun refreshApps() {
+        appsJob?.cancel()
+        val ctx = getApplication<Application>()
+        if (!AppUsageReader.hasAccess(ctx)) {
+            _state.update { it.copy(hasUsageAccess = false, apps = emptyList(), appsLoading = false) }
+            return
+        }
+        _state.update { it.copy(hasUsageAccess = true, appsLoading = true) }
+        appsJob = viewModelScope.launch(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            val start = UsagePeriods.lastDayStarts(_state.value.rangeDays, now).first()
+            val rows = AppUsageReader.query(ctx, start, now).take(60).map { it.toRow() }
+            _state.update { it.copy(apps = rows, appsLoading = false) }
+        }
+    }
+
+    private fun AppUsage.toRow(): AppUsageRow {
+        val pm = getApplication<Application>().packageManager
+        val pkg = packageName
+        val label = if (pkg == null) UNLABELED else labelCache.getOrPut(pkg) {
+            runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+        }
+        return AppUsageRow(uid, packageName, label, rxBytes, txBytes)
+    }
+
+    // ---- rules ----
+
+    fun saveRule(rule: UsageRule) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val saved = if (rule.id.isBlank()) rule.copy(id = UsageRule.newId(), createdAt = System.currentTimeMillis()) else rule
+            UsageRulesRepository.upsert(saved)
+            applyPolicy()
+            refreshLedger()
+        }
+    }
+
+    fun deleteRule(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            UsageRulesRepository.delete(id)
+            applyPolicy()
+            refreshLedger()
+        }
+    }
+
+    fun setRuleEnabled(id: String, enabled: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            UsageRulesRepository.rules().firstOrNull { it.id == id }?.let {
+                UsageRulesRepository.upsert(it.copy(enabled = enabled))
+                applyPolicy()
+                refreshLedger()
+            }
+        }
+    }
+
+    fun saveGlobal(limit: GlobalLimit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            UsageRulesRepository.saveGlobal(limit)
+            refreshLedger()
+        }
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch(Dispatchers.IO) {
+            UsageStore.clearLedger()
+            refreshLedger()
+        }
+    }
+
+    /** Tells a running core to rebuild its routing so rule edits take effect without reconnecting. */
+    private suspend fun applyPolicy() = withContext(Dispatchers.Main) {
+        LauncherManager.reloadPolicy(getApplication())
+    }
+
+    companion object {
+        const val UNLABELED = "\u0000other"
+    }
+}

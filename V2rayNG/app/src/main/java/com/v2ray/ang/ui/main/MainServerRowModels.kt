@@ -16,6 +16,8 @@ data class ServerRowUiModel(
     val subscriptionBadge: String,
     val countryCode: String? = null,
     val countryName: String? = null,
+    val favorite: Boolean = false,
+    val exitVerified: Boolean = false,
 ) {
     val flag: String get() = GeoIpResolver.flagEmoji(countryCode)
     val locationLabel: String
@@ -34,7 +36,8 @@ fun buildServerRowUiModel(
     subscriptionRemarks: String,
 ): ServerRowUiModel {
     val profile = server.profile
-    val geo = GeoIpResolver.displayForProfile(server.guid, profile)
+    val aff = com.v2ray.ang.handler.MmkvManager.decodeServerAffiliationInfo(server.guid)
+    val geo = GeoIpResolver.display(aff)
     return ServerRowUiModel(
         guid = server.guid,
         profile = profile,
@@ -46,6 +49,8 @@ fun buildServerRowUiModel(
         subscriptionBadge = subscriptionRemarks.firstOrNull()?.toString().orEmpty(),
         countryCode = geo.countryCode,
         countryName = geo.countryName,
+        favorite = aff?.favorite == true,
+        exitVerified = geo.exitVerified,
     )
 }
 

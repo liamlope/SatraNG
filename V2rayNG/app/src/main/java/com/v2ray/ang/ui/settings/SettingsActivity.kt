@@ -65,13 +65,21 @@ class SettingsActivity : BaseComponentActivity() {
 
     private val viewModel: SettingsViewModel by viewModels()
 
+    private val initialDestination: SettingsDestination by lazy {
+        SettingsDestination.entries.firstOrNull { it.name == intent.getStringExtra(EXTRA_DESTINATION) }
+            ?: SettingsDestination.Advanced
+    }
+
+    companion object {
+        const val EXTRA_DESTINATION = "satra_settings_destination"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 viewModel.refreshSystemVpnSettingsAvailability()
-                viewModel.refreshHubState()
-            }
+                            }
         }
     }
 
@@ -100,9 +108,7 @@ class SettingsActivity : BaseComponentActivity() {
             onOpenPerAppManage = { startActivity(Intent(this, PerAppProxyActivity::class.java)) },
             onOpenRouting = { startActivity(Intent(this, RoutingSettingActivity::class.java)) },
             onOpenNotifications = { startActivity(Intent(this, NotificationControlActivity::class.java)) },
-            onOpenLiquidCatalog = {
-                startActivity(Intent(this, com.v2ray.ang.ui.catalog.LiquidCatalogActivity::class.java))
-            },
+            initialDestination = initialDestination,
         )
     }
 }
@@ -117,13 +123,13 @@ fun SettingsScreen(
     onOpenPerAppManage: () -> Unit,
     onOpenRouting: () -> Unit,
     onOpenNotifications: () -> Unit,
-    onOpenLiquidCatalog: (() -> Unit)? = null,
+    initialDestination: SettingsDestination = SettingsDestination.Advanced,
 ) {
     val scrollState = rememberScrollState()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val systemVpnSettingsAvailable by viewModel.systemVpnSettingsAvailable.collectAsStateWithLifecycle()
     val hubState by viewModel.hubState.collectAsStateWithLifecycle()
-    var destination by rememberSaveable { mutableStateOf(SettingsDestination.Hub) }
+    var destination by rememberSaveable { mutableStateOf(initialDestination) }
     val isDark = LocalDarkTheme.current
 
     var localDns by rememberMmkvBool(AppConfig.PREF_LOCAL_DNS_ENABLED, AppConfig.DEFAULT_LOCAL_DNS_ENABLED)
@@ -257,12 +263,7 @@ fun SettingsScreen(
             AppTopBar(
                 title = stringResource(titleRes),
                 onBackClick = {
-                    if (destination == SettingsDestination.Hub) {
-                        onFinish()
-                    } else {
-                        destination = SettingsDestination.Hub
-                        viewModel.refreshHubState()
-                    }
+                    onFinish()
                 },
                 isLoading = isLoading
             )
@@ -274,34 +275,8 @@ fun SettingsScreen(
                 .padding(innerPadding)
         ) {
             when (destination) {
-                SettingsDestination.Hub -> {
-                    SettingsHubScreen(
-                        hubState = hubState,
-                        onOpen = { destination = it },
-                        onPerAppToggle = { viewModel.setPerAppProxyEnabled(it) },
-                        onOpenPerAppManage = onOpenPerAppManage,
-                        onOpenRouting = onOpenRouting,
-                        onOpenNotifications = onOpenNotifications,
-                        onOpenLiquidCatalog = onOpenLiquidCatalog,
-                        onApplyTunnelPresets = {
-                            viewModel.applySatraTunnelPresets()
-                            localDns = AppConfig.DEFAULT_LOCAL_DNS_ENABLED
-                            socksPort = AppConfig.PORT_SOCKS
-                            vpnMtu = AppConfig.VPN_MTU.toString()
-                            useHevTun = AppConfig.DEFAULT_USE_HEV_TUNNEL
-                            ipv6Enabled = AppConfig.DEFAULT_IPV6_ENABLED
-                            sniffingEnabled = AppConfig.DEFAULT_SNIFFING_ENABLED
-                            socksEnableUdp = AppConfig.DEFAULT_SOCKS_ENABLE_UDP
-                            appendHttpProxy = AppConfig.DEFAULT_APPEND_HTTP_PROXY
-                            mux = false
-                            proxySharing = false
-                            mode = VPN
-                        },
-                    )
-                }
-                SettingsDestination.Safety -> {
-                    SettingsSafetyPanel()
-                }
+                SettingsDestination.Hub -> LaunchedEffect(Unit) { onFinish() }
+                SettingsDestination.Safety -> LaunchedEffect(Unit) { onFinish() }
                 SettingsDestination.PerApp -> {
                     LaunchedEffect(Unit) {
                         onOpenPerAppManage()

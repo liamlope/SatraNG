@@ -95,6 +95,10 @@ object AppConfig {
     const val PREF_REAL_PING_CONCURRENCY = "pref_real_ping_concurrency"
     /** Auto-select best config and reconnect after unexpected drop. Default ON. */
     const val PREF_AUTO_CONNECT = "pref_auto_connect"
+    /** Start the VPN as soon as the app is opened. */
+    const val PREF_QUICK_CONNECT = "pref_quick_connect"
+    /** Show the advanced settings entries on the Settings tab. */
+    const val PREF_SHOW_ADVANCED = "pref_show_advanced"
     /** Persisted short flag: user stopped VPN manually — blocks auto reconnect. */
     const val PREF_USER_REQUESTED_STOP = "pref_user_requested_stop"
 
@@ -205,6 +209,7 @@ object AppConfig {
     const val MSG_STATE_STOP = 4
     const val MSG_STATE_STOP_SUCCESS = 41
     const val MSG_STATE_RESTART = 5
+    const val MSG_STATE_RELOAD = 9
     const val MSG_MEASURE_DELAY = 6
     const val MSG_MEASURE_DELAY_RESULT = 61
     const val MSG_MEASURE_DELAY_CANCEL = 62

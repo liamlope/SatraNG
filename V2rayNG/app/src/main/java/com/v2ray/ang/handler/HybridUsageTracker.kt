@@ -10,8 +10,6 @@ import androidx.work.WorkerParameters
 import androidx.work.multiprocess.RemoteWorkManager
 import com.v2ray.ang.AngApplication
 import com.v2ray.ang.AppConfig
-import com.v2ray.ang.core.CoreServiceManager
-import com.v2ray.ang.dto.OutboundTrafficStat
 import com.v2ray.ang.dto.SubscriptionUpdateMessage
 import com.v2ray.ang.dto.entities.SubscriptionItem
 import com.v2ray.ang.helper.MessageHelper
@@ -140,35 +138,16 @@ object HybridUsageTracker {
         resetBaseline(subId, remoteUsed)
     }
 
-    /**
-     * Single consumer of core outbound counters (query resets them).
-     * Notification speed + UI polling must go through this.
-     */
-    @Synchronized
-    fun consumeOutboundStats(): List<OutboundTrafficStat> {
-        if (!CoreServiceManager.isRunning()) return emptyList()
-        val stats = CoreServiceManager.queryAllOutboundTrafficStats()
-        var proxyBytes = 0L
-        stats.forEach { stat ->
-            if (stat.tag != AppConfig.TAG_BLOCKED && stat.tag != AppConfig.TAG_DIRECT) {
-                when (stat.direction) {
-                    AppConfig.UPLINK, AppConfig.DOWNLINK -> proxyBytes += stat.value
-                }
-            }
+    /** Called once per second by [UsageSampler] with the proxied bytes of that second. */
+    fun addLocalDelta(proxyBytes: Long) {
+        if (proxyBytes <= 0L) return
+        MmkvManager.encodeSettings(KEY_LOCAL_DELTA, localDelta() + proxyBytes)
+        val subId = MmkvManager.getSelectServer()
+            ?.let { MmkvManager.decodeServerConfig(it)?.subscriptionId }
+            ?.takeIf { it.isNotBlank() }
+        if (!subId.isNullOrBlank() && activeSubId() != subId) {
+            MmkvManager.encodeSettings(KEY_ACTIVE_SUB, subId)
         }
-        if (proxyBytes > 0L) {
-            val next = localDelta() + proxyBytes
-            MmkvManager.encodeSettings(KEY_LOCAL_DELTA, next)
-            UsageMonitorStore.recordLocalDeltaSample(proxyBytes)
-            val selectedGuid = MmkvManager.getSelectServer()
-            val subId = selectedGuid
-                ?.let { MmkvManager.decodeServerConfig(it)?.subscriptionId }
-                ?.takeIf { it.isNotBlank() }
-            if (!subId.isNullOrBlank()) {
-                MmkvManager.encodeSettings(KEY_ACTIVE_SUB, subId)
-            }
-        }
-        return stats
     }
 
     fun schedulePeriodicSync(context: Context = AngApplication.application) {

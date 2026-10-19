@@ -53,6 +53,7 @@ android {
 
     buildTypes {
         release {
+            manifestPlaceholders["appLabel"] = "@string/app_name"
             // Keep minify off: Xray/Gson reflection breaks easily; Play Protect
             // cares more about permissions + stable release signing.
             isMinifyEnabled = false
@@ -66,6 +67,9 @@ android {
             }
         }
         debug {
+            // Side-by-side install with the user's production SatraNG: distinct id, label and data.
+            applicationIdSuffix = ".debug"
+            manifestPlaceholders["appLabel"] = "SatraNG Dev"
             // Prefer the same release cert when available so Play Protect
             // reputation is stable across installs (not a fresh debug cert each machine).
             val satraSigning = signingConfigs.findByName("satraRelease")
@@ -155,6 +159,11 @@ android {
         compose = true
     }
 
+    lint {
+        // Only en + fa are hand-translated; other locales fall back to English.
+        disable += "MissingTranslation"
+    }
+
     androidResources {
         generateLocaleConfig = true
         localeFilters += listOf(
@@ -240,9 +249,6 @@ dependencies {
 
     // Reorderable list
     implementation(libs.reorderable)
-
-    // Abdullajon LiquidGlass (pinned submodule via :liquidglass-compose)
-    implementation(project(":liquidglass-compose"))
 
     // Testing Libraries
     testImplementation(platform(libs.junit.bom))

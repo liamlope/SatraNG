@@ -105,7 +105,7 @@ fun AboutScreen(
                     .clip(RoundedCornerShape(24.dp))
                     .background(
                         Brush.linearGradient(
-                            listOf(SatraColors.InkSoft, SatraColors.Slate, Color(0xFF0A4F40))
+                            listOf(SatraColors.InkSoft, SatraColors.AmberDeep, Color(0xFF0A4F40))
                         )
                     )
                     .padding(24.dp)

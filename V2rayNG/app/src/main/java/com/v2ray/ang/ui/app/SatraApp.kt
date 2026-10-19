@@ -1,0 +1,173 @@
+package com.v2ray.ang.ui.app
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.v2ray.ang.R
+import com.v2ray.ang.handler.UsageStore
+import com.v2ray.ang.ui.compose.satra.SatraBackground
+import com.v2ray.ang.ui.compose.satra.SatraIcons
+import com.v2ray.ang.ui.compose.satra.SatraShapes
+import com.v2ray.ang.ui.compose.satra.SatraTab
+import com.v2ray.ang.ui.compose.satra.SatraTabBar
+import com.v2ray.ang.ui.compose.satra.Satra
+import com.v2ray.ang.ui.compose.satra.satraClickable
+import com.v2ray.ang.ui.home.AddMethod
+import com.v2ray.ang.ui.home.HomeScreen
+import com.v2ray.ang.ui.main.MainAction
+import com.v2ray.ang.ui.main.MainDestination
+import com.v2ray.ang.ui.main.MainViewModel
+import com.v2ray.ang.ui.more.MoreScreen
+import com.v2ray.ang.ui.servers.ServersScreen
+import com.v2ray.ang.ui.subs.SubsScreen
+import com.v2ray.ang.ui.subs.SubsViewModel
+import com.v2ray.ang.ui.usage.UsageScreen
+import com.v2ray.ang.ui.usage.UsageViewModel
+
+/** Everything the tab UI needs from the hosting activity (permissions, launchers, other screens). */
+interface AppNav {
+    fun action(action: MainAction)
+    fun navigate(destination: MainDestination)
+    fun openSettingsPage(destination: com.v2ray.ang.ui.settings.SettingsDestination)
+    fun editSubscription(subId: String?)
+    fun scanQr(onResult: (String) -> Unit)
+    fun openUsageAccess()
+    /** Switch to the Xray TUN engine (needed for per-app limits) and restart the VPN. */
+    fun enableAppEnforcement()
+    fun openSystemVpnSettings()
+    fun share(text: String)
+    fun copy(text: String)
+}
+
+object Tabs { const val Home = 0; const val Servers = 1; const val Subs = 2; const val Usage = 3; const val More = 4 }
+
+@Composable
+fun SatraApp(
+    mainVm: MainViewModel,
+    subsVm: SubsViewModel,
+    usageVm: UsageViewModel,
+    nav: AppNav,
+    initialTab: Int = Tabs.Home,
+) {
+    var tab by rememberSaveable { mutableIntStateOf(initialTab) }
+    LaunchedEffect(initialTab) { tab = initialTab }
+    val state by mainVm.uiState.collectAsState()
+    val live by mainVm.liveState.collectAsState()
+    val holder = rememberSaveableStateHolder()
+    val tabs = listOf(
+        SatraTab(SatraIcons.Home, stringResource(R.string.sx_tab_home)),
+        SatraTab(SatraIcons.Servers, stringResource(R.string.sx_tab_servers)),
+        SatraTab(SatraIcons.Layers, stringResource(R.string.sx_tab_subs)),
+        SatraTab(SatraIcons.Chart, stringResource(R.string.sx_tab_usage)),
+        SatraTab(SatraIcons.Sliders, stringResource(R.string.sx_tab_more)),
+    )
+    SatraBackground {
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                Crossfade(targetState = tab, animationSpec = tween(180), label = "tabs") { current ->
+                    holder.SaveableStateProvider(current) {
+                        when (current) {
+                            Tabs.Home -> {
+                                val week by usageVm.week.collectAsState()
+                                HomeScreen(
+                                    state = state, live = live, week = week,
+                                    onToggle = { nav.action(MainAction.ToggleService) },
+                                    onPing = { nav.action(MainAction.TestCurrentServer) },
+                                    onOpenServers = { tab = Tabs.Servers },
+                                    onOpenUsage = { tab = Tabs.Usage },
+                                    onAdd = { method ->
+                                        when (method) {
+                                            AddMethod.Scan -> nav.action(MainAction.ImportQRcode)
+                                            AddMethod.Clipboard -> nav.action(MainAction.ImportClipboard)
+                                            AddMethod.File -> nav.action(MainAction.ImportConfigLocal)
+                                            AddMethod.Subscription -> { tab = Tabs.Subs }
+                                        }
+                                    },
+                                )
+                            }
+                            Tabs.Servers -> ServersScreen(mainVm, nav)
+                            Tabs.Subs -> SubsScreen(subsVm, mainVm, nav)
+                            Tabs.Usage -> UsageScreen(usageVm, live, nav)
+                            else -> MoreScreen(mainVm, nav)
+                        }
+                    }
+                }
+                UndoBar(
+                    name = state.undoName,
+                    onUndo = { nav.action(MainAction.UndoDelete) },
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
+                )
+            }
+            SatraTabBar(tabs, tab, { tab = it })
+        }
+    }
+}
+
+@Composable
+private fun UndoBar(name: String?, onUndo: () -> Unit, modifier: Modifier = Modifier) {
+    val c = Satra.colors
+    AnimatedVisibility(
+        visible = name != null,
+        modifier = modifier,
+        enter = slideInVertically(tween(280)) { it } + fadeIn(tween(200)),
+        exit = slideOutVertically(tween(220)) { it } + fadeOut(tween(160)),
+    ) {
+        var last by remember { androidx.compose.runtime.mutableStateOf(name.orEmpty()) }
+        if (name != null) last = name
+        Row(
+            Modifier
+                .padding(horizontal = 16.dp)
+                .widthIn(max = 520.dp)
+                .shadow(14.dp, SatraShapes.Large, ambientColor = c.shadow, spotColor = c.shadow)
+                .clip(SatraShapes.Large)
+                .background(c.surfaceRaised)
+                .padding(start = 16.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.sx_deleted_named, last),
+                style = Satra.type.subhead, color = c.textPrimary,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                stringResource(R.string.sx_undo),
+                style = Satra.type.headline, color = c.accent,
+                modifier = Modifier.heightIn(min = 44.dp).satraClickable(onClick = onUndo).padding(horizontal = 16.dp).wrapContentHeight(Alignment.CenterVertically),
+            )
+        }
+    }
+}
+
