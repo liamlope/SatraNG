@@ -161,6 +161,7 @@ fun InputDialog(
                         singleLine = false,
                         maxLines = 5,
                         visualTransformation = field.visualTransformation,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(autoCorrectEnabled = false),
                         colors = satraFieldColors(),
                         shape = SatraShapes.Medium,
                         modifier = Modifier.fillMaxWidth()

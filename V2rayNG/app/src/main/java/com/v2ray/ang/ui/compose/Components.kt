@@ -168,7 +168,7 @@ private fun SearchInputField(
                     backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
                 )
             ),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search, autoCorrectEnabled = false),
             modifier = Modifier
                 .weight(1f)
                 .focusRequester(focusRequester)

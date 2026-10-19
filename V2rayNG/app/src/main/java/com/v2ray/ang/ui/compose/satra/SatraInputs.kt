@@ -80,7 +80,8 @@ fun SatraTextField(
             interactionSource = source,
             textStyle = Satra.type.body.copy(color = c.textPrimary),
             cursorBrush = Brush.linearGradient(listOf(c.accent, c.accent)),
-            keyboardOptions = keyboardOptions,
+            // Keyboards must not rewrite what's typed (e.g. SwiftKey turning "parham" into Persian script).
+            keyboardOptions = keyboardOptions.copy(autoCorrectEnabled = false),
             visualTransformation = visualTransformation,
             modifier = Modifier.fillMaxWidth(),
             decorationBox = { inner ->

@@ -831,7 +831,7 @@ fun SatraSearchField(
         singleLine = true,
         textStyle = Satra.type.body.copy(color = c.textPrimary),
         cursorBrush = Brush.linearGradient(listOf(c.accent, c.accent)),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search, autoCorrectEnabled = false),
         keyboardActions = KeyboardActions(onSearch = { }),
         modifier = modifier
             .fillMaxWidth()
