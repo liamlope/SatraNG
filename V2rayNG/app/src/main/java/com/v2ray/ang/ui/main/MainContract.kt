@@ -34,6 +34,12 @@ data class MainUiState(
     val shareQRCodeBitmap: android.graphics.Bitmap? = null,
     /** True while Auto-connect is retrying after an unexpected drop. */
     val autoReconnecting: Boolean = false,
+    /** "Connect to the fastest" is testing servers / about to connect. */
+    val smartConnecting: Boolean = false,
+    /** One-tap Add is importing (subscription download in progress). */
+    val importing: Boolean = false,
+    /** Show the "more ways to add" sheet (clipboard had nothing usable, or user asked). */
+    val addSheet: Boolean = false,
     val phase: ConnectPhase = ConnectPhase.Idle,
     /** Short reason shown under the button when [phase] is [ConnectPhase.Failed]. */
     val errorMessage: String? = null,
@@ -56,6 +62,9 @@ sealed interface MainAction {
     data object ToggleService : MainAction
     data object TestCurrentServer : MainAction
     data object TestAllServers : MainAction
+    /** Test the servers of the current list, pick the quickest and connect (or switch) to it. */
+    data object SmartConnect : MainAction
+    data class ShowAddSheet(val show: Boolean) : MainAction
     data object TestRealAllServers : MainAction
     data object CancelTesting : MainAction
     data object RemoveAllServers : MainAction
@@ -94,6 +103,8 @@ sealed interface MainAction {
     data object UndoHandled : MainAction
     /** Re-measure the exit country of a single config (and its latency). */
     data class RecheckServer(val guid: String) : MainAction
+    /** Retry finding the real exit country of one config (tap on a "not found" location). */
+    data class LocateServer(val guid: String) : MainAction
 }
 
 /** Screens opened from the tab UI as separate activities. */
@@ -108,6 +119,19 @@ data class QuotaUi(
     val totalBytes: Long,
     /** Epoch millis, 0 when the subscription never expires. */
     val expireMs: Long,
+    /** When the plan started; we only know when the subscription was added, so that is used. */
+    val startMs: Long = 0L,
 ) {
     val fraction: Float? get() = if (totalBytes > 0L) (usedBytes.toDouble() / totalBytes).toFloat().coerceIn(0f, 1f) else null
+
+    /**
+     * Share of the plan's time still left, from [startMs] to [expireMs]. If the start is unknown or
+     * not before expiry, a 30-day plan is assumed. Null when the subscription never expires.
+     */
+    fun timeLeftFraction(nowMs: Long): Float? {
+        if (expireMs <= 0L) return null
+        val left = (expireMs - nowMs).coerceAtLeast(0L).toDouble()
+        val span = if (startMs in 1 until expireMs) (expireMs - startMs).toDouble() else 30.0 * 86_400_000.0
+        return (left / span).toFloat().coerceIn(0f, 1f)
+    }
 }

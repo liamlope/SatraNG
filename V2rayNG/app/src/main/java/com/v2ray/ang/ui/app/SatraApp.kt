@@ -109,12 +109,16 @@ fun SatraApp(
                                     onOpenUsage = { tab = Tabs.Usage },
                                     onAdd = { method ->
                                         when (method) {
+                                            AddMethod.Smart, AddMethod.Clipboard -> nav.action(MainAction.ImportClipboard)
                                             AddMethod.Scan -> nav.action(MainAction.ImportQRcode)
-                                            AddMethod.Clipboard -> nav.action(MainAction.ImportClipboard)
                                             AddMethod.File -> nav.action(MainAction.ImportConfigLocal)
                                             AddMethod.Subscription -> { tab = Tabs.Subs }
+                                            AddMethod.More -> nav.action(MainAction.ShowAddSheet(true))
                                         }
                                     },
+                                    onSmartConnect = { nav.action(MainAction.SmartConnect) },
+                                    onLocate = { guid -> nav.action(MainAction.LocateServer(guid)) },
+                                    onDismissAddSheet = { nav.action(MainAction.ShowAddSheet(false)) },
                                 )
                             }
                             Tabs.Servers -> ServersScreen(mainVm, nav)

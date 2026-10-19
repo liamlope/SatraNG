@@ -155,7 +155,7 @@ class PremiumScreenshotTest {
         selectedGroupId = "g1",
         selectedGuid = "a1",
         selectedRow = rows[0],
-        quota = QuotaUi("My provider", 18L * 1024 * 1024 * 1024, 50L * 1024 * 1024 * 1024, System.currentTimeMillis() + 12L * 86_400_000),
+        quota = QuotaUi("My provider", 18L * 1024 * 1024 * 1024, 50L * 1024 * 1024 * 1024, System.currentTimeMillis() + 12L * 86_400_000, System.currentTimeMillis() - 18L * 86_400_000),
     )
 
     private val week = (0 until 7).map { i ->
@@ -167,6 +167,7 @@ class PremiumScreenshotTest {
     private val live = LiveUiState(
         running = true, upBps = 182_000, downBps = 2_450_000, sessionStartMs = System.currentTimeMillis() - 754_000,
         sessionBytes = 312L * 1_048_576, todayBytes = 1_240L * 1_048_576,
+        sessionDown = 290L * 1_048_576, sessionUp = 22L * 1_048_576, todayDown = 1_150L * 1_048_576, todayUp = 90L * 1_048_576,
         history = listOf(0.1f, 0.3f, 0.2f, 0.6f, 0.9f, 0.5f, 0.7f, 0.4f, 0.8f, 1f, 0.6f, 0.9f),
     )
 
@@ -278,7 +279,9 @@ class PremiumScreenshotTest {
     @Test fun homeConnectedLightFa() = shot("home_connected", false, "fa", content = home(baseState.copy(phase = ConnectPhase.Connected, isRunning = true)))
     @Test fun homeIdleLightEn() = shot("home_idle", false, content = home(baseState.copy(phase = ConnectPhase.Idle), LiveUiState()))
     @Test fun homeIdleFaDark() = shot("home_idle", true, "fa", content = home(baseState.copy(phase = ConnectPhase.Idle), LiveUiState()))
-    @Test fun homeConnectedLarge() = shot("home_connected", true, font = 1.4f, heightDp = 1100, content = home(baseState.copy(phase = ConnectPhase.Connected, isRunning = true)))
+    @Test fun homeConnectedSmall() = shot("home_connected_small", false, heightDp = 640, content = home(baseState.copy(phase = ConnectPhase.Connected, isRunning = true)))
+    @Test fun homeIdleSmallFa() = shot("home_idle_small", true, "fa", heightDp = 640, content = home(baseState.copy(phase = ConnectPhase.Idle), LiveUiState()))
+    @Test fun homeConnectedLarge() = shot("home_connected", true, font = 1.4f, content = home(baseState.copy(phase = ConnectPhase.Connected, isRunning = true)))
 
     // ---------- Servers ----------
 

@@ -194,8 +194,8 @@
     <string name="sx_set_search">Поиск по настройкам</string>
     <string name="sx_set_nothing">Ничего не найдено.</string>
     <string name="sx_set_connection">Подключение</string>
-    <string name="sx_set_smart">Умное подключение</string>
-    <string name="sx_set_smart_sub">Выбирает самый быстрый сервер и переподключается при обрыве.</string>
+    <string name="sx_set_smart">Переподключаться автоматически</string>
+    <string name="sx_set_smart_sub">Если соединение оборвётся, SatraNG переподключится и при необходимости выберет самый быстрый сервер.</string>
     <string name="sx_set_quick">Подключаться при запуске</string>
     <string name="sx_set_quick_sub">Запускает VPN сразу после открытия SatraNG.</string>
     <string name="sx_set_killswitch">Аварийное отключение</string>
@@ -247,6 +247,23 @@
     <string name="sx_engine_sheet_undo">Вернуть можно в «Настройки › Расширенные». Лимиты приложений тогда приостановятся, лимиты сайтов продолжат работать.</string>
     <string name="sx_engine_sheet_enable">Включить и перезапустить VPN</string>
     <string name="sx_engine_sheet_later">Не сейчас</string>
+    <string name="sx_locating_servers">Определяем расположение серверов…</string>
+    <string name="sx_geo_locating">Определяем расположение…</string>
+    <string name="sx_geo_failed">Расположение не найдено</string>
+    <string name="sx_geo_retry">Повторить</string>
+    <string name="sx_home_empty_add_msg">Скопируйте ссылку на подписку или конфигурацию от провайдера и нажмите «Добавить». Остальное SatraNG сделает сам.</string>
+    <string name="sx_add_more_ways">Другие способы</string>
+    <string name="sx_add_sheet_msg">Кнопка «Добавить» сама берёт данные из буфера обмена. Если ссылка в другом месте, выберите способ ниже.</string>
+    <string name="sx_add_subscription_sub">Ввести или изменить ссылку вручную</string>
+    <string name="sx_total">Всего</string>
+    <string name="sx_add_nothing">В буфере обмена нечего добавить. Сначала скопируйте ссылку или конфигурацию.</string>
+    <string name="sx_add_sub_fetching">Подписка найдена. Загружаем серверы…</string>
+    <string name="sx_add_sub_empty">Подписка добавлена, но серверы пока не загрузились. Потяните вниз во вкладке «Подписки», чтобы повторить.</string>
+    <string name="sx_add_sub_exists">Эта подписка уже добавлена — она обновлена.</string>
+    <string name="sx_smart_none">Ни один сервер не ответил. Проверьте подключение или обновите подписку.</string>
+    <string name="sx_smart_connect">Подключиться к самому быстрому</string>
+    <string name="sx_smart_connect_sub">Проверяет серверы и подключается к самому быстрому и стабильному.</string>
+    <string name="sx_smart_finding">Ищем самый быстрый сервер…</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Истекает через %d день</item>
         <item quantity="few">Истекает через %d дня</item>
@@ -282,5 +299,23 @@
         <item quantity="few">%d дня</item>
         <item quantity="many">%d дней</item>
         <item quantity="other">%d дня</item>
+    </plurals>
+    <plurals name="sx_days_left">
+        <item quantity="one">Остался %d день</item>
+        <item quantity="few">Осталось %d дня</item>
+        <item quantity="many">Осталось %d дней</item>
+        <item quantity="other">Осталось %d дня</item>
+    </plurals>
+    <plurals name="sx_add_sub_done">
+        <item quantity="one">Подписка добавлена: %d сервер</item>
+        <item quantity="few">Подписка добавлена: %d сервера</item>
+        <item quantity="many">Подписка добавлена: %d серверов</item>
+        <item quantity="other">Подписка добавлена: %d сервера</item>
+    </plurals>
+    <plurals name="sx_add_configs_done">
+        <item quantity="one">Добавлен %d сервер</item>
+        <item quantity="few">Добавлено %d сервера</item>
+        <item quantity="many">Добавлено %d серверов</item>
+        <item quantity="other">Добавлено %d сервера</item>
     </plurals>
 </resources>

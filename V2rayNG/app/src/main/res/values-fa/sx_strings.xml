@@ -194,8 +194,8 @@
     <string name="sx_set_search">جستجو در تنظیمات</string>
     <string name="sx_set_nothing">تنظیماتی مطابق جستجوی شما نیست.</string>
     <string name="sx_set_connection">اتصال</string>
-    <string name="sx_set_smart">اتصال هوشمند</string>
-    <string name="sx_set_smart_sub">سریع‌ترین سرور را خودکار انتخاب می‌کند و در صورت قطع شدن دوباره وصل می‌شود.</string>
+    <string name="sx_set_smart">اتصال دوبارهٔ خودکار</string>
+    <string name="sx_set_smart_sub">اگر اتصال قطع شود، SatraNG دوباره وصل می‌شود و در صورت نیاز به سریع‌ترین سرور می‌رود.</string>
     <string name="sx_set_quick">اتصال هنگام باز کردن برنامه</string>
     <string name="sx_set_quick_sub">به محض باز کردن SatraNG، VPN روشن می‌شود.</string>
     <string name="sx_set_killswitch">قطع‌کنندهٔ اضطراری (Kill switch)</string>
@@ -247,6 +247,23 @@
     <string name="sx_engine_sheet_undo">می‌توانید در تنظیمات › پیشرفته برگردید. در آن حالت محدودیت برنامه‌ها متوقف می‌شود ولی محدودیت سایت‌ها کار می‌کند.</string>
     <string name="sx_engine_sheet_enable">فعال‌سازی و راه‌اندازی دوبارهٔ VPN</string>
     <string name="sx_engine_sheet_later">فعلاً نه</string>
+    <string name="sx_locating_servers">در حال یافتن موقعیت سرورها…</string>
+    <string name="sx_geo_locating">در حال یافتن موقعیت…</string>
+    <string name="sx_geo_failed">موقعیت پیدا نشد</string>
+    <string name="sx_geo_retry">تلاش دوباره</string>
+    <string name="sx_home_empty_add_msg">لینک اشتراک یا کانفیگی را که از ارائه‌دهنده گرفته‌اید کپی کنید و «افزودن» را بزنید. بقیه‌اش با SatraNG.</string>
+    <string name="sx_add_more_ways">راه‌های دیگر افزودن</string>
+    <string name="sx_add_sheet_msg">دکمهٔ افزودن خودش از کلیپ‌بورد می‌خواند. اگر لینک جای دیگری است، از این‌ها استفاده کنید.</string>
+    <string name="sx_add_subscription_sub">وارد کردن یا ویرایش دستی لینک</string>
+    <string name="sx_total">مجموع</string>
+    <string name="sx_add_nothing">چیزی برای افزودن در کلیپ‌بورد نیست. اول یک لینک یا کانفیگ کپی کنید.</string>
+    <string name="sx_add_sub_fetching">اشتراک پیدا شد. در حال دریافت سرورها…</string>
+    <string name="sx_add_sub_empty">اشتراک اضافه شد ولی هنوز سرورهایش دریافت نشد. در «اشتراک‌ها» صفحه را پایین بکشید تا دوباره تلاش شود.</string>
+    <string name="sx_add_sub_exists">این اشتراک قبلاً اضافه شده بود و به‌روز شد.</string>
+    <string name="sx_smart_none">هیچ سروری پاسخ نداد. اتصال را بررسی یا اشتراک را به‌روز کنید.</string>
+    <string name="sx_smart_connect">اتصال به سریع‌ترین</string>
+    <string name="sx_smart_connect_sub">سرورها را می‌سنجد و به سریع‌ترین و پایدارترین وصل می‌شود.</string>
+    <string name="sx_smart_finding">در حال یافتن سریع‌ترین سرور…</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">%d روز دیگر منقضی می‌شود</item>
         <item quantity="other">%d روز دیگر منقضی می‌شود</item>
@@ -270,5 +287,17 @@
     <plurals name="sx_days">
         <item quantity="one">%d روز</item>
         <item quantity="other">%d روز</item>
+    </plurals>
+    <plurals name="sx_days_left">
+        <item quantity="one">%d روز مانده</item>
+        <item quantity="other">%d روز مانده</item>
+    </plurals>
+    <plurals name="sx_add_sub_done">
+        <item quantity="one">اشتراک اضافه شد: %d سرور</item>
+        <item quantity="other">اشتراک اضافه شد: %d سرور</item>
+    </plurals>
+    <plurals name="sx_add_configs_done">
+        <item quantity="one">%d سرور اضافه شد</item>
+        <item quantity="other">%d سرور اضافه شد</item>
     </plurals>
 </resources>

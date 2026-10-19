@@ -137,6 +137,17 @@ class MainActivity : HelperBaseComponentActivity(), AppNav {
         }
 
         lifecycleScope.launch {
+            var last = mainViewModel.smartConnectRequest.value
+            mainViewModel.smartConnectRequest.collect { tick ->
+                if (tick > last) {
+                    last = tick
+                    if (mainViewModel.uiState.value.isRunning) LauncherManager.restartService(this@MainActivity)
+                    else requestServiceStart()
+                }
+            }
+        }
+
+        lifecycleScope.launch {
             var last = mainViewModel.autoReconnectRequest.value
             mainViewModel.autoReconnectRequest.collect { tick ->
                 if (tick > last) {

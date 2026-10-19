@@ -69,6 +69,7 @@ import com.v2ray.ang.ui.compose.satra.SheetTitle
 import com.v2ray.ang.ui.compose.satra.rememberSatraHaptics
 import com.v2ray.ang.ui.compose.satra.satraClickable
 import com.v2ray.ang.ui.home.FlagBadge
+import com.v2ray.ang.ui.main.GeoState
 import com.v2ray.ang.ui.main.MainAction
 import com.v2ray.ang.ui.main.MainUiState
 import com.v2ray.ang.ui.main.MainViewModel
@@ -169,6 +170,15 @@ fun ServersContent(
                     }
                 }
             }
+            if (rows.isNotEmpty() && query.isBlank()) {
+                item(key = "smart") {
+                    SmartConnectCard(
+                        busy = state.smartConnecting,
+                        onClick = { onAction(MainAction.SmartConnect) },
+                        modifier = Modifier.padding(horizontal = SatraSpace.Gutter).padding(bottom = 10.dp),
+                    )
+                }
+            }
             if (rows.isEmpty()) {
                 item(key = "empty") {
                     val searching = query.isNotBlank() || state.favoritesOnly
@@ -192,6 +202,7 @@ fun ServersContent(
                         onSelect = { nav.action(MainAction.SelectServer(row.guid)) },
                         onMore = { actionsFor = row },
                         onFavorite = { onAction(MainAction.ToggleFavorite(row.guid)) },
+                        onRetryLocation = { onAction(MainAction.LocateServer(row.guid)) },
                         onDelete = { onAction(MainAction.DeleteWithUndo(row.guid)) },
                         modifier = Modifier.padding(horizontal = SatraSpace.Gutter).padding(bottom = 8.dp),
                     )
@@ -252,6 +263,7 @@ private fun ServerItem(
     onMore: () -> Unit,
     onFavorite: () -> Unit,
     onDelete: () -> Unit,
+    onRetryLocation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val c = Satra.colors
@@ -309,7 +321,7 @@ private fun ServerItem(
                 .padding(start = 14.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FlagBadge(row.countryCode, row.exitVerified, size = 42.dp)
+            FlagBadge(row.countryCode, row.exitVerified, size = 42.dp, locating = row.geoState == GeoState.Locating)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -323,13 +335,80 @@ private fun ServerItem(
                         Icon(SatraIcons.StarFilled, null, tint = c.warning, modifier = Modifier.size(14.dp))
                     }
                 }
-                Text(
-                    listOf(row.locationLabel, row.typeDescription).filter { it.isNotBlank() }.joinToString(" · "),
-                    style = Satra.type.footnote, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
+                ServerSubtitle(row, onRetryLocation)
             }
             PingPill(row.testDelayMillis, testing = testing)
             SatraIconButton(SatraIcons.More, stringResource(R.string.sx_more_options), onMore, tint = c.textSecondary, size = 20.dp)
+        }
+    }
+}
+
+/** One tap: test the list, connect to the quickest server. Shown on top of Servers and on Home. */
+@Composable
+fun SmartConnectCard(busy: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, compact: Boolean = false) {
+    val c = Satra.colors
+    com.v2ray.ang.ui.compose.satra.SatraCard(modifier = modifier, onClick = if (busy) null else onClick, padding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = if (compact) 10.dp else 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(if (compact) 34.dp else 40.dp).clip(SatraShapes.Medium)
+                    .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(c.accent, com.v2ray.ang.ui.compose.satra.SatraBrand.OrangeLight))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(SatraIcons.Bolt, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(if (busy) R.string.sx_smart_finding else R.string.sx_smart_connect),
+                    style = Satra.type.headline, color = c.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                if (!compact) {
+                    Text(stringResource(R.string.sx_smart_connect_sub), style = Satra.type.footnote, color = c.textSecondary, maxLines = 2)
+                }
+            }
+            if (busy) {
+                com.v2ray.ang.ui.compose.satra.SatraSpinner(size = 20.dp)
+            } else {
+                Icon(
+                    if (androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl) SatraIcons.ChevronLeft else SatraIcons.ChevronRight,
+                    null, tint = c.textTertiary, modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
+}
+
+/** "Germany · VLESS / ws / tls", or the detection state while the exit country is unknown. */
+@Composable
+internal fun ServerSubtitle(row: ServerRowUiModel, onRetryLocation: () -> Unit) {
+    val c = Satra.colors
+    val location = row.locationLabel
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val state = when {
+            location.isNotBlank() -> null
+            row.geoState == GeoState.Locating -> stringResource(R.string.sx_geo_locating)
+            row.geoState == GeoState.Failed -> stringResource(R.string.sx_geo_failed)
+            else -> null
+        }
+        Text(
+            listOf(location.ifBlank { state.orEmpty() }, row.typeDescription).filter { it.isNotBlank() }.joinToString(" · "),
+            style = Satra.type.footnote,
+            color = if (state != null) c.textTertiary else c.textSecondary,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (location.isBlank() && row.geoState == GeoState.Failed) {
+            Text(
+                stringResource(R.string.sx_geo_retry),
+                style = Satra.type.footnote.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                color = c.accent,
+                maxLines = 1,
+                modifier = Modifier
+                    .padding(start = 6.dp)
+                    .clip(SatraShapes.Small)
+                    .satraClickable(pressedScale = 0.92f, onClick = onRetryLocation)
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+            )
         }
     }
 }

@@ -18,6 +18,9 @@ data class ServerRowUiModel(
     val countryName: String? = null,
     val favorite: Boolean = false,
     val exitVerified: Boolean = false,
+    val geoState: GeoState = GeoState.Unknown,
+    /** Country of the server address (entry). Tunnel detection only; never the flag. */
+    val entryCountryCode: String? = null,
 ) {
     val flag: String get() = GeoIpResolver.flagEmoji(countryCode)
     val locationLabel: String
@@ -26,6 +29,9 @@ data class ServerRowUiModel(
             ?: countryCode
             ?: ""
 }
+
+/** Where a config's exit-country detection stands, for the row's location line. */
+enum class GeoState { Unknown, Locating, Failed, Located }
 
 internal data class ServerGroupUiState(
     val servers: List<ServersCache> = emptyList(),
@@ -52,6 +58,12 @@ fun buildServerRowUiModel(
         countryName = geo.countryName,
         favorite = aff?.favorite == true,
         exitVerified = geo.exitVerified,
+        entryCountryCode = aff?.entryCountryCode,
+        geoState = when {
+            geo.exitVerified -> GeoState.Located
+            geo.countryCode == null && (aff?.geoAttemptAt ?: 0L) > 0L -> GeoState.Failed
+            else -> GeoState.Unknown
+        },
     )
 }
 

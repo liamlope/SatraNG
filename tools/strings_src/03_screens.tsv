@@ -143,8 +143,8 @@ sx_preset_telegram	Telegram	تلگرام
 sx_set_search	Search settings	جستجو در تنظیمات
 sx_set_nothing	No settings match your search.	تنظیماتی مطابق جستجوی شما نیست.
 sx_set_connection	Connection	اتصال
-sx_set_smart	Smart connect	اتصال هوشمند
-sx_set_smart_sub	Picks the fastest server for you and reconnects if the connection drops.	سریع‌ترین سرور را خودکار انتخاب می‌کند و در صورت قطع شدن دوباره وصل می‌شود.
+sx_set_smart	Reconnect automatically	اتصال دوبارهٔ خودکار
+sx_set_smart_sub	If the connection drops, SatraNG reconnects, switching to the fastest server when needed.	اگر اتصال قطع شود، SatraNG دوباره وصل می‌شود و در صورت نیاز به سریع‌ترین سرور می‌رود.
 sx_set_quick	Connect when the app opens	اتصال هنگام باز کردن برنامه
 sx_set_quick_sub	Starts the VPN as soon as you open SatraNG.	به محض باز کردن SatraNG، VPN روشن می‌شود.
 sx_set_killswitch	Kill switch	قطع‌کنندهٔ اضطراری (Kill switch)
@@ -196,3 +196,20 @@ sx_engine_sheet_battery	Everyday speed stays the same. Very large downloads may 
 sx_engine_sheet_undo	You can switch back in Settings › Advanced. App limits pause then; website limits keep working.	می‌توانید در تنظیمات › پیشرفته برگردید. در آن حالت محدودیت برنامه‌ها متوقف می‌شود ولی محدودیت سایت‌ها کار می‌کند.
 sx_engine_sheet_enable	Turn on and restart VPN	فعال‌سازی و راه‌اندازی دوبارهٔ VPN
 sx_engine_sheet_later	Not now	فعلاً نه
+sx_locating_servers	Finding where your servers are…	در حال یافتن موقعیت سرورها…
+sx_geo_locating	Finding location…	در حال یافتن موقعیت…
+sx_geo_failed	Location not found	موقعیت پیدا نشد
+sx_geo_retry	Retry	تلاش دوباره
+sx_home_empty_add_msg	Copy the subscription link or config your provider sent you, then tap Add. SatraNG works out the rest.	لینک اشتراک یا کانفیگی را که از ارائه‌دهنده گرفته‌اید کپی کنید و «افزودن» را بزنید. بقیه‌اش با SatraNG.
+sx_add_more_ways	More ways to add	راه‌های دیگر افزودن
+sx_add_sheet_msg	Add copies from the clipboard automatically. Use these if your link is somewhere else.	دکمهٔ افزودن خودش از کلیپ‌بورد می‌خواند. اگر لینک جای دیگری است، از این‌ها استفاده کنید.
+sx_add_subscription_sub	Type or edit a link by hand	وارد کردن یا ویرایش دستی لینک
+sx_total	Total	مجموع
+sx_add_nothing	Nothing to add in the clipboard. Copy a link or config first.	چیزی برای افزودن در کلیپ‌بورد نیست. اول یک لینک یا کانفیگ کپی کنید.
+sx_add_sub_fetching	Subscription found. Getting servers…	اشتراک پیدا شد. در حال دریافت سرورها…
+sx_add_sub_empty	Subscription added, but its servers couldn’t be downloaded yet. Pull down in Subscriptions to retry.	اشتراک اضافه شد ولی هنوز سرورهایش دریافت نشد. در «اشتراک‌ها» صفحه را پایین بکشید تا دوباره تلاش شود.
+sx_add_sub_exists	This subscription was already added. It has been updated.	این اشتراک قبلاً اضافه شده بود و به‌روز شد.
+sx_smart_none	No server answered. Check your connection or update the subscription.	هیچ سروری پاسخ نداد. اتصال را بررسی یا اشتراک را به‌روز کنید.
+sx_smart_connect	Connect to the fastest	اتصال به سریع‌ترین
+sx_smart_connect_sub	Tests your servers and connects to the quickest, most stable one.	سرورها را می‌سنجد و به سریع‌ترین و پایدارترین وصل می‌شود.
+sx_smart_finding	Finding the fastest server…	در حال یافتن سریع‌ترین سرور…

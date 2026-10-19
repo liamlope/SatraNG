@@ -23,6 +23,9 @@ import com.v2ray.ang.core.LauncherManager
 import com.v2ray.ang.handler.GeoIpResolver
 import com.v2ray.ang.handler.LiveUsage
 import com.v2ray.ang.handler.MmkvManager
+import com.v2ray.ang.handler.ImportClassifier
+import com.v2ray.ang.handler.AngConfigManager
+import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.handler.UsagePeriods
 import com.v2ray.ang.handler.UsageStore
@@ -37,6 +40,8 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
@@ -86,10 +91,15 @@ data class LiveUiState(
     val sessionBytes: Long = 0L,
     val todayBytes: Long = 0L,
     val history: List<Float> = emptyList(),
+    val sessionUp: Long = 0L,
+    val sessionDown: Long = 0L,
+    val todayUp: Long = 0L,
+    val todayDown: Long = 0L,
 ) {
     fun next(live: LiveUsage): LiveUiState {
-        val today = UsageStore.day(UsagePeriods.dayKey(System.currentTimeMillis())).totalBytes
-        if (!live.running) return LiveUiState(todayBytes = today)
+        val day = UsageStore.day(UsagePeriods.dayKey(System.currentTimeMillis()))
+        val today = day.totalBytes
+        if (!live.running) return LiveUiState(todayBytes = today, todayUp = day.upBytes, todayDown = day.downBytes)
         val point = (live.upBps + live.downBps).toFloat()
         return LiveUiState(
             running = true,
@@ -99,6 +109,10 @@ data class LiveUiState(
             sessionBytes = live.sessionUp + live.sessionDown,
             todayBytes = today,
             history = (history + point).takeLast(HISTORY_POINTS),
+            sessionUp = live.sessionUp,
+            sessionDown = live.sessionDown,
+            todayUp = day.upBytes,
+            todayDown = day.downBytes,
         )
     }
 
@@ -128,6 +142,10 @@ class MainViewModel(
     private val _autoReconnectRequest = MutableStateFlow(0)
     /** Increments when Auto policy wants Activity to restart the service. */
     val autoReconnectRequest: StateFlow<Int> = _autoReconnectRequest.asStateFlow()
+
+    /** Bumped when Smart connect picked a server: the Activity starts the VPN or restarts it. */
+    private val _smartConnectRequest = MutableStateFlow(0)
+    val smartConnectRequest: StateFlow<Int> = _smartConnectRequest.asStateFlow()
 
     // ---------- Live stats (published by the daemon's UsageSampler) ----------
     val liveState: StateFlow<LiveUiState> = flow {
@@ -225,6 +243,129 @@ class MainViewModel(
     init {
         collectServiceEvents()
         setupGroupTab()
+        collectDataChanges()
+    }
+
+    /**
+     * Subscriptions can change from anywhere (Subscriptions tab, background worker, import):
+     * refresh the lists as soon as configs land instead of waiting for the next resume, and
+     * start finding exit countries for configs that have none yet.
+     */
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    private fun collectDataChanges() {
+        viewModelScope.launch {
+            SettingsChangeManager.dataChanges
+                .drop(1)
+                .debounce(250)
+                .collect {
+                    SettingsChangeManager.consumeSetupGroupTab()
+                    setupGroupTab(forceRefresh = true).join()
+                    recheckUpdatedSubscriptions()
+                    ensureActiveSelection()
+                    locateMissing()
+                }
+        }
+    }
+
+    /**
+     * The first subscription added (from any screen) becomes the active one with its best server;
+     * also moves off a config whose subscription was just disabled. Never while connected.
+     */
+    private suspend fun ensureActiveSelection() {
+        val active = withContext(ioDispatcher) { MmkvManager.decodeActiveServerList() }
+        if (active.isEmpty()) return
+        val subId = withContext(ioDispatcher) {
+            dataSource.decodeServerConfig(active.first())?.subscriptionId?.takeIf { it.isNotBlank() }
+        }
+        val list = subId?.let { id -> MmkvManager.decodeServerList(id).filter { it in active.toSet() } }
+            ?.takeIf { it.isNotEmpty() } ?: active
+        adoptFirstServers(subId, list)
+    }
+
+    /**
+     * Re-measures exits of subscriptions that were updated since we last looked, wherever the
+     * update ran (this screen, the background worker in another process). A subscription seen for
+     * the first time is only marked: its new configs are located by [locateMissing].
+     */
+    private fun recheckUpdatedSubscriptions() {
+        viewModelScope.launch(ioDispatcher) {
+            for (sub in MmkvManager.decodeSubscriptions()) {
+                if (!sub.subscription.enabled) continue
+                val updated = sub.subscription.lastUpdated
+                if (updated <= 0L) continue
+                val key = GEO_RECHECK_PREFIX + sub.guid
+                val seen = MmkvManager.decodeSettingsLong(key, -1L)
+                if (seen == updated) continue
+                MmkvManager.encodeSettings(key, updated)
+                if (seen > 0L) locateServers(MmkvManager.decodeServerList(sub.guid), recheck = true)
+            }
+        }
+    }
+
+    // ---------- Exit-country detection in the background ----------
+
+    private val locating: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    /** Configs without a measured exit country (new imports first), excluding recent failures. */
+    fun locateMissing() {
+        viewModelScope.launch(ioDispatcher) {
+            locateServers(MmkvManager.decodeActiveServerList().asReversed(), recheck = false)
+        }
+    }
+
+    /**
+     * Measures exit countries in the background. Without [recheck], configs with a known exit are
+     * skipped and recent failures wait for the backoff; with it (subscription updated, Retry) the
+     * listed configs are measured again. A failed recheck keeps the old flag.
+     */
+    fun locateServers(guids: Collection<String>, recheck: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            val now = System.currentTimeMillis()
+            val todo = guids.filter { g ->
+                g !in locating && GeoIpResolver.needsLookup(dataSource.decodeAffiliationInfo(g), now, recheck)
+            }.take(LOCATE_MAX)
+            if (todo.isEmpty()) return@launch
+            locating.addAll(todo)
+            todo.forEach { g -> patchRowEverywhere(g) { it.copy(geoState = GeoState.Locating) } }
+            dataSource.sendMsg2TestService(
+                TestServiceMessage(key = AppConfig.MSG_LOCATE_START, serverGuids = locating.toList()),
+                null,
+            )
+            // Watchdog: if the test process dies, rows must not stay "Locating…" forever.
+            val budget = ((locating.size + 1) / 2) * 70_000L + 30_000L
+            delay(budget)
+            todo.filter { it in locating }.forEach { onLocateResult(it) }
+        }
+    }
+
+    private fun onLocateResult(guid: String) {
+        locating.remove(guid)
+        viewModelScope.launch(ioDispatcher) {
+            val aff = dataSource.decodeAffiliationInfo(guid)
+            val geo = GeoIpResolver.display(aff)
+            patchRowEverywhere(guid) { row ->
+                row.copy(
+                    countryCode = geo.countryCode ?: row.countryCode,
+                    countryName = geo.countryName ?: row.countryName,
+                    exitVerified = geo.exitVerified,
+                    geoState = when {
+                        geo.exitVerified -> GeoState.Located
+                        (geo.countryCode ?: row.countryCode) == null -> GeoState.Failed
+                        else -> GeoState.Unknown
+                    },
+                )
+            }
+            if (guid == uiState.value.selectedGuid) refreshSelectedRow()
+        }
+    }
+
+    private fun patchRowEverywhere(guid: String, transform: (ServerRowUiModel) -> ServerRowUiModel) {
+        groupUiFlows.values.forEach { flow ->
+            flow.update { current ->
+                if (current.rows.none { it.guid == guid }) current
+                else current.copy(rows = current.rows.map { if (it.guid == guid) transform(it) else it })
+            }
+        }
     }
 
     private fun collectServiceEvents() {
@@ -295,6 +436,14 @@ class MainViewModel(
 
             is MainServiceEvent.MeasureDelayCancelled -> {
                 if (testRequests.completeCurrent(event.requestId)) resetTestStatus()
+            }
+
+            is MainServiceEvent.LocateResult -> onLocateResult(event.guid)
+
+            MainServiceEvent.LocateFinished -> {
+                val left = locating.toList()
+                locating.clear()
+                left.forEach { onLocateResult(it) }
             }
 
             is MainServiceEvent.MeasureConfigCancelled -> {
@@ -426,6 +575,9 @@ class MainViewModel(
             MainAction.UndoDelete -> undoDelete()
             MainAction.UndoHandled -> _uiState.update { it.copy(undoName = null) }
             is MainAction.RecheckServer -> recheckServer(action.guid)
+            is MainAction.LocateServer -> locateServers(listOf(action.guid), recheck = true)
+            MainAction.SmartConnect -> smartConnect()
+            is MainAction.ShowAddSheet -> _uiState.update { it.copy(addSheet = action.show) }
             is MainAction.ShareQRCode -> {
                 val bitmap = dataSource.share2QRCode(action.guid)
                 _uiState.update { it.copy(shareQRCodeBitmap = bitmap) }
@@ -524,7 +676,9 @@ class MainViewModel(
 
     private fun updateGroupUi(groupId: String, servers: List<ServersCache>) {
         val filteredServers = applyKeywordFilter(servers)
-        val rows = buildServerRows(groupId, filteredServers)
+        val rows = buildServerRows(groupId, filteredServers).map { row ->
+            if (row.guid in locating && row.geoState != GeoState.Located) row.copy(geoState = GeoState.Locating) else row
+        }
         val state = uiState.value
         val order = rows.indices
             .filter { !state.favoritesOnly || rows[it].favorite }
@@ -550,21 +704,26 @@ class MainViewModel(
         }
     }
 
-    /** Fills in missing flags lazily: server address -> IP -> country. Never blocks the UI. */
+    /**
+     * Looks up the *entry* country (server address) lazily, for tunnel detection only. The row's
+     * flag is the measured exit and is never replaced by this.
+     */
     private fun scheduleGeoFill(groupId: String, rows: List<ServerRowUiModel>) {
-        val todo = rows.filter { it.countryCode == null && it.guid !in geoInFlight }.take(GEO_FILL_BATCH)
+        val todo = rows.filter { it.guid !in geoInFlight }.take(GEO_FILL_BATCH)
         if (todo.isEmpty()) return
         viewModelScope.launch(geoDispatcher) {
             val now = System.currentTimeMillis()
             for (row in todo) {
                 ensureActive()
                 val aff = MmkvManager.decodeServerAffiliationInfo(row.guid)
-                if (!GeoIpResolver.needsLookup(aff, now)) continue
+                if (!GeoIpResolver.needsEntryLookup(aff, now)) continue
                 if (!geoInFlight.add(row.guid)) continue
                 try {
                     val port = if (uiState.value.isRunning) SettingsManager.getHttpPort() else 0
-                    val result = GeoIpResolver.resolveHostSoft(row.guid, row.profile, port)
-                    if (result.countryCode != null) patchRowGeo(groupId, row.guid, result)
+                    val entry = GeoIpResolver.resolveEntry(row.guid, row.profile, port)
+                    if (entry != null && entry != row.entryCountryCode) {
+                        patchRowEverywhere(row.guid) { it.copy(entryCountryCode = entry) }
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -610,6 +769,7 @@ class MainViewModel(
                     usedBytes = used.displayUsed,
                     totalBytes = sub.total,
                     expireMs = if (sub.expire <= 0L) 0L else if (sub.expire > 10_000_000_000L) sub.expire else sub.expire * 1000L,
+                    startMs = sub.addedTime,
                 )
             }
             _uiState.update { it.copy(selectedRow = row, quota = quota) }
@@ -800,29 +960,88 @@ class MainViewModel(
     }
 
     // ---------- Business actions (coroutine-based) ----------
+    /**
+     * One-tap Add: works out what the pasted text is, imports it and says what happened.
+     * Nothing recognisable opens the "more ways to add" sheet instead of failing silently.
+     */
     private fun importBatchConfig(configText: String) {
+        val kind = ImportClassifier.classify(configText)
+        if (kind.isEmpty) {
+            toast(R.string.sx_add_nothing)
+            _uiState.update { it.copy(addSheet = true) }
+            return
+        }
+        if (kind.subscriptions > 0) toast(R.string.sx_add_sub_fetching)
+        _uiState.update { it.copy(importing = true) }
         launchLoading {
             withContext(ioDispatcher) {
                 try {
+                    val subsBefore = MmkvManager.decodeSubscriptions().map { it.guid }.toSet()
+                    val serversBefore = MmkvManager.decodeAllServerList().toSet()
                     val (count, countSub) = dataSource.importBatchConfig(
                         configText, uiState.value.selectedGroupId, true
                     )
+                    val added = MmkvManager.decodeAllServerList().filter { it !in serversBefore }
                     when {
-                        count > 0 -> {
-                            toast(dataSource.getString(R.string.title_import_config_count, count))
-                            setupGroupTab(forceRefresh = true)
+                        countSub > 0 && added.isNotEmpty() -> toastSuccess(getQuantityString(R.plurals.sx_add_sub_done, added.size, added.size))
+                        countSub > 0 -> toastError(R.string.sx_add_sub_empty)
+                        count > 0 -> toastSuccess(getQuantityString(R.plurals.sx_add_configs_done, count, count))
+                        kind.subscriptions > 0 -> {
+                            // Link already known: refresh that subscription instead of failing.
+                            val r = AngConfigManager.updateConfigViaSubAll()
+                            if (r.successCount > 0) toast(R.string.sx_add_sub_exists) else toastError(R.string.sx_subs_failed)
                         }
-
-                        countSub > 0 -> setupGroupTab(forceRefresh = true)
                         else -> toastError(R.string.toast_failure)
+                    }
+                    if (count > 0 || countSub > 0 || added.isNotEmpty()) {
+                        val newSub = MmkvManager.decodeSubscriptions().firstOrNull { it.guid !in subsBefore }?.guid
+                        setupGroupTab(forceRefresh = true).join()
+                        adoptFirstServers(newSub, added)
+                        locateServers(added, recheck = false)
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (e: Exception) {
                     LogUtil.e(AppConfig.TAG, "Failed to import batch config", e)
                     toastError(R.string.toast_failure)
+                } finally {
+                    _uiState.update { it.copy(importing = false) }
                 }
             }
+        }
+    }
+
+    /** Group whose fastest server should be picked once the current test batch finishes. */
+    @Volatile private var pendingBestPick: String? = null
+
+    /**
+     * When nothing usable was selected (first import), the new subscription becomes the current
+     * list, its first server is selected right away, and after a quick real-ping pass the fastest
+     * one replaces it (unless the user picked something or connected meanwhile).
+     */
+    private suspend fun adoptFirstServers(newSubId: String?, added: List<String>) {
+        val selected = dataSource.getSelectServer()
+        val selectedValid = selected != null && dataSource.decodeServerConfig(selected) != null &&
+            MmkvManager.isServerActive(selected)
+        if (selectedValid || added.isEmpty() || uiState.value.isRunning) return
+        val groupId = newSubId ?: dataSource.decodeServerConfig(added.first())?.subscriptionId.orEmpty()
+        withContext(Dispatchers.Main) {
+            if (groupId.isNotEmpty()) onAction(MainAction.SelectGroup(groupId))
+            updateSelectedGuid(added.first())
+            pendingBestPick = groupId
+            testAllRealPing()
+        }
+    }
+
+    private fun applyPendingBestPick() {
+        val groupId = pendingBestPick ?: return
+        pendingBestPick = null
+        if (uiState.value.isRunning) return
+        viewModelScope.launch(ioDispatcher) {
+            val list = if (groupId.isNotEmpty()) MmkvManager.decodeServerList(groupId) else MmkvManager.decodeActiveServerList()
+            val best = list.mapNotNull { g -> MmkvManager.decodeServerAffiliationInfo(g)?.testDelayMillis?.takeIf { it > 0L }?.let { g to it } }
+                .minByOrNull { it.second }?.first ?: return@launch
+            withContext(Dispatchers.Main) { if (!uiState.value.isRunning) updateSelectedGuid(best) }
         }
     }
 
@@ -1196,6 +1415,7 @@ class MainViewModel(
     private fun onTestsFinished(requestId: String) {
         if (testRequests.completeBulk(requestId) == null) return
         resetTestStatus()
+        applyPendingBestPick()
         val groupId = uiState.value.selectedGroupId
         viewModelScope.launch(ioDispatcher) {
             // The test worker already measured each answering config's exit country.
@@ -1248,6 +1468,54 @@ class MainViewModel(
         reconnectJob?.cancel()
         reconnectAttempt = 0
         MmkvManager.encodeSettings(AppConfig.PREF_USER_REQUESTED_STOP, false)
+    }
+
+    private var smartJob: Job? = null
+
+    /**
+     * Smart connect: tests the servers of the current list (all lists when "All" is empty), waits
+     * until the test finishes or a few quick answers are in, then connects to the fastest one.
+     */
+    fun smartConnect() {
+        if (smartJob?.isActive == true) return
+        smartJob = viewModelScope.launch {
+            _uiState.update { it.copy(smartConnecting = true) }
+            try {
+                val groupId = uiState.value.selectedGroupId
+                val candidates = withContext(ioDispatcher) {
+                    (if (groupId.isNotBlank()) MmkvManager.decodeServerList(groupId) else MmkvManager.decodeActiveServerList())
+                }
+                if (candidates.isEmpty()) return@launch
+                val started = System.currentTimeMillis()
+                testAllRealPing()
+                delay(400)
+                while (true) {
+                    delay(400)
+                    val elapsed = System.currentTimeMillis() - started
+                    if (!uiState.value.isTesting || elapsed > SMART_MAX_WAIT_MS) break
+                    if (elapsed > SMART_EARLY_MS) {
+                        val answered = withContext(ioDispatcher) {
+                            candidates.count { (MmkvManager.decodeServerAffiliationInfo(it)?.testDelayMillis ?: 0L) > 0L }
+                        }
+                        if (answered >= SMART_EARLY_ANSWERS) break
+                    }
+                }
+                val best = withContext(ioDispatcher) {
+                    candidates
+                        .mapNotNull { g -> MmkvManager.decodeServerAffiliationInfo(g)?.testDelayMillis?.takeIf { it > 0L }?.let { g to it } }
+                        .minByOrNull { it.second }?.first
+                }
+                if (best == null) {
+                    toastError(R.string.sx_smart_none)
+                    return@launch
+                }
+                updateSelectedGuid(best)
+                markUserRequestedStart()
+                _smartConnectRequest.update { it + 1 }
+            } finally {
+                _uiState.update { it.copy(smartConnecting = false) }
+            }
+        }
     }
 
     fun prepareConnectGuid(): String? {
@@ -1351,6 +1619,9 @@ class MainViewModel(
         filterJob?.cancel()
         reconnectJob?.cancel()
         cancelAllPing()
+        if (locating.isNotEmpty()) {
+            dataSource.sendMsg2TestService(TestServiceMessage(key = AppConfig.MSG_LOCATE_CANCEL), null)
+        }
         dataSource.close()
         super.onCleared()
     }
@@ -1372,6 +1643,11 @@ class MainViewModel(
         const val FAILED_SHOWN_MS = 3_600L
         const val UNDO_WINDOW_MS = 5_000L
         const val GEO_FILL_BATCH = 80
+        private const val GEO_RECHECK_PREFIX = "satra_geo_recheck_"
+        const val LOCATE_MAX = 80
+        const val SMART_MAX_WAIT_MS = 20_000L
+        const val SMART_EARLY_MS = 6_000L
+        const val SMART_EARLY_ANSWERS = 3
         const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
     }
 }

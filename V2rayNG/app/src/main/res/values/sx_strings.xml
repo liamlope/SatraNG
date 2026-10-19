@@ -194,8 +194,8 @@
     <string name="sx_set_search">Search settings</string>
     <string name="sx_set_nothing">No settings match your search.</string>
     <string name="sx_set_connection">Connection</string>
-    <string name="sx_set_smart">Smart connect</string>
-    <string name="sx_set_smart_sub">Picks the fastest server for you and reconnects if the connection drops.</string>
+    <string name="sx_set_smart">Reconnect automatically</string>
+    <string name="sx_set_smart_sub">If the connection drops, SatraNG reconnects, switching to the fastest server when needed.</string>
     <string name="sx_set_quick">Connect when the app opens</string>
     <string name="sx_set_quick_sub">Starts the VPN as soon as you open SatraNG.</string>
     <string name="sx_set_killswitch">Kill switch</string>
@@ -247,6 +247,23 @@
     <string name="sx_engine_sheet_undo">You can switch back in Settings › Advanced. App limits pause then; website limits keep working.</string>
     <string name="sx_engine_sheet_enable">Turn on and restart VPN</string>
     <string name="sx_engine_sheet_later">Not now</string>
+    <string name="sx_locating_servers">Finding where your servers are…</string>
+    <string name="sx_geo_locating">Finding location…</string>
+    <string name="sx_geo_failed">Location not found</string>
+    <string name="sx_geo_retry">Retry</string>
+    <string name="sx_home_empty_add_msg">Copy the subscription link or config your provider sent you, then tap Add. SatraNG works out the rest.</string>
+    <string name="sx_add_more_ways">More ways to add</string>
+    <string name="sx_add_sheet_msg">Add copies from the clipboard automatically. Use these if your link is somewhere else.</string>
+    <string name="sx_add_subscription_sub">Type or edit a link by hand</string>
+    <string name="sx_total">Total</string>
+    <string name="sx_add_nothing">Nothing to add in the clipboard. Copy a link or config first.</string>
+    <string name="sx_add_sub_fetching">Subscription found. Getting servers…</string>
+    <string name="sx_add_sub_empty">Subscription added, but its servers couldn’t be downloaded yet. Pull down in Subscriptions to retry.</string>
+    <string name="sx_add_sub_exists">This subscription was already added. It has been updated.</string>
+    <string name="sx_smart_none">No server answered. Check your connection or update the subscription.</string>
+    <string name="sx_smart_connect">Connect to the fastest</string>
+    <string name="sx_smart_connect_sub">Tests your servers and connects to the quickest, most stable one.</string>
+    <string name="sx_smart_finding">Finding the fastest server…</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Expires in %d day</item>
         <item quantity="other">Expires in %d days</item>
@@ -270,5 +287,17 @@
     <plurals name="sx_days">
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="sx_days_left">
+        <item quantity="one">%d day left</item>
+        <item quantity="other">%d days left</item>
+    </plurals>
+    <plurals name="sx_add_sub_done">
+        <item quantity="one">Subscription added: %d server</item>
+        <item quantity="other">Subscription added: %d servers</item>
+    </plurals>
+    <plurals name="sx_add_configs_done">
+        <item quantity="one">%d server added</item>
+        <item quantity="other">%d servers added</item>
     </plurals>
 </resources>

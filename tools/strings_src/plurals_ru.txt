@@ -22,3 +22,15 @@ sx_days|one|%d день
 sx_days|few|%d дня
 sx_days|many|%d дней
 sx_days|other|%d дня
+sx_days_left|one|Остался %d день
+sx_days_left|few|Осталось %d дня
+sx_days_left|many|Осталось %d дней
+sx_days_left|other|Осталось %d дня
+sx_add_sub_done|one|Подписка добавлена: %d сервер
+sx_add_sub_done|few|Подписка добавлена: %d сервера
+sx_add_sub_done|many|Подписка добавлена: %d серверов
+sx_add_sub_done|other|Подписка добавлена: %d сервера
+sx_add_configs_done|one|Добавлен %d сервер
+sx_add_configs_done|few|Добавлено %d сервера
+sx_add_configs_done|many|Добавлено %d серверов
+sx_add_configs_done|other|Добавлено %d сервера

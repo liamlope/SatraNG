@@ -3,6 +3,7 @@ package com.v2ray.ang.ui.home
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -13,6 +14,11 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -83,8 +89,13 @@ import kotlinx.coroutines.delay
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-enum class AddMethod { Scan, Clipboard, File, Subscription }
+enum class AddMethod { Smart, Scan, Clipboard, File, Subscription, More }
 
+/**
+ * Home fits on one screen: the orb shrinks with the available height so the server card, the
+ * traffic card and the subscription card are always visible without scrolling (a scroll is only a
+ * safety net for extreme font sizes).
+ */
 @Composable
 fun HomeScreen(
     state: MainUiState,
@@ -96,120 +107,145 @@ fun HomeScreen(
     onOpenUsage: () -> Unit,
     onAdd: (AddMethod) -> Unit,
     modifier: Modifier = Modifier,
+    onSmartConnect: () -> Unit = {},
+    onLocate: (String) -> Unit = {},
+    onDismissAddSheet: () -> Unit = {},
 ) {
-    val c = Satra.colors
     val hasServers = state.groups.isNotEmpty() && state.selectedGuid != null
-    val listState = rememberLazyListState()
-    LazyColumn(
-        state = listState,
-        modifier = modifier,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 28.dp),
-    ) {
-        item(key = "top", contentType = "top") {
-            HomeTopBar(onAdd = onAdd)
-        }
+    Column(modifier.fillMaxSize()) {
+        HomeTopBar(onAdd = onAdd, importing = state.importing)
         if (!hasServers) {
-            item(key = "empty", contentType = "empty") {
+            Column(
+                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.Center,
+            ) {
                 SatraEmptyState(
                     icon = SatraIcons.Shield,
                     title = stringResource(R.string.sx_home_empty_title),
-                    message = stringResource(R.string.sx_home_empty_message),
-                    actionText = stringResource(R.string.sx_add_subscription),
-                    onAction = { onAdd(AddMethod.Subscription) },
-                    secondaryText = stringResource(R.string.sx_add_scan),
-                    onSecondary = { onAdd(AddMethod.Scan) },
-                    modifier = Modifier.padding(top = 40.dp),
+                    message = stringResource(R.string.sx_home_empty_add_msg),
+                    actionText = stringResource(R.string.sx_add),
+                    onAction = { onAdd(AddMethod.Smart) },
+                    secondaryText = stringResource(R.string.sx_add_more_ways),
+                    onSecondary = { onAdd(AddMethod.More) },
                 )
             }
-            item(key = "empty-actions") {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = SatraSpace.Gutter, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+        } else {
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                val density = LocalDensity.current
+                val fontScale = density.fontScale.coerceAtLeast(1f)
+                // Everything except the orb, measured generously (grows with the font scale).
+                val fixed = (70 + 54 + 112 + 66 + 40) * fontScale + (if (state.quota != null) 96 * fontScale else 0f)
+                val orb = (maxHeight.value - fixed).coerceIn(140f, 288f).dp
+                val gap = ((maxHeight.value - fixed - orb.value) / 6f).coerceIn(6f, 18f).dp
+                Column(
+                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    SatraButton(
-                        stringResource(R.string.sx_add_paste_short), { onAdd(AddMethod.Clipboard) },
-                        modifier = Modifier.weight(1f), style = SatraButtonStyle.Tinted, icon = SatraIcons.Clipboard, compact = true,
+                    OrbSection(state = state, live = live, onToggle = onToggle, orbSize = orb)
+                    Spacer(Modifier.height(gap))
+                    ServerCard(
+                        row = state.selectedRow,
+                        state = state,
+                        onPing = onPing,
+                        onOpen = onOpenServers,
+                        onLocate = onLocate,
+                        modifier = Modifier.padding(horizontal = SatraSpace.Gutter),
                     )
-                    SatraButton(
-                        stringResource(R.string.sx_add_file_short), { onAdd(AddMethod.File) },
-                        modifier = Modifier.weight(1f), style = SatraButtonStyle.Tinted, icon = SatraIcons.File, compact = true,
+                    Spacer(Modifier.height(8.dp))
+                    com.v2ray.ang.ui.servers.SmartConnectCard(
+                        busy = state.smartConnecting,
+                        onClick = onSmartConnect,
+                        compact = true,
+                        modifier = Modifier.padding(horizontal = SatraSpace.Gutter),
                     )
+                    Spacer(Modifier.height(gap))
+                    TrafficCard(live, onOpenUsage, Modifier.padding(horizontal = SatraSpace.Gutter))
+                    state.quota?.let { quota ->
+                        Spacer(Modifier.height(gap))
+                        QuotaCard(quota, Modifier.padding(horizontal = SatraSpace.Gutter))
+                    }
+                    Spacer(Modifier.height(12.dp))
                 }
             }
-            return@LazyColumn
         }
-        item(key = "orb", contentType = "orb") {
-            OrbSection(state = state, live = live, onToggle = onToggle)
+    }
+    if (state.addSheet) {
+        AddSheet(onAdd = { m -> onDismissAddSheet(); onAdd(m) }, onDismiss = onDismissAddSheet)
+    }
+}
+
+/** The "more ways to add" sheet: everything beyond the one-tap paste. */
+@Composable
+internal fun AddSheet(onAdd: (AddMethod) -> Unit, onDismiss: () -> Unit) {
+    val c = Satra.colors
+    com.v2ray.ang.ui.compose.satra.SatraSheet(onDismiss = onDismiss) {
+        Text(
+            stringResource(R.string.sx_add_more_ways),
+            style = Satra.type.title2, color = c.textPrimary,
+            modifier = Modifier.padding(horizontal = 24.dp).padding(bottom = 4.dp),
+        )
+        Text(
+            stringResource(R.string.sx_add_sheet_msg),
+            style = Satra.type.footnote, color = c.textSecondary,
+            modifier = Modifier.padding(horizontal = 24.dp).padding(bottom = 14.dp),
+        )
+        com.v2ray.ang.ui.compose.satra.InsetGroup {
+            row { com.v2ray.ang.ui.compose.satra.SatraRow(stringResource(R.string.sx_add_clipboard), icon = SatraIcons.Clipboard, iconColor = c.accent, onClick = { onAdd(AddMethod.Clipboard) }) }
+            row { com.v2ray.ang.ui.compose.satra.SatraRow(stringResource(R.string.sx_add_scan), icon = SatraIcons.Scan, iconColor = c.info, onClick = { onAdd(AddMethod.Scan) }) }
+            row { com.v2ray.ang.ui.compose.satra.SatraRow(stringResource(R.string.sx_add_file), icon = SatraIcons.File, iconColor = c.success, onClick = { onAdd(AddMethod.File) }) }
+            row { com.v2ray.ang.ui.compose.satra.SatraRow(stringResource(R.string.sx_add_subscription), subtitle = stringResource(R.string.sx_add_subscription_sub), icon = SatraIcons.Link, iconColor = c.warning, chevron = true, onClick = { onAdd(AddMethod.Subscription) }) }
         }
-        item(key = "server", contentType = "server") {
-            ServerCard(
-                row = state.selectedRow,
-                state = state,
-                onPing = onPing,
-                onOpen = onOpenServers,
-                modifier = Modifier.padding(horizontal = SatraSpace.Gutter),
-            )
-        }
-        item(key = "stats", contentType = "stats") {
-            Spacer(Modifier.height(14.dp))
-            AnimatedContent(
-                targetState = live.running,
-                transitionSpec = { (fadeIn(tween(260)) + slideInVertically { it / 8 }) togetherWith fadeOut(tween(160)) },
-                label = "statsSwap",
-                modifier = Modifier.padding(horizontal = SatraSpace.Gutter),
-            ) { running ->
-                if (running) LiveCard(live, onOpenUsage) else TodayCard(live, week, onOpenUsage)
-            }
-        }
-        state.quota?.let { quota ->
-            item(key = "quota", contentType = "quota") {
-                Spacer(Modifier.height(14.dp))
-                QuotaCard(quota, Modifier.padding(horizontal = SatraSpace.Gutter))
-            }
-        }
+        Spacer(Modifier.height(16.dp))
     }
 }
 
 @Composable
-private fun HomeTopBar(onAdd: (AddMethod) -> Unit) {
-    var menu by remember { mutableStateOf(false) }
+private fun HomeTopBar(onAdd: (AddMethod) -> Unit, importing: Boolean) {
+    val c = Satra.colors
     Row(
         Modifier
             .statusBarsPadding()
             .fillMaxWidth()
-            .height(56.dp)
-            .padding(start = SatraSpace.Gutter, end = 8.dp),
+            .height(52.dp)
+            .padding(start = SatraSpace.Gutter, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            Modifier.size(30.dp).clip(RoundedCornerShapeSmall).background(Brush.linearGradient(listOf(Satra.colors.accent, com.v2ray.ang.ui.compose.satra.SatraBrand.OrangeLight))),
+            Modifier.size(24.dp).clip(RoundedCornerShapeSmall).background(Brush.linearGradient(listOf(c.accent, com.v2ray.ang.ui.compose.satra.SatraBrand.OrangeLight))),
             contentAlignment = Alignment.Center,
-        ) { Icon(SatraIcons.Shield, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(18.dp)) }
-        Spacer(Modifier.width(10.dp))
+        ) { Icon(SatraIcons.Shield, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(14.dp)) }
+        Spacer(Modifier.width(8.dp))
         Text(
             stringResource(R.string.app_name),
-            style = Satra.type.title2.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp),
-            color = Satra.colors.textPrimary,
+            style = Satra.type.headline.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.2).sp),
+            color = c.textPrimary,
             modifier = Modifier.weight(1f),
         )
-        Box {
-            SatraIconButton(SatraIcons.Plus, stringResource(R.string.sx_add), { menu = true })
-            SatraMenu(menu, { menu = false }) {
-                SatraMenuItem(stringResource(R.string.sx_add_scan), { menu = false; onAdd(AddMethod.Scan) }, SatraIcons.Scan)
-                SatraMenuItem(stringResource(R.string.sx_add_clipboard), { menu = false; onAdd(AddMethod.Clipboard) }, SatraIcons.Clipboard)
-                SatraMenuItem(stringResource(R.string.sx_add_file), { menu = false; onAdd(AddMethod.File) }, SatraIcons.File)
-                SatraMenuItem(stringResource(R.string.sx_add_subscription), { menu = false; onAdd(AddMethod.Subscription) }, SatraIcons.Link)
-            }
+        SatraIconButton(SatraIcons.Scan, stringResource(R.string.sx_add_scan), { onAdd(AddMethod.Scan) }, tint = c.textSecondary, size = 20.dp)
+        Spacer(Modifier.width(4.dp))
+        // One-tap add: reads the clipboard and works out what it is.
+        Row(
+            Modifier
+                .clip(CircleShape)
+                .background(c.accent)
+                .satraClickable(pressedScale = 0.94f, onLongClick = { onAdd(AddMethod.More) }, onClick = { if (!importing) onAdd(AddMethod.Smart) })
+                .padding(start = 10.dp, end = 14.dp, top = 7.dp, bottom = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (importing) com.v2ray.ang.ui.compose.satra.SatraSpinner(size = 16.dp, color = androidx.compose.ui.graphics.Color.White, strokeWidth = 2.dp)
+            else Icon(SatraIcons.Plus, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.sx_add), style = Satra.type.subhead.copy(fontWeight = FontWeight.SemiBold), color = androidx.compose.ui.graphics.Color.White)
         }
     }
 }
 
-private val RoundedCornerShapeSmall = androidx.compose.foundation.shape.RoundedCornerShape(9.dp)
+private val RoundedCornerShapeSmall = androidx.compose.foundation.shape.RoundedCornerShape(7.dp)
 
 // ───────────────────────────── Orb ─────────────────────────────
 
 @Composable
-private fun OrbSection(state: MainUiState, live: LiveUiState, onToggle: () -> Unit) {
+private fun OrbSection(state: MainUiState, live: LiveUiState, onToggle: () -> Unit, orbSize: androidx.compose.ui.unit.Dp = 292.dp) {
     val c = Satra.colors
     val phase = when (state.phase) {
         ConnectPhase.Idle -> OrbPhase.Idle
@@ -250,7 +286,7 @@ private fun OrbSection(state: MainUiState, live: LiveUiState, onToggle: () -> Un
             onClick = onToggle,
             stateLabel = title,
             actionLabel = hint,
-            modifier = Modifier.size(292.dp),
+            modifier = Modifier.size(orbSize),
         )
         Text(
             title,
@@ -274,7 +310,6 @@ private fun OrbSection(state: MainUiState, live: LiveUiState, onToggle: () -> Un
                 else -> Text(h, style = Satra.type.callout, color = c.textSecondary, textAlign = TextAlign.Center)
             }
         }
-        Spacer(Modifier.height(18.dp))
     }
 }
 
@@ -303,11 +338,12 @@ private fun ServerCard(
     onPing: () -> Unit,
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
+    onLocate: (String) -> Unit = {},
 ) {
     val c = Satra.colors
     SatraCard(modifier = modifier, onClick = onOpen, padding = androidx.compose.foundation.layout.PaddingValues(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            FlagBadge(row?.countryCode, row?.exitVerified == true, size = 46.dp)
+            FlagBadge(row?.countryCode, row?.exitVerified == true, size = 46.dp, locating = row?.geoState == com.v2ray.ang.ui.main.GeoState.Locating)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
@@ -322,7 +358,9 @@ private fun ServerCard(
                         append(it)
                     }
                 }
-                if (sub.isNotBlank()) {
+                if (row != null && location.isBlank() && row.geoState != com.v2ray.ang.ui.main.GeoState.Unknown) {
+                    com.v2ray.ang.ui.servers.ServerSubtitle(row) { onLocate(row.guid) }
+                } else if (sub.isNotBlank()) {
                     Text(sub, style = Satra.type.footnote, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 } else {
                     Text(
@@ -353,10 +391,33 @@ private fun ServerCard(
     }
 }
 
+/** Breathing alpha for the globe while the exit country is being measured (only composed then). */
+@Composable
+private fun rememberLocatePulse(): Float {
+    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "locate")
+    val v by transition.animateFloat(
+        0.35f, 1f,
+        androidx.compose.animation.core.infiniteRepeatable(
+            androidx.compose.animation.core.tween(900),
+            androidx.compose.animation.core.RepeatMode.Reverse,
+        ),
+        label = "locateAlpha",
+    )
+    return v
+}
+
 /** Circular flag. Unknown location shows a neutral globe; unverified (address-based) flags are slightly dimmed. */
 @Composable
-fun FlagBadge(countryCode: String?, verified: Boolean, size: androidx.compose.ui.unit.Dp = 40.dp, modifier: Modifier = Modifier) {
+fun FlagBadge(
+    countryCode: String?,
+    verified: Boolean,
+    size: androidx.compose.ui.unit.Dp = 40.dp,
+    modifier: Modifier = Modifier,
+    locating: Boolean = false,
+) {
     val c = Satra.colors
+    val reduce = com.v2ray.ang.ui.compose.satra.rememberReduceMotion()
+    val pulse = if (locating && countryCode.isNullOrBlank() && !reduce) rememberLocatePulse() else 1f
     Box(
         modifier
             .size(size)
@@ -365,7 +426,11 @@ fun FlagBadge(countryCode: String?, verified: Boolean, size: androidx.compose.ui
         contentAlignment = Alignment.Center,
     ) {
         if (countryCode.isNullOrBlank()) {
-            Icon(SatraIcons.Globe, null, tint = c.textTertiary, modifier = Modifier.size(size * 0.5f))
+            Icon(
+                SatraIcons.Globe, null,
+                tint = if (locating) c.accent.copy(alpha = pulse) else c.textTertiary,
+                modifier = Modifier.size(size * 0.5f),
+            )
         } else {
             Text(
                 GeoIpResolver.flagEmoji(countryCode),
@@ -380,35 +445,79 @@ fun FlagBadge(countryCode: String?, verified: Boolean, size: androidx.compose.ui
 
 // ───────────────────────────── Live / today / quota ─────────────────────────────
 
+/**
+ * Download / upload / total for this session and for today, plus live speed while connected.
+ * Compact on purpose: Home must fit one screen.
+ */
 @Composable
-private fun LiveCard(live: LiveUiState, onOpenUsage: () -> Unit) {
+private fun TrafficCard(live: LiveUiState, onOpenUsage: () -> Unit, modifier: Modifier = Modifier) {
     val c = Satra.colors
-    SatraCard(onClick = onOpenUsage) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            SpeedStat(SatraIcons.ArrowDown, stringResource(R.string.sx_live_download), formatSpeed(live.downBps), c.success, Modifier.weight(1f))
-            SpeedStat(SatraIcons.ArrowUp, stringResource(R.string.sx_live_upload), formatSpeed(live.upBps), c.info, Modifier.weight(1f))
+    SatraCard(modifier, onClick = onOpenUsage, padding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 12.dp)) {
+        if (live.running) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SpeedStat(SatraIcons.ArrowDown, stringResource(R.string.sx_live_download), formatSpeed(live.downBps), c.success, Modifier.weight(1f))
+                SpeedStat(SatraIcons.ArrowUp, stringResource(R.string.sx_live_upload), formatSpeed(live.upBps), c.info, Modifier.weight(1f))
+            }
+            SatraSparkline(
+                values = live.history.ifEmpty { listOf(0f, 0f) },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                height = 30.dp,
+            )
         }
-        Spacer(Modifier.height(8.dp))
-        SatraSparkline(
-            values = live.history.ifEmpty { listOf(0f, 0f) },
-            modifier = Modifier.fillMaxWidth(),
-            height = 64.dp,
-        )
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.sx_live_session), style = Satra.type.footnote, color = c.textSecondary, modifier = Modifier.weight(1f))
-            Text(formatBytes(live.sessionBytes), style = Satra.type.numberSmall, color = c.textPrimary)
-        }
+        TrafficTableHeader()
+        if (live.running) TrafficRow(stringResource(R.string.sx_live_session), live.sessionDown, live.sessionUp)
+        TrafficRow(stringResource(R.string.sx_home_today), live.todayDown, live.todayUp)
     }
+}
+
+@Composable
+private fun TrafficTableHeader() {
+    val c = Satra.colors
+    Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Spacer(Modifier.weight(1.1f))
+        FitText("↓ " + stringResource(R.string.sx_live_download), Satra.type.caption, c.success, Modifier.weight(1f))
+        FitText("↑ " + stringResource(R.string.sx_live_upload), Satra.type.caption, c.info, Modifier.weight(1f))
+        FitText(stringResource(R.string.sx_total), Satra.type.caption, c.textSecondary, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun TrafficRow(label: String, down: Long, up: Long) {
+    val c = Satra.colors
+    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        FitText(label, Satra.type.footnote, c.textSecondary, Modifier.weight(1.1f), TextAlign.Start)
+        FitText(formatBytes(down), Satra.type.numberSmall, c.textPrimary, Modifier.weight(1f))
+        FitText(formatBytes(up), Satra.type.numberSmall, c.textPrimary, Modifier.weight(1f))
+        FitText(formatBytes(down + up), Satra.type.numberSmall.copy(fontWeight = FontWeight.SemiBold), c.accent, Modifier.weight(1f))
+    }
+}
+
+/** One line that shrinks (down to 60%) instead of cutting off, so large fonts stay readable. */
+@Composable
+private fun FitText(
+    text: String,
+    style: androidx.compose.ui.text.TextStyle,
+    color: androidx.compose.ui.graphics.Color,
+    modifier: Modifier,
+    align: TextAlign = TextAlign.End,
+) {
+    val max = style.fontSize
+    androidx.compose.foundation.text.BasicText(
+        text,
+        modifier,
+        style = style.copy(color = color, textAlign = align),
+        maxLines = 1,
+        autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = max * 0.6f, maxFontSize = max),
+    )
 }
 
 @Composable
 private fun SpeedStat(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String, tint: androidx.compose.ui.graphics.Color, modifier: Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(30.dp).clip(CircleShape).background(tint.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = tint, modifier = Modifier.size(16.dp))
+        Box(Modifier.size(28.dp).clip(CircleShape).background(tint.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = tint, modifier = Modifier.size(15.dp))
         }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(8.dp))
         Column {
             Text(label, style = Satra.type.caption, color = Satra.colors.textSecondary)
             Text(value, style = Satra.type.numberMedium, color = Satra.colors.textPrimary, maxLines = 1)
@@ -416,79 +525,69 @@ private fun SpeedStat(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
     }
 }
 
+/**
+ * Subscription card. Its colour follows whichever runs out first, data or time:
+ * green while both have more than half left, through orange, to red under 15 %.
+ */
 @Composable
-private fun TodayCard(live: LiveUiState, week: List<DayUsage>, onOpenUsage: () -> Unit) {
+private fun QuotaCard(quota: QuotaUi, modifier: Modifier = Modifier) {
     val c = Satra.colors
-    SatraCard(onClick = onOpenUsage) {
+    val now = System.currentTimeMillis()
+    val dataLeft = quota.fraction?.let { 1f - it }
+    val timeLeft = quota.timeLeftFraction(now)
+    val health = listOfNotNull(dataLeft, timeLeft).minOrNull() ?: 1f
+    val tone by animateColorAsState(quotaColor(health, c.success, c.warning, c.danger), tween(500), label = "quotaTone")
+    SatraCard(modifier, padding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            SatraRing(fraction = dataLeft ?: 1f, size = 54.dp, stroke = 6.dp, color = tone) {
+                Text(
+                    if (dataLeft != null) String.format(com.v2ray.ang.ui.compose.satra.currentLocale(), "%d%%", (dataLeft * 100).toInt()) else "∞",
+                    style = Satra.type.caption.copy(fontWeight = FontWeight.Bold), color = c.textPrimary,
+                )
+            }
+            Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.sx_home_today), style = Satra.type.footnote, color = c.textSecondary)
-                Text(formatBytes(live.todayBytes), style = Satra.type.numberLarge, color = c.textPrimary)
+                Text(quota.name.ifBlank { stringResource(R.string.sx_quota_title) }, style = Satra.type.headline, color = c.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    if (quota.totalBytes > 0L) stringResource(
+                        R.string.sx_quota_left,
+                        formatBytes((quota.totalBytes - quota.usedBytes).coerceAtLeast(0L)),
+                        formatBytes(quota.totalBytes),
+                    ) else stringResource(R.string.sx_quota_unlimited),
+                    style = Satra.type.footnote, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                if (quota.expireMs > 0L) {
+                    val days = TimeUnit.MILLISECONDS.toDays(quota.expireMs - now)
+                    Spacer(Modifier.height(5.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        SatraProgressBar(fraction = timeLeft ?: 0f, color = tone, modifier = Modifier.weight(1f))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (quota.expireMs <= now) stringResource(R.string.sx_quota_expired)
+                            else if (days < 1) stringResource(R.string.sx_quota_expires_today)
+                            else pluralStringResource(R.plurals.sx_days_left, days.toInt(), days.toInt()),
+                            style = Satra.type.caption.copy(fontWeight = FontWeight.SemiBold),
+                            color = if (health < 0.15f) c.danger else c.textSecondary,
+                            maxLines = 1,
+                        )
+                    }
+                }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.sx_home_see_usage), style = Satra.type.subhead.copy(fontWeight = FontWeight.SemiBold), color = c.accent)
-                Icon(SatraIcons.ChevronRight, null, tint = c.accent, modifier = Modifier.size(16.dp))
-            }
-        }
-        if (week.isNotEmpty() && week.any { it.totalBytes > 0L }) {
-            Spacer(Modifier.height(10.dp))
-            SatraSparkline(
-                values = week.map { it.totalBytes.toFloat() },
-                modifier = Modifier.fillMaxWidth(),
-                height = 52.dp,
-            )
         }
     }
 }
 
-@Composable
-private fun QuotaCard(quota: QuotaUi, modifier: Modifier = Modifier) {
-    val c = Satra.colors
-    val fraction = quota.fraction
-    val ctx = LocalContext.current
-    SatraCard(modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (fraction != null) {
-                SatraRing(
-                    fraction = fraction, size = 58.dp, stroke = 7.dp,
-                    color = when {
-                        fraction >= 0.9f -> c.danger
-                        fraction >= 0.75f -> c.warning
-                        else -> c.accent
-                    },
-                ) {
-                    Text(
-                        String.format(com.v2ray.ang.ui.compose.satra.currentLocale(), "%d%%", (fraction * 100).toInt()),
-                        style = Satra.type.caption.copy(fontWeight = FontWeight.Bold), color = c.textPrimary,
-                    )
-                }
-                Spacer(Modifier.width(14.dp))
-            }
-            Column(Modifier.weight(1f)) {
-                Text(quota.name.ifBlank { stringResource(R.string.sx_quota_title) }, style = Satra.type.headline, color = c.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (quota.totalBytes > 0L) {
-                    Text(
-                        stringResource(
-                            R.string.sx_quota_left,
-                            formatBytes((quota.totalBytes - quota.usedBytes).coerceAtLeast(0L)),
-                            formatBytes(quota.totalBytes),
-                        ),
-                        style = Satra.type.footnote, color = c.textSecondary,
-                    )
-                } else {
-                    Text(stringResource(R.string.sx_quota_unlimited), style = Satra.type.footnote, color = c.textSecondary)
-                }
-                if (quota.expireMs > 0L) {
-                    val days = TimeUnit.MILLISECONDS.toDays(quota.expireMs - System.currentTimeMillis())
-                    Text(
-                        if (quota.expireMs <= System.currentTimeMillis()) stringResource(R.string.sx_quota_expired)
-                        else if (days < 1) stringResource(R.string.sx_quota_expires_today)
-                        else pluralStringResource(R.plurals.sx_quota_expires_days, days.toInt(), days.toInt()),
-                        style = Satra.type.footnote,
-                        color = if (days < 3) c.warning else c.textSecondary,
-                    )
-                }
-            }
-        }
+/** Smoothly blends green → orange → red as [health] (share left of the scarcer resource) drops. */
+internal fun quotaColor(
+    health: Float,
+    good: androidx.compose.ui.graphics.Color,
+    warn: androidx.compose.ui.graphics.Color,
+    bad: androidx.compose.ui.graphics.Color,
+): androidx.compose.ui.graphics.Color {
+    val h = health.coerceIn(0f, 1f)
+    return when {
+        h >= 0.5f -> good
+        h >= 0.15f -> androidx.compose.ui.graphics.lerp(warn, good, ((h - 0.15f) / 0.35f).let { it * it })
+        else -> androidx.compose.ui.graphics.lerp(bad, warn, h / 0.15f)
     }
 }
