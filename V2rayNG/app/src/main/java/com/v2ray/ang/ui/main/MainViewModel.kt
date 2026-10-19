@@ -1472,7 +1472,11 @@ class MainViewModel(
      */
     fun pingServer(guid: String) {
         val st = uiState.value
-        if (!canPingSingle(guid, st.pinging, st.isTesting)) return
+        // Only a whole-list test blocks this; the quick re-ping of the active config does not.
+        if (!canPingSingle(guid, st.pinging, bulkTesting = testRequests.bulk != null && st.pinging.isEmpty())) {
+            LogUtil.i(AppConfig.TAG, "MainViewModel: single ping skipped, list test running")
+            return
+        }
         if (st.isRunning && guid == st.selectedGuid) {
             _uiState.update { it.copy(pinging = it.pinging + guid) }
             viewModelScope.launch { delay(SINGLE_PING_TIMEOUT_MS); _uiState.update { it.copy(pinging = it.pinging - guid) } }
