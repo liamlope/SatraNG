@@ -1,10 +1,12 @@
 package com.v2ray.ang.ui.compose.satra
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -78,10 +80,19 @@ fun PingPill(ms: Long?, modifier: Modifier = Modifier, testing: Boolean = false,
     androidx.compose.runtime.CompositionLocalProvider(
         androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr,
     ) {
+        val pulse = if (testing) {
+            val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "pingPulse")
+            t.animateFloat(
+                0.45f, 1f,
+                androidx.compose.animation.core.infiniteRepeatable(tween(700), androidx.compose.animation.core.RepeatMode.Reverse),
+                label = "pingPulseA",
+            ).value
+        } else 1f
         Row(
             modifier
                 .clip(SatraShapes.Pill)
-                .background(grade.softColor())
+                .background(grade.softColor().copy(alpha = grade.softColor().alpha * pulse))
+                .animateContentSize(tween(220))
                 .padding(horizontal = 9.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

@@ -412,7 +412,7 @@ class MainViewModel(
             }
             is MainServiceEvent.MeasureDelayResult -> {
                 if (!uiState.value.isRunning || !testRequests.completeCurrent(event.requestId)) return
-                _uiState.update { it.copy(isTesting = testRequests.isTesting, status = MainStatus.ConnectionTest(event.result)) }
+                _uiState.update { it.copy(isTesting = testRequests.isTesting, status = MainStatus.ConnectionTest(event.result), pinging = it.pinging - (it.selectedGuid ?: "")) }
                 // Measured through the running core: show it on the active config's row and on Home.
                 val guid = uiState.value.selectedGuid
                 if (!guid.isNullOrBlank()) {
@@ -603,6 +603,7 @@ class MainViewModel(
             MainAction.UndoHandled -> _uiState.update { it.copy(undoName = null) }
             is MainAction.RecheckServer -> recheckServer(action.guid)
             is MainAction.LocateServer -> locateServers(listOf(action.guid), recheck = true)
+            is MainAction.PingServer -> pingServer(action.guid)
             is MainAction.SpeedTest -> startSpeedTest(listOf(action.guid), sortAfter = false)
             MainAction.SpeedTestAll -> speedTestAll()
             MainAction.CancelSpeedTest -> {
@@ -1465,6 +1466,29 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Ping one config by itself. Uses a private test core, so it works whether or not the VPN is
+     * connected (the running config is pinged through the live core instead). Never locates.
+     */
+    fun pingServer(guid: String) {
+        val st = uiState.value
+        if (!canPingSingle(guid, st.pinging, st.isTesting)) return
+        if (st.isRunning && guid == st.selectedGuid) {
+            _uiState.update { it.copy(pinging = it.pinging + guid) }
+            viewModelScope.launch { delay(SINGLE_PING_TIMEOUT_MS); _uiState.update { it.copy(pinging = it.pinging - guid) } }
+            return testCurrentServerRealPing()
+        }
+        val groupId = dataSource.decodeServerConfig(guid)?.subscriptionId.orEmpty()
+        _uiState.update { it.copy(pinging = it.pinging + guid) }
+        viewModelScope.launch {
+            patchRowEverywhere(guid) { it.copy(testDelayMillis = 0L) }
+            pingGuids(groupId, listOf(guid))
+            // Safety net: never leave a spinner if the worker dies.
+            delay(SINGLE_PING_TIMEOUT_MS)
+            _uiState.update { it.copy(pinging = it.pinging - guid) }
+        }
+    }
+
     fun testCurrentServerRealPing() {
         if (!uiState.value.isRunning) return
         val requestId = testRequests.beginCurrent()
@@ -1474,6 +1498,7 @@ class MainViewModel(
 
     private fun onTestsFinished(requestId: String) {
         if (testRequests.completeBulk(requestId) == null) return
+        _uiState.update { it.copy(pinging = emptySet()) }
         resetTestStatus()
         applyPendingBestPick()
         val groupId = uiState.value.selectedGroupId
@@ -1779,5 +1804,6 @@ class MainViewModel(
         const val SMART_RETEST_MS = 6_000L
         private const val LAST_OK_PREFIX = "satra_last_ok_"
         const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
+        const val SINGLE_PING_TIMEOUT_MS = 20_000L
     }
 }

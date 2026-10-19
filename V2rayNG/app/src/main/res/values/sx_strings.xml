@@ -384,4 +384,6 @@
         <item quantity="one">%d minute</item>
         <item quantity="other">%d minutes</item>
     </plurals>
+    <string name="sx_ping_this">Ping</string>
+    <string name="sx_ping_this_sub">Measure latency now, connected or not</string>
 </resources>

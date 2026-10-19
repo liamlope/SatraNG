@@ -38,6 +38,8 @@ data class MainUiState(
     val smartConnecting: Boolean = false,
     /** Configs queued or running a download speed test. */
     val speedTesting: Set<String> = emptySet(),
+    /** Configs pinged on their own (latency chip tap / row menu). */
+    val pinging: Set<String> = emptySet(),
     /** One-tap Add is importing (subscription download in progress). */
     val importing: Boolean = false,
     /** Show the "more ways to add" sheet (clipboard had nothing usable, or user asked). */
@@ -107,6 +109,8 @@ sealed interface MainAction {
     data class RecheckServer(val guid: String) : MainAction
     /** Retry finding the real exit country of one config (tap on a "not found" location). */
     data class LocateServer(val guid: String) : MainAction
+    /** Ping one config on its own, connected or not. */
+    data class PingServer(val guid: String) : MainAction
     /** Download speed test of one config. */
     data class SpeedTest(val guid: String) : MainAction
     /** Speed test the quickest configs of the list one by one, then sort by speed. */

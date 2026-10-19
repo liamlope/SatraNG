@@ -1,5 +1,7 @@
 package com.v2ray.ang.ui.servers
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.animateColorAsState
@@ -223,10 +225,11 @@ fun ServersContent(
                     ServerItem(
                         row = row,
                         selected = row.guid == state.selectedGuid,
-                        testing = state.isTesting && row.testDelayMillis == 0L,
+                        testing = com.v2ray.ang.ui.main.isRowPinging(row.guid, row.testDelayMillis, state.pinging, state.isTesting),
                         speedTesting = row.guid in state.speedTesting,
                         onSelect = { nav.action(MainAction.SelectServer(row.guid)) },
                         onMore = { actionsFor = row },
+                        onPing = { onAction(MainAction.PingServer(row.guid)) },
                         onFavorite = { onAction(MainAction.ToggleFavorite(row.guid)) },
                         onRetryLocation = { onAction(MainAction.LocateServer(row.guid)) },
                         onDelete = { onAction(MainAction.DeleteWithUndo(row.guid)) },
@@ -288,6 +291,7 @@ private fun ServerItem(
     speedTesting: Boolean,
     onSelect: () -> Unit,
     onMore: () -> Unit,
+    onPing: () -> Unit,
     onFavorite: () -> Unit,
     onDelete: () -> Unit,
     onRetryLocation: () -> Unit,
@@ -295,6 +299,7 @@ private fun ServerItem(
 ) {
     val c = Satra.colors
     val haptics = rememberSatraHaptics()
+    val pingCd = stringResource(R.string.sx_ping_this)
     val dismissState = rememberSwipeToDismissBoxState()
     LaunchedEffect(dismissState.currentValue) {
         when (dismissState.currentValue) {
@@ -361,7 +366,11 @@ private fun ServerItem(
                 ServerSubtitle(row, onRetryLocation)
                 ServerTags(row, speedTesting)
             }
-            PingPill(row.testDelayMillis, testing = testing)
+            PingPill(
+                row.testDelayMillis, testing = testing,
+                modifier = Modifier.clip(SatraShapes.Pill).satraClickable(enabled = !testing, pressedScale = 0.9f, onClick = onPing)
+                    .semantics { contentDescription = pingCd },
+            )
             com.v2ray.ang.ui.compose.satra.FavoriteStar(
                 favorite = row.favorite,
                 onToggle = onFavorite,
@@ -536,6 +545,7 @@ internal fun ServerActionsSheet(server: ServerRowUiModel, nav: AppNav, onAction:
             InsetGroup {
                 row { SatraRow(stringResource(R.string.sx_server_use), icon = SatraIcons.Power, iconColor = c.accent, onClick = { onDismiss(); nav.action(MainAction.SelectServer(server.guid)) }) }
                 row { SatraRow(stringResource(if (server.favorite) R.string.sx_server_unfavorite else R.string.sx_server_favorite), icon = SatraIcons.Star, iconColor = c.warning, onClick = { onDismiss(); onAction(MainAction.ToggleFavorite(server.guid)) }) }
+                row { SatraRow(stringResource(R.string.sx_ping_this), subtitle = stringResource(R.string.sx_ping_this_sub), icon = SatraIcons.Pulse, iconColor = c.accent, onClick = { onDismiss(); onAction(MainAction.PingServer(server.guid)) }) }
                 row { SatraRow(stringResource(R.string.sx_speed_test), subtitle = stringResource(R.string.sx_speed_test_sub), icon = SatraIcons.Bolt, iconColor = c.success, onClick = { onDismiss(); onAction(MainAction.SpeedTest(server.guid)) }) }
                 row { SatraRow(stringResource(R.string.sx_server_recheck), icon = SatraIcons.Globe, iconColor = c.info, onClick = { onDismiss(); onAction(MainAction.RecheckServer(server.guid)) }) }
                 row { SatraRow(stringResource(R.string.sx_server_edit), icon = SatraIcons.Edit, iconColor = c.textSecondary, onClick = { onDismiss(); nav.action(MainAction.EditServer(server.guid, server.profile)) }) }

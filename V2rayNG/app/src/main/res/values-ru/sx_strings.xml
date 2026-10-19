@@ -408,4 +408,6 @@
         <item quantity="many">%d минут</item>
         <item quantity="other">%d минуты</item>
     </plurals>
+    <string name="sx_ping_this">Пинг</string>
+    <string name="sx_ping_this_sub">Измерить задержку сейчас, с подключением или без</string>
 </resources>

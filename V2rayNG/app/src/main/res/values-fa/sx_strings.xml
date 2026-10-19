@@ -384,4 +384,6 @@
         <item quantity="one">%d دقیقه</item>
         <item quantity="other">%d دقیقه</item>
     </plurals>
+    <string name="sx_ping_this">پینگ</string>
+    <string name="sx_ping_this_sub">اندازه‌گیری تأخیر همین حالا، چه وصل باشید چه نه</string>
 </resources>

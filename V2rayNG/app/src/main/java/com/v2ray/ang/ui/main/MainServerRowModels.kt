@@ -103,3 +103,11 @@ private fun serverProtocolDescription(profile: ProfileItem): String {
     }
     return parts.joinToString(" / ")
 }
+
+/** A row shows the ping spinner when it's pinged on its own, or a whole-list test hasn't reached it yet. */
+internal fun isRowPinging(guid: String, delayMillis: Long, pinging: Set<String>, bulkTesting: Boolean): Boolean =
+    guid in pinging || (bulkTesting && pinging.isEmpty() && delayMillis == 0L)
+
+/** Whether a single-config ping may start now: not while a whole-list test runs, not twice for one config. */
+internal fun canPingSingle(guid: String, pinging: Set<String>, bulkTesting: Boolean): Boolean =
+    guid.isNotBlank() && guid !in pinging && !(bulkTesting && pinging.isEmpty())
