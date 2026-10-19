@@ -594,7 +594,7 @@ object CoreConfigManager {
     private fun collectUserRuleDomainsByTag(tag: String): ArrayList<String> {
         val domain = ArrayList<String>()
 
-        val rulesetItems = MmkvManager.decodeRoutingRulesets()
+        val rulesetItems = com.v2ray.ang.handler.RoutingPolicy.current(MmkvManager.decodeRoutingRulesets())
         rulesetItems?.forEach { key ->
             if (key.enabled && key.outboundTag == tag && !key.domain.isNullOrEmpty()) {
                 key.domain?.forEach {
@@ -612,7 +612,7 @@ object CoreConfigManager {
     private fun collectCustomOutboundDomains(): ArrayList<String> {
         val domain = ArrayList<String>()
 
-        val rulesetItems = MmkvManager.decodeRoutingRulesets()
+        val rulesetItems = com.v2ray.ang.handler.RoutingPolicy.current(MmkvManager.decodeRoutingRulesets())
         rulesetItems?.forEach { key ->
             if (key.enabled && !AppConfig.BUILTIN_OUTBOUND_TAGS.contains(key.outboundTag)
                 && !key.domain.isNullOrEmpty()
@@ -1178,7 +1178,7 @@ object CoreConfigManager {
             MmkvManager.decodeSettingsString(AppConfig.PREF_ROUTING_DOMAIN_STRATEGY)
                 ?: "AsIs"
 
-        val rulesetItems = MmkvManager.decodeRoutingRulesets()
+        val rulesetItems = com.v2ray.ang.handler.RoutingPolicy.current(MmkvManager.decodeRoutingRulesets())
         rulesetItems?.forEach { key ->
             appendRoutingUserRule(configContext, key, v2rayConfig, policyGroupBalancerTags)
         }

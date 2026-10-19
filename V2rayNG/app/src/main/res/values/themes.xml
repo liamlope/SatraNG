@@ -2,11 +2,11 @@
 <resources>
     <color name="window_background_light">#FFF3F6F9</color>
     <color name="window_background_dark">#FF000000</color>
-    <color name="satra_splash_background">#FF000000</color>
+    <color name="satra_splash_background">#FF0B0B0C</color>
 
     <style name="Theme.Satra.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/satra_splash_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/satra_splash_icon</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/satra_splash_shield</item>
         <item name="windowSplashScreenAnimationDuration">500</item>
         <item name="postSplashScreenTheme">@style/AppThemeDayNight.NoActionBar</item>
     </style>
