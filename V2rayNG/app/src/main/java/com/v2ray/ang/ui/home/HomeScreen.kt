@@ -470,8 +470,9 @@ private fun TrafficCard(live: LiveUiState, onOpenUsage: () -> Unit, modifier: Mo
     }
 }
 
+/** Header of the download / upload / total table (Home and Usage). */
 @Composable
-private fun TrafficTableHeader() {
+internal fun TrafficTableHeader() {
     val c = Satra.colors
     Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1.1f))
@@ -482,7 +483,7 @@ private fun TrafficTableHeader() {
 }
 
 @Composable
-private fun TrafficRow(label: String, down: Long, up: Long) {
+internal fun TrafficRow(label: String, down: Long, up: Long) {
     val c = Satra.colors
     Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         FitText(label, Satra.type.footnote, c.textSecondary, Modifier.weight(1.1f), TextAlign.Start)

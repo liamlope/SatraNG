@@ -320,6 +320,16 @@ private fun SummaryCard(state: UsageUiState, live: LiveUiState, modifier: Modifi
             )
             MiniStat(stringResource(R.string.sx_home_today), formatBytes(live.todayBytes), Modifier.weight(1f))
         }
+        Spacer(Modifier.height(12.dp))
+        com.v2ray.ang.ui.home.TrafficTableHeader()
+        if (live.running) {
+            com.v2ray.ang.ui.home.TrafficRow(stringResource(R.string.sx_live_session), live.sessionDown, live.sessionUp)
+        }
+        com.v2ray.ang.ui.home.TrafficRow(stringResource(R.string.sx_home_today), live.todayDown, live.todayUp)
+        com.v2ray.ang.ui.home.TrafficRow(
+            stringResource(if (state.rangeDays <= 7) R.string.sx_range_7 else R.string.sx_range_30),
+            state.days.sumOf { it.downBytes }, state.days.sumOf { it.upBytes },
+        )
     }
 }
 
