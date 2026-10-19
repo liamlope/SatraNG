@@ -69,13 +69,13 @@ object MmkvManager {
         ) = Unit
     }
 
-    private val mainStorage by lazy { MMKV.mmkvWithID(ID_MAIN, MMKV.MULTI_PROCESS_MODE, cryptKey) }
-    private val profileFullStorage by lazy { MMKV.mmkvWithID(ID_PROFILE_FULL_CONFIG, MMKV.MULTI_PROCESS_MODE, cryptKey) }
-    private val serverRawStorage by lazy { MMKV.mmkvWithID(ID_SERVER_RAW, MMKV.MULTI_PROCESS_MODE, cryptKey) }
+    private val mainStorage by lazy { openStore(ID_MAIN) }
+    private val profileFullStorage by lazy { openStore(ID_PROFILE_FULL_CONFIG) }
+    private val serverRawStorage by lazy { openStore(ID_SERVER_RAW) }
     private val serverAffStorage by lazy { MMKV.mmkvWithID(ID_SERVER_AFF, MMKV.MULTI_PROCESS_MODE) }
-    private val subStorage by lazy { MMKV.mmkvWithID(ID_SUB, MMKV.MULTI_PROCESS_MODE, cryptKey) }
+    private val subStorage by lazy { openStore(ID_SUB) }
     private val assetStorage by lazy { MMKV.mmkvWithID(ID_ASSET, MMKV.MULTI_PROCESS_MODE) }
-    private val settingsStorage by lazy { MMKV.mmkvWithID(ID_SETTING, MMKV.MULTI_PROCESS_MODE, cryptKey) }
+    private val settingsStorage by lazy { openStore(ID_SETTING) }
 
     private inline fun <T> withProfileIndexLock(block: () -> T): T {
         return synchronized(mainStorage) {
@@ -165,6 +165,9 @@ object MmkvManager {
             null
         }
     }
+
+    private fun openStore(id: String): MMKV = cryptKey?.let { MMKV.mmkvWithID(id, MMKV.MULTI_PROCESS_MODE, it) }
+        ?: MMKV.mmkvWithID(id, MMKV.MULTI_PROCESS_MODE)
 
     /** Crypt key for the sensitive stores (null = plaintext). */
     @Volatile
