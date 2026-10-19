@@ -127,11 +127,11 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     SatraButton(
-                        stringResource(R.string.sx_add_clipboard), { onAdd(AddMethod.Clipboard) },
+                        stringResource(R.string.sx_add_paste_short), { onAdd(AddMethod.Clipboard) },
                         modifier = Modifier.weight(1f), style = SatraButtonStyle.Tinted, icon = SatraIcons.Clipboard, compact = true,
                     )
                     SatraButton(
-                        stringResource(R.string.sx_add_file), { onAdd(AddMethod.File) },
+                        stringResource(R.string.sx_add_file_short), { onAdd(AddMethod.File) },
                         modifier = Modifier.weight(1f), style = SatraButtonStyle.Tinted, icon = SatraIcons.File, compact = true,
                     )
                 }

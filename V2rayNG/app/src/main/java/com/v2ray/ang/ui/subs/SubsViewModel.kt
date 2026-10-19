@@ -55,13 +55,26 @@ data class SubsUiState(
     val qrTitle: String = "",
 )
 
-class SubsViewModel(app: Application) : AndroidViewModel(app) {
+/** What the Subscriptions screen can ask for; lets the screen render without a ViewModel (previews, tests). */
+interface SubsActions {
+    fun reload()
+    fun updateAll()
+    fun updateOne(guid: String)
+    fun setEnabled(guid: String, enabled: Boolean)
+    fun delete(guid: String)
+    fun save(guid: String?, name: String, url: String, autoUpdate: Boolean, intervalHours: Int, enabled: Boolean): SubsMessage?
+    fun showQr(row: SubRow)
+    fun dismissQr()
+    fun messageShown()
+}
+
+class SubsViewModel(app: Application) : AndroidViewModel(app), SubsActions {
     private val _state = MutableStateFlow(SubsUiState())
     val state: StateFlow<SubsUiState> = _state.asStateFlow()
 
     init { reload() }
 
-    fun reload() {
+    override fun reload() {
         viewModelScope.launch(Dispatchers.IO) {
             val rows = MmkvManager.decodeSubscriptions().map { it.toRow() }
             _state.update { it.copy(rows = rows) }
@@ -70,9 +83,9 @@ class SubsViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun SubscriptionCache.toRow() = SubRow(guid, subscription.ensureDisplayDefaults(), MmkvManager.decodeServerList(guid).size)
 
-    fun messageShown() = _state.update { it.copy(message = null) }
+    override fun messageShown() = _state.update { it.copy(message = null) }
 
-    fun updateOne(guid: String) {
+    override fun updateOne(guid: String) {
         if (guid in _state.value.updating) return
         val cache = MmkvManager.decodeSubscriptions().firstOrNull { it.guid == guid } ?: return
         _state.update { it.copy(updating = it.updating + guid) }
@@ -95,7 +108,7 @@ class SubsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun updateAll() {
+    override fun updateAll() {
         if (_state.value.updatingAll) return
         _state.update { it.copy(updatingAll = true) }
         viewModelScope.launch {
@@ -117,7 +130,7 @@ class SubsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun setEnabled(guid: String, enabled: Boolean) {
+    override fun setEnabled(guid: String, enabled: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             val item = MmkvManager.decodeSubscription(guid) ?: return@launch
             item.enabled = enabled
@@ -131,7 +144,7 @@ class SubsViewModel(app: Application) : AndroidViewModel(app) {
      * Creates or edits a subscription. Returns a validation message, or null when saved.
      * [intervalHours] is only used when [autoUpdate] is on.
      */
-    fun save(
+    override fun save(
         guid: String?,
         name: String,
         url: String,
@@ -169,7 +182,7 @@ class SubsViewModel(app: Application) : AndroidViewModel(app) {
         return null
     }
 
-    fun delete(guid: String) {
+    override fun delete(guid: String) {
         viewModelScope.launch(Dispatchers.IO) {
             SubscriptionUpdater.cancelOne(subId = guid)
             SettingsManager.removeSubscriptionWithDefault(guid)
@@ -179,14 +192,14 @@ class SubsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun showQr(row: SubRow) {
+    override fun showQr(row: SubRow) {
         viewModelScope.launch {
             val bmp = withContext(Dispatchers.Default) { QRCodeDecoder.createQRCode(row.item.url) }
             _state.update { it.copy(qr = bmp, qrTitle = row.title) }
         }
     }
 
-    fun dismissQr() = _state.update { it.copy(qr = null) }
+    override fun dismissQr() = _state.update { it.copy(qr = null) }
 
     companion object {
         /** True when [text] looks like something that can be saved as a subscription link. */

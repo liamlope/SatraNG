@@ -70,6 +70,7 @@ import com.v2ray.ang.ui.compose.satra.rememberSatraHaptics
 import com.v2ray.ang.ui.compose.satra.satraClickable
 import com.v2ray.ang.ui.home.FlagBadge
 import com.v2ray.ang.ui.main.MainAction
+import com.v2ray.ang.ui.main.MainUiState
 import com.v2ray.ang.ui.main.MainViewModel
 import com.v2ray.ang.ui.main.ServerRowUiModel
 import com.v2ray.ang.ui.main.ServerSort
@@ -82,7 +83,20 @@ fun ServersScreen(vm: MainViewModel, nav: AppNav) {
     val state by vm.uiState.collectAsState()
     val group by vm.serverGroupState(state.selectedGroupId).collectAsState()
     val rows = remember(group.rows, state.hiddenGuids) { group.rows.filter { it.guid !in state.hiddenGuids } }
-    var query by rememberSaveable { mutableStateOf("") }
+    ServersContent(state = state, rows = rows, nav = nav, onAction = vm::onAction)
+}
+
+/** Stateless body of the Servers tab (also rendered by the screenshot tests). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ServersContent(
+    state: MainUiState,
+    rows: List<ServerRowUiModel>,
+    nav: AppNav,
+    onAction: (MainAction) -> Unit,
+    initialQuery: String = "",
+) {
+    var query by rememberSaveable { mutableStateOf(initialQuery) }
     var menu by remember { mutableStateOf(false) }
     var addMenu by remember { mutableStateOf(false) }
     var manualSheet by remember { mutableStateOf(false) }
@@ -91,11 +105,11 @@ fun ServersScreen(vm: MainViewModel, nav: AppNav) {
     val haptics = rememberSatraHaptics()
     val c = Satra.colors
 
-    LaunchedEffect(query) { vm.onAction(MainAction.Search(query)) }
+    LaunchedEffect(query) { onAction(MainAction.Search(query)) }
 
     PullToRefreshBox(
         isRefreshing = state.isTesting,
-        onRefresh = { vm.onAction(MainAction.TestRealAllServers) },
+        onRefresh = { onAction(MainAction.TestRealAllServers) },
     ) {
         SatraLargeTitleScaffold(
             title = stringResource(R.string.sx_servers_title),
@@ -104,7 +118,7 @@ fun ServersScreen(vm: MainViewModel, nav: AppNav) {
                 SatraIconButton(
                     if (state.isTesting) SatraIcons.Stop else SatraIcons.Pulse,
                     stringResource(if (state.isTesting) R.string.sx_servers_stop_test else R.string.sx_servers_test_all),
-                    { vm.onAction(if (state.isTesting) MainAction.CancelTesting else MainAction.TestRealAllServers) },
+                    { onAction(if (state.isTesting) MainAction.CancelTesting else MainAction.TestRealAllServers) },
                     tint = c.accent,
                 )
                 Box {
@@ -119,9 +133,9 @@ fun ServersScreen(vm: MainViewModel, nav: AppNav) {
                 Box {
                     SatraIconButton(SatraIcons.More, stringResource(R.string.sx_more_options), { menu = true })
                     SatraMenu(menu, { menu = false }) {
-                        SatraMenuItem(stringResource(R.string.sx_sort_default), { menu = false; vm.onAction(MainAction.SetSort(ServerSort.Default)) }, if (state.sort == ServerSort.Default) SatraIcons.Check else SatraIcons.Sort)
-                        SatraMenuItem(stringResource(R.string.sx_sort_ping), { menu = false; vm.onAction(MainAction.SetSort(ServerSort.Ping)) }, if (state.sort == ServerSort.Ping) SatraIcons.Check else SatraIcons.Pulse)
-                        SatraMenuItem(stringResource(R.string.sx_sort_name), { menu = false; vm.onAction(MainAction.SetSort(ServerSort.Name)) }, if (state.sort == ServerSort.Name) SatraIcons.Check else SatraIcons.Tag)
+                        SatraMenuItem(stringResource(R.string.sx_sort_default), { menu = false; onAction(MainAction.SetSort(ServerSort.Default)) }, if (state.sort == ServerSort.Default) SatraIcons.Check else SatraIcons.Sort)
+                        SatraMenuItem(stringResource(R.string.sx_sort_ping), { menu = false; onAction(MainAction.SetSort(ServerSort.Ping)) }, if (state.sort == ServerSort.Ping) SatraIcons.Check else SatraIcons.Pulse)
+                        SatraMenuItem(stringResource(R.string.sx_sort_name), { menu = false; onAction(MainAction.SetSort(ServerSort.Name)) }, if (state.sort == ServerSort.Name) SatraIcons.Check else SatraIcons.Tag)
                         SatraMenuItem(stringResource(R.string.sx_remove_duplicates), { menu = false; confirm = ConfirmKind.RemoveDuplicates }, SatraIcons.Copy)
                         SatraMenuItem(stringResource(R.string.sx_remove_invalid), { menu = false; confirm = ConfirmKind.RemoveInvalid }, SatraIcons.Ban)
                         SatraMenuItem(stringResource(R.string.sx_remove_all), { menu = false; confirm = ConfirmKind.RemoveAll }, SatraIcons.Trash, destructive = true)
@@ -142,14 +156,14 @@ fun ServersScreen(vm: MainViewModel, nav: AppNav) {
                     SatraChip(
                         stringResource(R.string.sx_favorites), selected = state.favoritesOnly,
                         icon = if (state.favoritesOnly) SatraIcons.StarFilled else SatraIcons.Star,
-                        onClick = { vm.onAction(MainAction.SetFavoritesOnly(!state.favoritesOnly)) },
+                        onClick = { onAction(MainAction.SetFavoritesOnly(!state.favoritesOnly)) },
                     )
                     if (state.groups.size > 1) {
                         state.groups.forEach { g ->
                             SatraChip(
                                 g.remarks.ifBlank { stringResource(R.string.sx_group_default) },
                                 selected = g.id == state.selectedGroupId,
-                                onClick = { vm.onAction(MainAction.SelectGroup(g.id)) },
+                                onClick = { onAction(MainAction.SelectGroup(g.id)) },
                             )
                         }
                     }
@@ -177,8 +191,8 @@ fun ServersScreen(vm: MainViewModel, nav: AppNav) {
                         testing = state.isTesting && row.testDelayMillis == 0L,
                         onSelect = { nav.action(MainAction.SelectServer(row.guid)) },
                         onMore = { actionsFor = row },
-                        onFavorite = { vm.onAction(MainAction.ToggleFavorite(row.guid)) },
-                        onDelete = { vm.onAction(MainAction.DeleteWithUndo(row.guid)) },
+                        onFavorite = { onAction(MainAction.ToggleFavorite(row.guid)) },
+                        onDelete = { onAction(MainAction.DeleteWithUndo(row.guid)) },
                         modifier = Modifier.padding(horizontal = SatraSpace.Gutter).padding(bottom = 8.dp),
                     )
                 }
@@ -187,11 +201,11 @@ fun ServersScreen(vm: MainViewModel, nav: AppNav) {
     }
 
     actionsFor?.let { row ->
-        ServerActionsSheet(row, nav, vm, onDismiss = { actionsFor = null })
+        ServerActionsSheet(row, nav, onAction, onDismiss = { actionsFor = null })
     }
     if (manualSheet) ManualSheet(onPick = { type -> manualSheet = false; nav.action(MainAction.ImportManually(type)) }, onDismiss = { manualSheet = false })
     state.shareQRCodeBitmap?.let { bmp ->
-        SatraSheet(onDismiss = { vm.onAction(MainAction.DismissQRCodeDialog) }) {
+        SatraSheet(onDismiss = { onAction(MainAction.DismissQRCodeDialog) }) {
             SheetTitle(stringResource(R.string.sx_qr))
             Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                 Image(
@@ -217,9 +231,9 @@ fun ServersScreen(vm: MainViewModel, nav: AppNav) {
             onConfirm = {
                 haptics.heavy()
                 when (kind) {
-                    ConfirmKind.RemoveAll -> vm.onAction(MainAction.RemoveAllServers)
-                    ConfirmKind.RemoveDuplicates -> vm.onAction(MainAction.RemoveDuplicateServers)
-                    ConfirmKind.RemoveInvalid -> vm.onAction(MainAction.RemoveInvalidServers)
+                    ConfirmKind.RemoveAll -> onAction(MainAction.RemoveAllServers)
+                    ConfirmKind.RemoveDuplicates -> onAction(MainAction.RemoveDuplicateServers)
+                    ConfirmKind.RemoveInvalid -> onAction(MainAction.RemoveInvalidServers)
                 }
                 confirm = null
             },
@@ -242,15 +256,24 @@ private fun ServerItem(
 ) {
     val c = Satra.colors
     val haptics = rememberSatraHaptics()
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> { haptics.confirm(); onFavorite(); false }
-                SwipeToDismissBoxValue.EndToStart -> { haptics.heavy(); onDelete(); true }
-                SwipeToDismissBoxValue.Settled -> false
+    val dismissState = rememberSwipeToDismissBoxState()
+    LaunchedEffect(dismissState.currentValue) {
+        when (dismissState.currentValue) {
+            SwipeToDismissBoxValue.StartToEnd -> {
+                haptics.confirm()
+                onFavorite()
+                dismissState.reset()
             }
-        },
-    )
+            SwipeToDismissBoxValue.EndToStart -> {
+                haptics.heavy()
+                onDelete()
+                // If the delete was refused (active server) the row stays: slide it back.
+                kotlinx.coroutines.delay(300)
+                dismissState.reset()
+            }
+            SwipeToDismissBoxValue.Settled -> Unit
+        }
+    }
     SwipeToDismissBox(
         state = dismissState,
         modifier = modifier.clip(SatraShapes.Large),
@@ -312,7 +335,7 @@ private fun ServerItem(
 }
 
 @Composable
-private fun ServerActionsSheet(server: ServerRowUiModel, nav: AppNav, vm: MainViewModel, onDismiss: () -> Unit) {
+internal fun ServerActionsSheet(server: ServerRowUiModel, nav: AppNav, onAction: (MainAction) -> Unit, onDismiss: () -> Unit) {
     val c = Satra.colors
     SatraSheet(onDismiss = onDismiss) {
         Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -329,19 +352,19 @@ private fun ServerActionsSheet(server: ServerRowUiModel, nav: AppNav, vm: MainVi
             }
             InsetGroup {
                 row { SatraRow(stringResource(R.string.sx_server_use), icon = SatraIcons.Power, iconColor = c.accent, onClick = { onDismiss(); nav.action(MainAction.SelectServer(server.guid)) }) }
-                row { SatraRow(stringResource(if (server.favorite) R.string.sx_server_unfavorite else R.string.sx_server_favorite), icon = SatraIcons.Star, iconColor = c.warning, onClick = { onDismiss(); vm.onAction(MainAction.ToggleFavorite(server.guid)) }) }
-                row { SatraRow(stringResource(R.string.sx_server_recheck), icon = SatraIcons.Globe, iconColor = c.info, onClick = { onDismiss(); vm.onAction(MainAction.RecheckServer(server.guid)) }) }
+                row { SatraRow(stringResource(if (server.favorite) R.string.sx_server_unfavorite else R.string.sx_server_favorite), icon = SatraIcons.Star, iconColor = c.warning, onClick = { onDismiss(); onAction(MainAction.ToggleFavorite(server.guid)) }) }
+                row { SatraRow(stringResource(R.string.sx_server_recheck), icon = SatraIcons.Globe, iconColor = c.info, onClick = { onDismiss(); onAction(MainAction.RecheckServer(server.guid)) }) }
                 row { SatraRow(stringResource(R.string.sx_server_edit), icon = SatraIcons.Edit, iconColor = c.textSecondary, onClick = { onDismiss(); nav.action(MainAction.EditServer(server.guid, server.profile)) }) }
             }
             Spacer(Modifier.height(12.dp))
             InsetGroup {
                 row { SatraRow(stringResource(R.string.sx_server_copy), icon = SatraIcons.Copy, iconColor = c.info, onClick = { onDismiss(); nav.action(MainAction.ShareClipboard(server.guid)) }) }
-                row { SatraRow(stringResource(R.string.sx_server_qr), icon = SatraIcons.Qr, iconColor = c.info, onClick = { onDismiss(); vm.onAction(MainAction.ShareQRCode(server.guid)) }) }
+                row { SatraRow(stringResource(R.string.sx_server_qr), icon = SatraIcons.Qr, iconColor = c.info, onClick = { onDismiss(); onAction(MainAction.ShareQRCode(server.guid)) }) }
                 row { SatraRow(stringResource(R.string.sx_server_copy_full), icon = SatraIcons.File, iconColor = c.info, onClick = { onDismiss(); nav.action(MainAction.ShareFullContent(server.guid)) }) }
             }
             Spacer(Modifier.height(12.dp))
             InsetGroup {
-                row { SatraRow(stringResource(R.string.sx_delete), icon = SatraIcons.Trash, iconColor = c.danger, destructive = true, onClick = { onDismiss(); vm.onAction(MainAction.DeleteWithUndo(server.guid)) }) }
+                row { SatraRow(stringResource(R.string.sx_delete), icon = SatraIcons.Trash, iconColor = c.danger, destructive = true, onClick = { onDismiss(); onAction(MainAction.DeleteWithUndo(server.guid)) }) }
             }
         }
     }

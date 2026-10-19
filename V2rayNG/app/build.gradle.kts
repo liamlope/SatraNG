@@ -187,7 +187,12 @@ android {
     }
 
     testOptions {
+        unitTests.isIncludeAndroidResources = true
         unitTests.all {
+            it.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
+            it.systemProperty("roborazzi.test.record", "true")
+            it.systemProperty("roborazzi.output.dir", rootProject.file("../preview/premium").absolutePath)
+            it.maxHeapSize = "3g"
             it.useJUnitPlatform()
             // Treat Jupiter discovery warnings as failures: JUnit 4 failed on an invalid @Test
             // method, such as one that returns a value, while Jupiter only warns and skips it.
@@ -258,5 +263,14 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.kotlin)
+    // Offscreen Compose screenshots (Robolectric native graphics + Roborazzi), test classpath only.
+    testImplementation(libs.junit4)
+    testRuntimeOnly(libs.junit.vintage.engine)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.compose.ui.test.manifest)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }

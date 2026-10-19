@@ -56,6 +56,12 @@ private class Section(val header: String?, val footer: String?, val specs: List<
 fun MoreScreen(mainVm: MainViewModel, nav: AppNav, vm: MoreViewModel = viewModel()) {
     val s by vm.state.collectAsState()
     LifecycleResumeEffect(Unit) { vm.refresh(); onPauseOrDispose { } }
+    MoreContent(s, nav, vm)
+}
+
+/** Stateless body of the Settings tab (also rendered by the screenshot tests). */
+@Composable
+fun MoreContent(s: MoreUiState, nav: AppNav, vm: MoreActions) {
     var query by rememberSaveable { mutableStateOf("") }
     var languageSheet by remember { mutableStateOf(false) }
     val c = Satra.colors

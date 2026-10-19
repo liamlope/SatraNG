@@ -21,7 +21,8 @@ data class ServerRowUiModel(
 ) {
     val flag: String get() = GeoIpResolver.flagEmoji(countryCode)
     val locationLabel: String
-        get() = countryName?.takeIf { it.isNotBlank() }
+        get() = GeoIpResolver.countryNameForCode(countryCode)
+            ?: countryName?.takeIf { it.isNotBlank() }
             ?: countryCode
             ?: ""
 }

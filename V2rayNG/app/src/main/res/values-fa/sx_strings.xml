@@ -17,6 +17,8 @@
     <string name="sx_add_scan">اسکن کد QR</string>
     <string name="sx_add_clipboard">چسباندن از کلیپ‌بورد</string>
     <string name="sx_add_file">وارد کردن از فایل</string>
+    <string name="sx_add_paste_short">چسباندن</string>
+    <string name="sx_add_file_short">وارد کردن فایل</string>
     <string name="sx_add_subscription">افزودن اشتراک</string>
     <string name="sx_home_empty_title">بیایید متصل‌تان کنیم</string>
     <string name="sx_home_empty_message">لینک اشتراک را اضافه کنید یا کد QR ارائه‌دهنده را اسکن کنید. بقیه‌اش خودکار است.</string>

@@ -73,7 +73,16 @@ data class UsageUiState(
     val engineReady: Boolean = false,
 )
 
-class UsageViewModel(app: Application) : AndroidViewModel(app) {
+interface UsageActions {
+    fun setRange(days: Int)
+    fun saveRule(rule: UsageRule)
+    fun deleteRule(id: String)
+    fun setRuleEnabled(id: String, enabled: Boolean)
+    fun saveGlobal(limit: GlobalLimit)
+    fun clearHistory()
+}
+
+class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
 
     private val _state = MutableStateFlow(UsageUiState(hasUsageAccess = AppUsageReader.hasAccess(app)))
     val state: StateFlow<UsageUiState> = _state.asStateFlow()
@@ -106,7 +115,7 @@ class UsageViewModel(app: Application) : AndroidViewModel(app) {
         tickJob = null
     }
 
-    fun setRange(days: Int) {
+    override fun setRange(days: Int) {
         if (_state.value.rangeDays == days) return
         _state.update { it.copy(rangeDays = days) }
         viewModelScope.launch(Dispatchers.IO) { refreshLedger() }
@@ -179,7 +188,7 @@ class UsageViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- rules ----
 
-    fun saveRule(rule: UsageRule) {
+    override fun saveRule(rule: UsageRule) {
         viewModelScope.launch(Dispatchers.IO) {
             val saved = if (rule.id.isBlank()) rule.copy(id = UsageRule.newId(), createdAt = System.currentTimeMillis()) else rule
             UsageRulesRepository.upsert(saved)
@@ -188,7 +197,7 @@ class UsageViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun deleteRule(id: String) {
+    override fun deleteRule(id: String) {
         viewModelScope.launch(Dispatchers.IO) {
             UsageRulesRepository.delete(id)
             applyPolicy()
@@ -196,7 +205,7 @@ class UsageViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun setRuleEnabled(id: String, enabled: Boolean) {
+    override fun setRuleEnabled(id: String, enabled: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             UsageRulesRepository.rules().firstOrNull { it.id == id }?.let {
                 UsageRulesRepository.upsert(it.copy(enabled = enabled))
@@ -206,14 +215,14 @@ class UsageViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun saveGlobal(limit: GlobalLimit) {
+    override fun saveGlobal(limit: GlobalLimit) {
         viewModelScope.launch(Dispatchers.IO) {
             UsageRulesRepository.saveGlobal(limit)
             refreshLedger()
         }
     }
 
-    fun clearHistory() {
+    override fun clearHistory() {
         viewModelScope.launch(Dispatchers.IO) {
             UsageStore.clearLedger()
             refreshLedger()

@@ -10,6 +10,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -85,6 +86,13 @@ private sealed interface SubSheet {
 @Composable
 fun SubsScreen(vm: SubsViewModel, mainVm: MainViewModel, nav: AppNav) {
     val state by vm.state.collectAsState()
+    SubsContent(state, vm, nav)
+}
+
+/** Stateless body of the Subscriptions tab (also rendered by the screenshot tests). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SubsContent(state: SubsUiState, vm: SubsActions, nav: AppNav) {
     val ctx = LocalContext.current
     val haptics = rememberSatraHaptics()
     var sheet by remember { mutableStateOf<SubSheet?>(null) }
@@ -310,11 +318,11 @@ private fun ExpiryBadge(expireSec: Long) {
 private val intervalChoices = listOf(1, 6, 12, 24, 72)
 
 @Composable
-private fun EditSheet(
+internal fun EditSheet(
     sub: SubRow?,
     initialUrl: String,
     initialName: String,
-    vm: SubsViewModel,
+    vm: SubsActions,
     nav: AppNav,
     onDismiss: () -> Unit,
     onDelete: (SubRow) -> Unit,
@@ -375,7 +383,7 @@ private fun EditSheet(
                 Column {
                     FormLabel(stringResource(R.string.sx_subs_interval))
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                        Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 24.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         intervalChoices.forEach { h ->

@@ -24,7 +24,17 @@ data class MoreUiState(
 )
 
 /** State + writes for the Settings tab; keeps MMKV out of the composables. */
-class MoreViewModel(app: Application) : AndroidViewModel(app) {
+interface MoreActions {
+    fun setTheme(mode: String)
+    fun setLanguage(code: String)
+    fun setVpnMode(vpn: Boolean)
+    fun setSpeedNotification(on: Boolean)
+    fun setSmartConnect(on: Boolean)
+    fun setQuickConnect(on: Boolean)
+    fun setShowAdvanced(on: Boolean)
+}
+
+class MoreViewModel(app: Application) : AndroidViewModel(app), MoreActions {
     private val _state = MutableStateFlow(read())
     val state: StateFlow<MoreUiState> = _state.asStateFlow()
 
@@ -40,39 +50,39 @@ class MoreViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refresh() { _state.value = read() }
 
-    fun setTheme(mode: String) {
+    override fun setTheme(mode: String) {
         ThemeManager.setThemeMode(mode)
         _state.update { it.copy(theme = mode) }
     }
 
-    fun setLanguage(code: String) {
+    override fun setLanguage(code: String) {
         _state.update { it.copy(language = code) }
         AppLocaleManager.setApplicationLanguage(code)
     }
 
-    fun setVpnMode(vpn: Boolean) {
+    override fun setVpnMode(vpn: Boolean) {
         MmkvManager.encodeSettings(AppConfig.PREF_MODE, if (vpn) AppConfig.VPN else "Proxy only")
         SettingsChangeManager.notifySettingChanged(AppConfig.PREF_MODE)
         _state.update { it.copy(vpnMode = vpn) }
     }
 
-    fun setSpeedNotification(on: Boolean) {
+    override fun setSpeedNotification(on: Boolean) {
         MmkvManager.encodeSettings(AppConfig.PREF_SPEED_ENABLED, on)
         SettingsChangeManager.notifySettingChanged(AppConfig.PREF_SPEED_ENABLED)
         _state.update { it.copy(speedNotification = on) }
     }
 
-    fun setSmartConnect(on: Boolean) {
+    override fun setSmartConnect(on: Boolean) {
         MmkvManager.encodeSettings(AppConfig.PREF_AUTO_CONNECT, on)
         _state.update { it.copy(smartConnect = on) }
     }
 
-    fun setQuickConnect(on: Boolean) {
+    override fun setQuickConnect(on: Boolean) {
         MmkvManager.encodeSettings(AppConfig.PREF_QUICK_CONNECT, on)
         _state.update { it.copy(quickConnect = on) }
     }
 
-    fun setShowAdvanced(on: Boolean) {
+    override fun setShowAdvanced(on: Boolean) {
         MmkvManager.encodeSettings(AppConfig.PREF_SHOW_ADVANCED, on)
         _state.update { it.copy(showAdvanced = on) }
     }

@@ -17,6 +17,8 @@
     <string name="sx_add_scan">Scan QR code</string>
     <string name="sx_add_clipboard">Paste from clipboard</string>
     <string name="sx_add_file">Import from file</string>
+    <string name="sx_add_paste_short">Paste</string>
+    <string name="sx_add_file_short">Import file</string>
     <string name="sx_add_subscription">Add subscription</string>
     <string name="sx_home_empty_title">Let\'s get you connected</string>
     <string name="sx_home_empty_message">Add a subscription link or scan a QR code from your provider. Everything else is automatic.</string>

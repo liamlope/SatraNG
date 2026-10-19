@@ -11,6 +11,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -116,7 +117,7 @@ fun SatraBarChart(
                 size = Size(barW, barH),
                 cornerRadius = CornerRadius(barW * 0.32f, barW * 0.32f),
             )
-            if (i % labelEvery == 0 || isSel) {
+            if (isSel || (i % labelEvery == 0 && kotlin.math.abs(i - selected) * 2 >= labelEvery)) {
                 val label = labels.getOrNull(i).orEmpty()
                 val layout = measurer.measure(label, labelStyle.copy(color = if (isSel) c.textPrimary else c.textTertiary), maxLines = 1)
                 drawText(layout, topLeft = Offset(x + barW / 2 - layout.size.width / 2f, size.height - labelH + 4.dp.toPx()))
@@ -219,17 +220,14 @@ fun SatraProgressBar(
     ) {
         Box(
             Modifier
-                .fillMaxSize()
+                .fillMaxHeight()
+                .fillMaxWidth(anim.coerceIn(0.0001f, 1f))
                 .clip(CircleShape)
-                .then(Modifier.fillMaxWidthFraction(anim))
                 .background(color),
         )
     }
 }
 
-private fun Modifier.fillMaxWidthFraction(f: Float): Modifier = this.then(
-    Modifier.fillMaxWidth(f.coerceIn(0.0001f, 1f)),
-)
 
 /** Draws helper kept internal so tests can verify label thinning rules. */
 internal fun labelStep(count: Int, maxLabels: Int = 8): Int =

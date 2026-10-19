@@ -75,30 +75,34 @@ fun PingPill(ms: Long?, modifier: Modifier = Modifier, testing: Boolean = false,
         targetValue = if (ms != null && ms > 0) ms.toInt() else 0,
         animationSpec = tween(650), label = "pingPillValue",
     )
-    Row(
-        modifier
-            .clip(SatraShapes.Pill)
-            .background(grade.softColor())
-            .padding(horizontal = 9.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    androidx.compose.runtime.CompositionLocalProvider(
+        androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr,
     ) {
-        if (testing) {
-            SatraSpinner(size = 11.dp, color = Satra.colors.textSecondary, strokeWidth = 1.6.dp)
-            return@Row
-        }
-        Text(
-            text = when (grade) {
-                PingGrade.Unknown -> "—"
-                PingGrade.Failed -> failedLabel
-                else -> shown.toString()
-            },
-            style = Satra.type.caption.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
-            color = color,
-            maxLines = 1,
-        )
-        if (grade != PingGrade.Unknown && grade != PingGrade.Failed) {
-            Spacer(Modifier.width(2.dp))
-            Text("ms", style = Satra.type.caption.copy(fontSize = 10.sp), color = color.copy(alpha = .75f), maxLines = 1)
+        Row(
+            modifier
+                .clip(SatraShapes.Pill)
+                .background(grade.softColor())
+                .padding(horizontal = 9.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (testing) {
+                SatraSpinner(size = 11.dp, color = Satra.colors.textSecondary, strokeWidth = 1.6.dp)
+                return@Row
+            }
+            Text(
+                text = when (grade) {
+                    PingGrade.Unknown -> "—"
+                    PingGrade.Failed -> failedLabel
+                    else -> String.format(java.util.Locale.getDefault(), "%d", shown)
+                },
+                style = Satra.type.caption.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
+                color = color,
+                maxLines = 1,
+            )
+            if (grade != PingGrade.Unknown && grade != PingGrade.Failed) {
+                Spacer(Modifier.width(2.dp))
+                Text("ms", style = Satra.type.caption.copy(fontSize = 10.sp), color = color.copy(alpha = .75f), maxLines = 1)
+            }
         }
     }
 }
@@ -184,7 +188,7 @@ fun PingButton(
                 testing -> testingLabel
                 grade == PingGrade.Unknown -> idleLabel
                 grade == PingGrade.Failed -> failedLabel
-                else -> "$shown ms"
+                else -> ltr(String.format(java.util.Locale.getDefault(), "%d ms", shown))
             },
             style = Satra.type.headline.copy(fontSize = 15.sp, fontFeatureSettings = "tnum"),
             color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis,

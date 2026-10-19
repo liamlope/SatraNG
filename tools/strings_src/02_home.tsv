@@ -2,6 +2,8 @@ sx_add	Add	افزودن
 sx_add_scan	Scan QR code	اسکن کد QR
 sx_add_clipboard	Paste from clipboard	چسباندن از کلیپ‌بورد
 sx_add_file	Import from file	وارد کردن از فایل
+sx_add_paste_short	Paste	چسباندن
+sx_add_file_short	Import file	وارد کردن فایل
 sx_add_subscription	Add subscription	افزودن اشتراک
 sx_home_empty_title	Let's get you connected	بیایید متصل‌تان کنیم
 sx_home_empty_message	Add a subscription link or scan a QR code from your provider. Everything else is automatic.	لینک اشتراک را اضافه کنید یا کد QR ارائه‌دهنده را اسکن کنید. بقیه‌اش خودکار است.

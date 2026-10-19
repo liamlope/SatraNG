@@ -238,7 +238,7 @@ fun InsetGroup(
     content: GroupScope.() -> Unit,
 ) {
     val scope = GroupScope().apply(content)
-    Column(modifier.padding(horizontal = 16.dp)) {
+    Column(modifier.padding(horizontal = SatraSpace.Gutter)) {
         if (header != null) {
             Text(
                 header.uppercase(currentLocale()),
@@ -880,6 +880,9 @@ fun SatraEmptyState(
 
 // ───────────────────────────── Sheet, dialog, menu ─────────────────────────────
 
+/** Screenshot tests render sheets inline (a real ModalBottomSheet lives in its own window). */
+val LocalInlineSheets = androidx.compose.runtime.staticCompositionLocalOf { false }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SatraSheet(
@@ -889,6 +892,19 @@ fun SatraSheet(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val c = Satra.colors
+    if (LocalInlineSheets.current) {
+        Column(
+            modifier
+                .fillMaxWidth()
+                .clip(SatraShapes.Sheet)
+                .background(c.background)
+                .padding(top = 10.dp, bottom = 16.dp),
+        ) {
+            Box(Modifier.align(Alignment.CenterHorizontally).padding(bottom = 6.dp).size(width = 38.dp, height = 5.dp).clip(SatraShapes.Pill).background(c.fillStrong))
+            content()
+        }
+        return
+    }
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = skipPartiallyExpanded)
     ModalBottomSheet(
         onDismissRequest = onDismiss,

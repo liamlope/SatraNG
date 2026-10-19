@@ -76,7 +76,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private sealed interface EditorTarget {
+internal sealed interface EditorTarget {
     data class Edit(val rule: UsageRule) : EditorTarget
     data class NewApp(val packageName: String? = null, val label: String = "") : EditorTarget
     data object NewSite : EditorTarget
@@ -91,6 +91,12 @@ fun UsageScreen(vm: UsageViewModel, live: LiveUiState, nav: AppNav) {
         vm.onVisible()
         onPauseOrDispose { vm.onHidden() }
     }
+    UsageContent(state, live, nav, vm)
+}
+
+/** Stateless body of the Usage tab (also rendered by the screenshot tests). */
+@Composable
+fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageActions) {
     var editor by remember { mutableStateOf<EditorTarget?>(null) }
     var pickingApp by remember { mutableStateOf(false) }
     var confirmEngine by remember { mutableStateOf(false) }
@@ -492,7 +498,7 @@ private val sitePresets = listOf(
 private val amountPresetsMb = listOf(100L, 250L, 500L, 1024L, 2048L, 5120L)
 
 @Composable
-private fun LimitEditorSheet(
+internal fun LimitEditorSheet(
     target: EditorTarget,
     state: UsageUiState,
     onDismiss: () -> Unit,
@@ -566,7 +572,7 @@ private fun LimitEditorSheet(
                 subtitle = if (isGlobal) stringResource(R.string.sx_limit_global_sub) else null,
             )
             if (isGlobal) {
-                Box(Modifier.padding(horizontal = 20.dp)) {
+                Box(Modifier.padding(horizontal = 0.dp)) {
                     InsetGroup { row { SatraSwitchRow(stringResource(R.string.sx_limit_global_enable), globalOn, { globalOn = it }) } }
                 }
             }
@@ -574,7 +580,7 @@ private fun LimitEditorSheet(
                 if (!state.appRulesSupported) {
                     Notice(stringResource(R.string.sx_limit_android_old), warning = true)
                 }
-                Box(Modifier.padding(horizontal = 20.dp).padding(top = 6.dp)) {
+                Box(Modifier.padding(horizontal = 0.dp).padding(top = 6.dp)) {
                     InsetGroup {
                         row {
                             SatraRow(
@@ -623,7 +629,7 @@ private fun LimitEditorSheet(
             }
             if (!isGlobal || globalOn) {
                 if (!isGlobal) {
-                    Box(Modifier.padding(horizontal = 20.dp).padding(top = 14.dp)) {
+                    Box(Modifier.padding(horizontal = 0.dp).padding(top = 14.dp)) {
                         InsetGroup {
                             row { SatraSwitchRow(stringResource(R.string.sx_limit_block_all), blockAll, { blockAll = it }, subtitle = stringResource(R.string.sx_limit_block_all_sub)) }
                         }
@@ -631,22 +637,17 @@ private fun LimitEditorSheet(
                 }
                 if (!blockAll) {
                     FormLabel(stringResource(R.string.sx_limit_amount))
-                    Row(
+                    Column(
                         Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Box(Modifier.weight(1f)) {
-                            SatraTextField(
-                                amountText, { amountText = it.filter { ch -> ch.isDigit() }.take(6) },
-                                stringResource(R.string.sx_limit_amount),
-                                isError = attempted && !amountValid,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            )
-                        }
-                        Box(Modifier.width(132.dp)) {
-                            SatraSegmented(listOf(stringResource(R.string.sx_unit_mb), stringResource(R.string.sx_unit_gb)), unit, { unit = it })
-                        }
+                        SatraTextField(
+                            amountText, { amountText = it.filter { ch -> ch.isDigit() }.take(6) },
+                            stringResource(R.string.sx_limit_amount),
+                            isError = attempted && !amountValid,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        )
+                        SatraSegmented(listOf(stringResource(R.string.sx_unit_mb), stringResource(R.string.sx_unit_gb)), unit, { unit = it })
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(
@@ -656,7 +657,7 @@ private fun LimitEditorSheet(
                         amountPresetsMb.forEach { mb ->
                             val gb = mb >= 1024
                             SatraChip(
-                                text = if (gb) "${mb / 1024} " + stringResource(R.string.sx_unit_gb) else "$mb " + stringResource(R.string.sx_unit_mb),
+                                text = String.format(com.v2ray.ang.ui.compose.satra.currentLocale(), "%d ", if (gb) mb / 1024 else mb) + stringResource(if (gb) R.string.sx_unit_gb else R.string.sx_unit_mb),
                                 selected = amountMb == mb,
                                 onClick = { if (gb) { unit = 1; amountText = (mb / 1024).toString() } else { unit = 0; amountText = mb.toString() } },
                             )
