@@ -338,6 +338,31 @@ object MmkvManager {
             } else {
                 decodeServerList(subscriptionId).toList()
             }
+            // Same config as before (refresh): keep its guid so per-config data survives.
+            val reuse = if (replacedServers.isEmpty()) emptyMap() else ProfileReplacement.matchExisting(
+                profiles,
+                replacedServers.mapNotNull { g -> decodeServerConfig(g)?.let { g to it } }.toMap(),
+            )
+            if (reuse.isNotEmpty()) {
+                return@withProfileIndexLock saveServerProfilesLocked(
+                    profiles = profiles.entries.associate { (k, v) -> (reuse[k] ?: k) to v },
+                    rawConfigs = rawConfigs.entries.associate { (k, v) -> (reuse[k] ?: k) to v },
+                    subscriptionId = subscriptionId,
+                    replacedServers = replacedServers,
+                )
+            }
+            saveServerProfilesLocked(profiles, rawConfigs, subscriptionId, replacedServers, append)
+        }
+    }
+
+    private fun saveServerProfilesLocked(
+        profiles: Map<String, ProfileItem>,
+        rawConfigs: Map<String, String>,
+        subscriptionId: String,
+        replacedServers: List<String>,
+        append: Boolean = false,
+    ) {
+        run {
             val previousSelection = getSelectServer()
             val selectedProfile = if (!append &&
                 previousSelection != null &&
@@ -391,7 +416,7 @@ object MmkvManager {
                     "Failed to update selected profile",
                 )
             }
-            if (replacedServers.isEmpty()) return@withProfileIndexLock
+            if (replacedServers.isEmpty()) return@run
 
             val protectedServer = replacementSelection ?: previousSelection
             val referencedByOtherGroups = decodeServersReferencedByOtherGroups(subscriptionId)
