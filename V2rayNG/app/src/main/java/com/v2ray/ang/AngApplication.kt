@@ -50,5 +50,10 @@ class AngApplication : Application() {
 
         // Initialize theme state from MMKV
         ThemeManager.refresh()
+
+        if (isMainProcess()) com.v2ray.ang.core.ToggleSurfaces.publishShortcuts(this)
     }
+
+    private fun isMainProcess(): Boolean =
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) getProcessName() == packageName else true
 }

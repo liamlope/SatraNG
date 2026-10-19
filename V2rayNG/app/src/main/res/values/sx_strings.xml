@@ -386,4 +386,14 @@
     </plurals>
     <string name="sx_ping_this">Ping</string>
     <string name="sx_ping_this_sub">Measure latency now, connected or not</string>
+    <string name="sx_toggle_on">Connected</string>
+    <string name="sx_toggle_off">Not connected</string>
+    <string name="sx_toggle_tap_on">Tap to connect</string>
+    <string name="sx_toggle_connecting">Connecting…</string>
+    <string name="sx_toggle_open_app">Open SatraNG to allow the VPN</string>
+    <string name="sx_shortcut_toggle">Connect / Disconnect</string>
+    <string name="sx_shortcut_toggle_long">Connect or disconnect SatraNG</string>
+    <string name="sx_shortcut_smart">Smart Connect</string>
+    <string name="sx_shortcut_smart_long">Connect to the fastest server</string>
+    <string name="sx_widget_desc">One tap to connect or disconnect</string>
 </resources>

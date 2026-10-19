@@ -127,6 +127,19 @@ object NotificationManager {
             )
         }
 
+        // Lock screen: the channel hides private text, so give it a public version that still
+        // carries Disconnect (no config name shown there).
+        val publicBuilder = NotificationCompat.Builder(service, channelId)
+            .setSmallIcon(R.drawable.ic_stat_satra)
+            .setContentTitle(title)
+            .setContentText(service.getString(R.string.app_name))
+            .setOngoing(true)
+            .setShowWhen(false)
+            .setContentIntent(contentPendingIntent)
+            .addAction(R.drawable.ic_delete_24dp, service.getString(R.string.notification_action_stop_v2ray), stopV2RayPendingIntent)
+        mBuilder?.setPublicVersion(publicBuilder.build())
+        mBuilder?.setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+
         //mBuilder?.setDefaults(NotificationCompat.FLAG_ONLY_ALERT_ONCE)
 
         service.startForeground(NOTIFICATION_ID, mBuilder?.build())

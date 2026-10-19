@@ -90,9 +90,7 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
 
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/shortcuts" />
+
         </activity>
         <activity
             android:name=".ui.server.ServerVmessActivity"
@@ -327,7 +325,7 @@
             android:name=".service.QSTileService"
             android:exported="true"
             android:foregroundServiceType="specialUse"
-            android:icon="@drawable/ic_stat_satra"
+            android:icon="@drawable/ic_satra_glyph"
             android:label="@string/app_tile_name"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:process=":daemon">
@@ -337,6 +335,9 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="tile" />
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
         </service>
         <!-- =====================Tasker===================== -->
         <activity

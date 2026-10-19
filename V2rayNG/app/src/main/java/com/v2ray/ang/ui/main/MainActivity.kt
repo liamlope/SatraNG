@@ -168,6 +168,29 @@ class MainActivity : HelperBaseComponentActivity(), AppNav {
 
     private fun applyOpenTab(intent: Intent?) {
         if (intent?.getStringExtra(UsageNotifier.EXTRA_OPEN_TAB) == "usage") openTab = Tabs.Usage
+        handleToggleIntent(intent)
+    }
+
+    /** Tile / widget / shortcut asked to connect (usually because VPN consent was needed). */
+    private fun handleToggleIntent(intent: Intent?) {
+        val action = intent?.action ?: return
+        if (action != com.v2ray.ang.core.ToggleSurfaces.ACTION_CONNECT && action != com.v2ray.ang.core.ToggleSurfaces.ACTION_SMART_CONNECT) return
+        intent.action = Intent.ACTION_MAIN // handle once (not again on rotation)
+        openTab = Tabs.Home
+        lifecycleScope.launch {
+            delay(350L)
+            if (action == com.v2ray.ang.core.ToggleSurfaces.ACTION_SMART_CONNECT) {
+                if (!mainViewModel.uiState.value.isRunning) action(MainAction.SmartConnect)
+            } else if (!mainViewModel.uiState.value.isRunning) {
+                requestServiceStart()
+            }
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // The selected config may have changed: keep the widget/tile label in step.
+        com.v2ray.ang.core.ToggleSurfaces.refresh(applicationContext, mainViewModel.uiState.value.isRunning)
     }
 
     override fun onResume() {

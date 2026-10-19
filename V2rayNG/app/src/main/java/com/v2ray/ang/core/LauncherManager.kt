@@ -26,6 +26,17 @@ object LauncherManager {
             context.toast(R.string.app_tile_first_use)
             return false
         }
+        if (ToggleSurfaces.needsVpnConsent(context)) {
+            // Only an activity can show Android's VPN consent prompt: hand over to the app.
+            LogUtil.i(AppConfig.TAG, "LauncherManager: VPN consent needed, opening the app")
+            return try {
+                context.startActivity(ToggleSurfaces.openAppIntent(context))
+                false
+            } catch (e: Exception) {
+                context.toast(R.string.sx_toggle_open_app)
+                false
+            }
+        }
         try {
             MmkvManager.encodeSettings(AppConfig.PREF_USER_REQUESTED_STOP, false)
             startContextService(context)

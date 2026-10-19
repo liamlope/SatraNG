@@ -410,4 +410,14 @@
     </plurals>
     <string name="sx_ping_this">Пинг</string>
     <string name="sx_ping_this_sub">Измерить задержку сейчас, с подключением или без</string>
+    <string name="sx_toggle_on">Подключено</string>
+    <string name="sx_toggle_off">Не подключено</string>
+    <string name="sx_toggle_tap_on">Нажмите, чтобы подключиться</string>
+    <string name="sx_toggle_connecting">Подключение…</string>
+    <string name="sx_toggle_open_app">Откройте SatraNG, чтобы разрешить VPN</string>
+    <string name="sx_shortcut_toggle">Вкл / Выкл</string>
+    <string name="sx_shortcut_toggle_long">Подключить или отключить SatraNG</string>
+    <string name="sx_shortcut_smart">Умное подключение</string>
+    <string name="sx_shortcut_smart_long">Подключиться к самому быстрому серверу</string>
+    <string name="sx_widget_desc">Подключение одним нажатием</string>
 </resources>
