@@ -86,4 +86,12 @@ class GeoIpResolverTest {
         assertTrue(GeoIpResolver.isIpLiteral("2001:db8::1"))
         assertFalse(GeoIpResolver.isIpLiteral("example.com"))
     }
+
+    @org.junit.jupiter.api.Test
+    fun lanAndLoopbackHostsHaveNoCountry() {
+        listOf("192.168.0.41", "10.0.0.1", "172.16.5.4", "127.0.0.1", "169.254.1.1", "100.64.0.1", "fd00::1", "::1")
+            .forEach { org.junit.jupiter.api.Assertions.assertTrue(GeoIpResolver.isNonPublicIp(it), it) }
+        listOf("8.8.8.8", "188.121.123.171", "2606:4700::1111", "example.com")
+            .forEach { org.junit.jupiter.api.Assertions.assertFalse(GeoIpResolver.isNonPublicIp(it), it) }
+    }
 }

@@ -119,7 +119,8 @@ object GeoIpResolver {
         if (host.isBlank()) return null
         return try {
             val ip = if (isIpLiteral(host)) host else InetAddress.getByName(host).hostAddress
-            val code = if (ip.isNullOrBlank()) null else lookupIp(ip, viaHttpPort)
+            // LAN/loopback hosts have no country; looking them up would return the phone's own country.
+            val code = if (ip.isNullOrBlank() || isNonPublicIp(ip)) null else lookupIp(ip, viaHttpPort)
             MmkvManager.encodeServerEntry(guid, code, ip)
             code ?: aff?.entryCountryCode
         } catch (e: Exception) {
@@ -152,6 +153,14 @@ object GeoIpResolver {
         }
         return null
     }
+
+    internal fun isNonPublicIp(ip: String): Boolean = runCatching {
+        if (!isIpLiteral(ip)) return@runCatching false
+        val a = InetAddress.getByName(ip)
+        a.isSiteLocalAddress || a.isLoopbackAddress || a.isLinkLocalAddress || a.isAnyLocalAddress ||
+            (a.address.size == 16 && (a.address[0].toInt() and 0xFE) == 0xFC) || // IPv6 unique-local fc00::/7
+            (a.address.size == 4 && (a.address[0].toInt() and 0xFF) == 100 && (a.address[1].toInt() and 0xC0) == 64) // CGNAT 100.64/10
+    }.getOrDefault(false)
 
     internal fun isIpLiteral(host: String): Boolean =
         host.matches(Regex("""^\d{1,3}(\.\d{1,3}){3}$""")) || (host.contains(':') && host.matches(Regex("^[0-9a-fA-F:.%]+$")))
