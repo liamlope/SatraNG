@@ -470,4 +470,5 @@
     <string name="sx_sec_apply">Fix</string>
     <string name="sx_sec_applied">Applied. Reconnect to use it.</string>
     <string name="sx_sec_live_step">Checking %1$s…</string>
+    <string name="sx_sec_info_only">Info only · not scored</string>
 </resources>

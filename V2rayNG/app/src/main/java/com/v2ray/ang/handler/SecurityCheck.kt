@@ -105,7 +105,7 @@ object SecurityCheck {
             !f.vpnMode -> Status.Warn
             f.alwaysOn == true && f.lockdown == true -> Status.Pass
             f.alwaysOn == null -> Status.Unknown
-            else -> Status.Warn.also { fixes += Fix.EnableKillSwitch }
+            else -> Status.Warn
         }
         out += Finding(Item.KillSwitch, ks)
 
@@ -113,8 +113,9 @@ object SecurityCheck {
     }
 
     private val weight = mapOf(
-        Item.ExitIp to 25, Item.DnsLeak to 25, Item.Encryption to 20,
-        Item.Ipv6 to 10, Item.WebRtc to 10, Item.KillSwitch to 10,
+        // Kill switch is optional: shown as info, never scored.
+        Item.ExitIp to 25, Item.DnsLeak to 30, Item.Encryption to 25,
+        Item.Ipv6 to 10, Item.WebRtc to 10, Item.KillSwitch to 0,
     )
 
     fun maxPoints(item: Item): Int = weight[item] ?: 0

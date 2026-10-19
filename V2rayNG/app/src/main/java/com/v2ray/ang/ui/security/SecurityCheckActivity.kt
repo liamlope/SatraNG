@@ -215,7 +215,8 @@ private fun ScoreRing(score: Int, running: Boolean, connected: Boolean, progress
 private fun LiveRow(item: SecurityCheck.Item, phase: RowPhase, f: SecurityCheck.Finding?, facts: SecurityCheck.Facts?) {
     val c = Satra.colors
     var open by remember { mutableStateOf(false) }
-    val status = if (phase == RowPhase.Done) f?.status else null
+    val info = SecurityCheck.maxPoints(item) == 0
+    val status = if (phase == RowPhase.Done) f?.status?.let { if (info && it != SecurityCheck.Status.Pass) SecurityCheck.Status.Unknown else it } else null
     val tint = when (status) {
         SecurityCheck.Status.Pass -> c.success
         SecurityCheck.Status.Warn -> c.warning
@@ -229,6 +230,7 @@ private fun LiveRow(item: SecurityCheck.Item, phase: RowPhase, f: SecurityCheck.
             title,
             subtitle = when {
                 phase == RowPhase.Running -> stringResource(R.string.sx_sec_live_step, title)
+                status != null && f != null && SecurityCheck.maxPoints(item) == 0 -> stringResource(R.string.sx_sec_info_only)
                 status != null && f != null -> stringResource(R.string.sx_sec_points, SecurityCheck.points(f), SecurityCheck.maxPoints(item))
                 else -> null
             },
@@ -293,7 +295,8 @@ private fun DetailBlock(item: SecurityCheck.Item, f: SecurityCheck.Finding, fact
         DetailLine(stringResource(R.string.sx_sec_result), result)
         DetailLine(stringResource(R.string.sx_sec_why), why)
         Text(
-            stringResource(R.string.sx_sec_points, SecurityCheck.points(f), SecurityCheck.maxPoints(item)),
+            if (SecurityCheck.maxPoints(item) == 0) stringResource(R.string.sx_sec_info_only)
+            else stringResource(R.string.sx_sec_points, SecurityCheck.points(f), SecurityCheck.maxPoints(item)),
             style = Satra.type.caption.copy(fontWeight = FontWeight.SemiBold), color = c.accent,
         )
     }

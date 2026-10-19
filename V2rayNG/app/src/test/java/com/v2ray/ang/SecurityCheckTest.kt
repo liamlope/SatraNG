@@ -39,10 +39,11 @@ class SecurityCheckTest {
     @Test fun plainVlessFailsEncryption() =
         assertEquals(Status.Fail, status(SecurityCheck.evaluate(good.copy(security = "none")), Item.Encryption))
 
-    @Test fun killSwitchOffWarns() {
-        val r = SecurityCheck.evaluate(good.copy(lockdown = false))
+    @Test fun killSwitchIsInfoOnly() {
+        val r = SecurityCheck.evaluate(good.copy(lockdown = false, alwaysOn = false))
         assertEquals(Status.Warn, status(r, Item.KillSwitch))
-        assertTrue(SecurityCheck.Fix.EnableKillSwitch in r.fixes)
+        assertTrue(SecurityCheck.Fix.EnableKillSwitch !in r.fixes)
+        assertEquals(100, r.score) // optional: never costs points
     }
 
     @Test fun noExitFails() =

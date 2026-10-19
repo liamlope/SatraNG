@@ -14,8 +14,9 @@ class SecurityLiveTest {
     @Test fun maxPointsSumTo100() = assertEquals(100, Item.entries.sumOf { SecurityCheck.maxPoints(it) })
 
     @Test fun pointsPerStatus() {
-        assertEquals(25, SecurityCheck.points(SecurityCheck.Finding(Item.DnsLeak, Status.Pass)))
-        assertEquals(12, SecurityCheck.points(SecurityCheck.Finding(Item.DnsLeak, Status.Warn)))
+        assertEquals(30, SecurityCheck.points(SecurityCheck.Finding(Item.DnsLeak, Status.Pass)))
+        assertEquals(15, SecurityCheck.points(SecurityCheck.Finding(Item.DnsLeak, Status.Warn)))
+        assertEquals(0, SecurityCheck.maxPoints(Item.KillSwitch))
         assertEquals(0, SecurityCheck.points(SecurityCheck.Finding(Item.DnsLeak, Status.Fail)))
     }
 

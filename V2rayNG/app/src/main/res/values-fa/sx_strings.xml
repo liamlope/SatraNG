@@ -470,4 +470,5 @@
     <string name="sx_sec_apply">رفع</string>
     <string name="sx_sec_applied">اعمال شد. برای استفاده دوباره وصل شوید.</string>
     <string name="sx_sec_live_step">در حال بررسی %1$s…</string>
+    <string name="sx_sec_info_only">فقط اطلاعات · بدون امتیاز</string>
 </resources>
