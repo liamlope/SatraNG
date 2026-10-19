@@ -42,6 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
+import com.v2ray.ang.ui.compose.satra.groupRow
 
 @Composable
 fun PreferenceGroupHeader(title: String, modifier: Modifier = Modifier) {
@@ -105,13 +106,20 @@ private fun SettingsItemRow(
     val titleColor = if (enabled) c.textPrimary else c.textTertiary
     val descriptionColor = if (enabled) c.textSecondary else c.textTertiary
 
-    Row(
-        modifier = modifier
+    val grouped = com.v2ray.ang.ui.compose.satra.LocalGroupedRows.current
+    val outer = if (grouped) {
+        Modifier.groupRow().fillMaxWidth()
+    } else {
+        Modifier
             .fillMaxWidth()
             .padding(horizontal = SatraSpace.Gutter, vertical = 1.5.dp)
             .clip(SatraShapes.Medium)
             .background(c.surface)
-            .then(if (onClick != null) Modifier.satraClickable(enabled = enabled, role = Role.Button, pressedScale = 0.99f, onClick = onClick) else Modifier)
+    }
+    Row(
+        modifier = outer
+            .then(modifier)
+            .then(if (onClick != null) Modifier.satraClickable(enabled = enabled, role = Role.Button, pressedScale = if (grouped) 0.985f else 0.99f, onClick = onClick) else Modifier)
             .heightIn(min = 56.dp)
             .padding(horizontal = 16.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically

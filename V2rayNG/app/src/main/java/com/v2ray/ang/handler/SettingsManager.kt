@@ -55,10 +55,36 @@ object SettingsManager {
     private fun initRoutingRulesets(context: Context) {
         val exist = MmkvManager.decodeRoutingRulesets()
         if (exist.isNullOrEmpty()) {
-            val rulesetList = getPresetRoutingRulesets(context)
+            val rulesetList = getPresetRoutingRulesets(context, defaultRoutingType(context))
             MmkvManager.encodeRoutingRulesets(rulesetList)
         }
+        migrateLegacyRoutingPreset(context)
     }
+
+    fun defaultRoutingType(context: Context): RoutingType =
+        RoutingPresets.defaultFor(context.resources.configuration.locales[0] ?: java.util.Locale.getDefault())
+
+    /** Loads the shipped Iran/Russia presets for matching on the routing screen. */
+    fun offeredRoutingPresets(context: Context): Map<RoutingType, List<RulesetItem>> =
+        RoutingPresets.offered.associateWith { getPresetRoutingRulesets(context, it).orEmpty() }
+
+    /**
+     * One-time: an untouched upstream China/Global preset becomes the regional Iran/Russia preset.
+     * Any list the user changed is left exactly as it is.
+     */
+    private fun migrateLegacyRoutingPreset(context: Context) {
+        if (MmkvManager.decodeSettingsBool(PREF_ROUTING_PRESET_MIGRATED, false)) return
+        val current = MmkvManager.decodeRoutingRulesets().orEmpty()
+        val legacyMatch = RoutingPresets.legacy.any { t ->
+            getPresetRoutingRulesets(context, t)?.let { RoutingPresets.isUnmodified(current, it) } == true
+        }
+        if (legacyMatch) {
+            getPresetRoutingRulesets(context, defaultRoutingType(context))?.let { resetRoutingRulesetsCommon(it) }
+        }
+        MmkvManager.encodeSettings(PREF_ROUTING_PRESET_MIGRATED, true)
+    }
+
+    private const val PREF_ROUTING_PRESET_MIGRATED = "pref_satra_routing_preset_migrated_v1"
 
     /**
      * Get preset routing rulesets.
@@ -66,7 +92,7 @@ object SettingsManager {
      * @param type The routing preset type.
      * @return A mutable list of RulesetItem.
      */
-    private fun getPresetRoutingRulesets(context: Context, type: RoutingType = RoutingType.WHITE): MutableList<RulesetItem>? {
+    private fun getPresetRoutingRulesets(context: Context, type: RoutingType = RoutingType.WHITE_IRAN): MutableList<RulesetItem>? {
         val assets = Utils.readTextFromAssets(context, type.fileName)
         if (TextUtils.isEmpty(assets)) {
             return null

@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui.subscription
 
 import android.os.Bundle
+import com.v2ray.ang.ui.compose.satra.SatraScrollPage
 import android.text.TextUtils
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -171,21 +172,16 @@ fun SubEditScreen(
         return subItem
     }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0),
-        topBar = {
-            AppTopBar(
-                title = stringResource(R.string.title_sub_setting),
-                onBackClick = onBackClick,
-                actions = {
+    SatraScrollPage(
+        title = stringResource(R.string.title_sub_setting),
+        onBack = onBackClick,
+        actions = {
                     if (editSubId.isNotEmpty()) {
-                        IconButton(onClick = {
+                        com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Trash, contentDescription = stringResource(R.string.acc_delete), onClick = {
                             if (confirmRemove) showDeleteConfirm = true else onDelete()
-                        }) {
-                            Icon(painterResource(R.drawable.ic_delete_24dp), contentDescription = stringResource(R.string.acc_delete))
-                        }
+                        }, tint = com.v2ray.ang.ui.compose.satra.Satra.colors.danger)
                     }
-                    IconButton(onClick = {
+                    com.v2ray.ang.ui.compose.satra.SatraBarTextAction(stringResource(R.string.sx_save), onClick = {
                         val remarksErr = remarks.isBlank()
                         val urlErr = url.isNotEmpty() && (
                             !Utils.isValidUrl(url) || (!Utils.isValidSubUrl(url) && !allowInsecureUrl)
@@ -200,24 +196,10 @@ fun SubEditScreen(
                         if (!hasError) {
                             onSave(buildSubItem())
                         }
-                    }) {
-                        Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .consumeWindowInsets(innerPadding)
-                .imePadding()
-                .verticalScroll(scrollState)
-                .verticalScrollbar(scrollState)
-                .padding(vertical = 8.dp)
-                .padding(bottom = 36.dp)
-        ) {
+                    })
+                },
+    ) {
+        run {
             FormTextField(
                 label = stringResource(R.string.sub_setting_remarks),
                 value = remarks,

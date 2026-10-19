@@ -277,9 +277,7 @@ internal fun UserAssetScreen(
                 isLoading = isLoading,
                 actions = {
                     Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                        IconButton(onClick = { showAddMenu = true }) {
-                            Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add_asset))
-                        }
+                        com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Plus, contentDescription = stringResource(R.string.acc_add_asset), onClick = { showAddMenu = true })
                         DropdownMenu(
                             expanded = showAddMenu,
                             onDismissRequest = { showAddMenu = false },
@@ -297,9 +295,7 @@ internal fun UserAssetScreen(
                             }
                         }
                     }
-                    IconButton(onClick = onDownloadClick) {
-                        Icon(painterResource(R.drawable.ic_cloud_download_24dp), contentDescription = stringResource(R.string.acc_download_file))
-                    }
+                    com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Download, contentDescription = stringResource(R.string.acc_download_file), onClick = onDownloadClick)
                 }
             )
         }
@@ -402,20 +398,8 @@ private fun UserAssetItem(
             )
         }
         if (showEditButton) {
-            IconButton(onClick = onEdit) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_edit_24dp),
-                    contentDescription = stringResource(R.string.acc_edit),
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+            com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Edit, contentDescription = stringResource(R.string.acc_edit), onClick = onEdit)
         }
-        IconButton(onClick = onDeleteClick) {
-            Icon(
-                painter = painterResource(R.drawable.ic_delete_24dp),
-                contentDescription = stringResource(R.string.acc_delete),
-                modifier = Modifier.size(24.dp)
-            )
-        }
+        com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Trash, contentDescription = stringResource(R.string.acc_delete), onClick = onDeleteClick, tint = com.v2ray.ang.ui.compose.satra.Satra.colors.danger)
     }
 }

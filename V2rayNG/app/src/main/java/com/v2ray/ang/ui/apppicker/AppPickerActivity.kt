@@ -148,20 +148,10 @@ fun AppPickerScreen(
                 searchPlaceholder = stringResource(R.string.menu_item_search),
                 actions = {
                     if (!showSearch) {
-                        IconButton(onClick = { showSearch = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_search_24dp),
-                                contentDescription = stringResource(R.string.acc_search)
-                            )
-                        }
+                        com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Search, contentDescription = stringResource(R.string.acc_search), onClick = { showSearch = true })
                     }
                     Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_more_vert_24dp),
-                                contentDescription = null
-                            )
-                        }
+                        com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.More, contentDescription = stringResource(R.string.acc_more), onClick = { showMenu = true })
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },

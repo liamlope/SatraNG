@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui
 
 import android.content.Intent
+import com.v2ray.ang.ui.compose.satra.SatraScrollPage
 import android.os.Bundle
 import android.webkit.WebView
 import androidx.compose.foundation.Image
@@ -82,22 +83,11 @@ fun AboutScreen(
     val versionText = "v${BuildConfig.VERSION_NAME} ($libVersion)"
     val appIdText = BuildConfig.APPLICATION_ID
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        contentWindowInsets = WindowInsets(0),
-        topBar = {
-            AppTopBar(
-                title = stringResource(R.string.title_about),
-                onBackClick = onBackClick
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-        ) {
+    SatraScrollPage(
+        title = stringResource(R.string.title_about),
+        onBack = onBackClick,
+    ) {
+        run {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

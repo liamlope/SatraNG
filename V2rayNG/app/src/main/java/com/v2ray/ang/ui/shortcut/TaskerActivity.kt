@@ -132,9 +132,7 @@ fun TaskerScreen(
                 title = "",
                 onBackClick = onBackClick,
                 actions = {
-                    IconButton(onClick = onSave) {
-                        Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
-                    }
+                    com.v2ray.ang.ui.compose.satra.SatraBarTextAction(stringResource(R.string.sx_save), onClick = onSave)
                 }
             )
         }

@@ -231,3 +231,27 @@ sx_sort_speed	Speed	سرعت
 sx_mbps	%1$s Mbps	%1$s مگابیت
 sx_badge_tunnel	Tunnel	تانل
 sx_engine_applied	Reconnecting to apply the change	برای اعمال تغییر دوباره وصل می‌شویم
+sx_split_all	All apps	همه برنامه‌ها
+sx_split_only	Only selected	فقط انتخاب‌شده‌ها
+sx_split_except	All except	همه به‌جز
+sx_split_all_note	Every app on this phone uses the VPN.	همه برنامه‌های این گوشی از VPN استفاده می‌کنند.
+sx_split_only_note	Only the apps you tick use the VPN. Everything else connects directly.	فقط برنامه‌هایی که تیک می‌زنید از VPN استفاده می‌کنند؛ بقیه مستقیم وصل می‌شوند.
+sx_split_except_note	The apps you tick connect directly. Everything else uses the VPN.	برنامه‌هایی که تیک می‌زنید مستقیم وصل می‌شوند؛ بقیه از VPN استفاده می‌کنند.
+sx_split_none_title	No apps found	برنامه‌ای پیدا نشد
+sx_split_none_msg	Try a different name.	نام دیگری را امتحان کنید.
+sx_routing_title	Routing	مسیریابی
+sx_routing_preset	Preset	پیش‌تنظیم
+sx_routing_iran	Iran	ایران
+sx_routing_iran_note	Iranian sites go direct, everything else through the VPN	سایت‌های ایرانی مستقیم، بقیه از طریق VPN
+sx_routing_russia	Russia	روسیه
+sx_routing_russia_note	Russian sites go direct, everything else through the VPN	سایت‌های روسی مستقیم، بقیه از طریق VPN
+sx_routing_custom_note	You are using your own rules. Pick a preset to start over.	از قوانین خودتان استفاده می‌کنید. برای شروع دوباره یک پیش‌تنظیم انتخاب کنید.
+sx_routing_rules	Rules	قوانین
+sx_routing_rules_note	Rules are checked from top to bottom. Touch and hold to reorder; tap to edit.	قوانین از بالا به پایین بررسی می‌شوند. برای جابه‌جایی نگه دارید؛ برای ویرایش بزنید.
+sx_routing_advanced	Advanced	پیشرفته
+sx_routing_apply_title	Use the %1$s preset?	پیش‌تنظیم %1$s استفاده شود؟
+sx_routing_apply_msg	Your current rules are replaced. Locked rules stay.	قوانین فعلی جایگزین می‌شوند. قوانین قفل‌شده می‌مانند.
+sx_routing_apply	Use preset	استفاده
+sx_routing_tag_direct	Direct	مستقیم
+sx_routing_tag_proxy	VPN	VPN
+sx_routing_tag_block	Block	مسدود

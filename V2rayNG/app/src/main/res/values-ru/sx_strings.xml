@@ -279,6 +279,30 @@
     <string name="sx_mbps">%1$s Мбит/с</string>
     <string name="sx_badge_tunnel">Туннель</string>
     <string name="sx_engine_applied">Переподключение, чтобы применить изменение</string>
+    <string name="sx_split_all">Все приложения</string>
+    <string name="sx_split_only">Только выбранные</string>
+    <string name="sx_split_except">Все, кроме</string>
+    <string name="sx_split_all_note">Все приложения на телефоне используют VPN.</string>
+    <string name="sx_split_only_note">VPN используют только отмеченные приложения. Остальные подключаются напрямую.</string>
+    <string name="sx_split_except_note">Отмеченные приложения подключаются напрямую. Остальные используют VPN.</string>
+    <string name="sx_split_none_title">Приложения не найдены</string>
+    <string name="sx_split_none_msg">Попробуйте другое название.</string>
+    <string name="sx_routing_title">Маршрутизация</string>
+    <string name="sx_routing_preset">Набор правил</string>
+    <string name="sx_routing_iran">Иран</string>
+    <string name="sx_routing_iran_note">Иранские сайты напрямую, остальное через VPN</string>
+    <string name="sx_routing_russia">Россия</string>
+    <string name="sx_routing_russia_note">Российские сайты напрямую, остальное через VPN</string>
+    <string name="sx_routing_custom_note">Используются ваши правила. Выберите набор, чтобы начать заново.</string>
+    <string name="sx_routing_rules">Правила</string>
+    <string name="sx_routing_rules_note">Правила проверяются сверху вниз. Удерживайте, чтобы переместить; нажмите, чтобы изменить.</string>
+    <string name="sx_routing_advanced">Дополнительно</string>
+    <string name="sx_routing_apply_title">Использовать набор «%1$s»?</string>
+    <string name="sx_routing_apply_msg">Текущие правила будут заменены. Закреплённые останутся.</string>
+    <string name="sx_routing_apply">Применить</string>
+    <string name="sx_routing_tag_direct">Напрямую</string>
+    <string name="sx_routing_tag_proxy">VPN</string>
+    <string name="sx_routing_tag_block">Блок</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Истекает через %d день</item>
         <item quantity="few">Истекает через %d дня</item>
@@ -338,5 +362,11 @@
         <item quantity="few">%d приложения</item>
         <item quantity="many">%d приложений</item>
         <item quantity="other">%d приложения</item>
+    </plurals>
+    <plurals name="sx_split_selected">
+        <item quantity="one">Выбрано: %d</item>
+        <item quantity="few">Выбрано: %d</item>
+        <item quantity="many">Выбрано: %d</item>
+        <item quantity="other">Выбрано: %d</item>
     </plurals>
 </resources>

@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui.notification
 
 import android.content.Intent
+import com.v2ray.ang.ui.compose.satra.SatraScrollPage
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.background
@@ -46,24 +47,14 @@ class NotificationControlActivity : BaseComponentActivity() {
         val prefs by NotificationPrefs.state.collectAsStateWithLifecycle()
         val isDark = LocalDarkTheme.current
 
-        Scaffold(
-            topBar = {
-                AppTopBar(
-                    title = stringResource(R.string.satra_notif_control),
-                    onBackClick = { finish() },
-                )
-            },
-            containerColor = Color.Transparent,
+        SatraScrollPage(
+            title = stringResource(R.string.satra_notif_control),
+            onBack = { finish() },
             modifier = Modifier
                 .fillMaxSize()
                 .background(satraBackgroundBrush(isDark)),
-        ) { padding ->
-            Column(
-                Modifier
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(20.dp)
-            ) {
+        ) {
+            run {
                 Text(
                     stringResource(R.string.satra_notif_control_desc),
                     style = MaterialTheme.typography.bodyMedium,

@@ -279,6 +279,30 @@
     <string name="sx_mbps">%1$s Mbps</string>
     <string name="sx_badge_tunnel">Tunnel</string>
     <string name="sx_engine_applied">Reconnecting to apply the change</string>
+    <string name="sx_split_all">All apps</string>
+    <string name="sx_split_only">Only selected</string>
+    <string name="sx_split_except">All except</string>
+    <string name="sx_split_all_note">Every app on this phone uses the VPN.</string>
+    <string name="sx_split_only_note">Only the apps you tick use the VPN. Everything else connects directly.</string>
+    <string name="sx_split_except_note">The apps you tick connect directly. Everything else uses the VPN.</string>
+    <string name="sx_split_none_title">No apps found</string>
+    <string name="sx_split_none_msg">Try a different name.</string>
+    <string name="sx_routing_title">Routing</string>
+    <string name="sx_routing_preset">Preset</string>
+    <string name="sx_routing_iran">Iran</string>
+    <string name="sx_routing_iran_note">Iranian sites go direct, everything else through the VPN</string>
+    <string name="sx_routing_russia">Russia</string>
+    <string name="sx_routing_russia_note">Russian sites go direct, everything else through the VPN</string>
+    <string name="sx_routing_custom_note">You are using your own rules. Pick a preset to start over.</string>
+    <string name="sx_routing_rules">Rules</string>
+    <string name="sx_routing_rules_note">Rules are checked from top to bottom. Touch and hold to reorder; tap to edit.</string>
+    <string name="sx_routing_advanced">Advanced</string>
+    <string name="sx_routing_apply_title">Use the %1$s preset?</string>
+    <string name="sx_routing_apply_msg">Your current rules are replaced. Locked rules stay.</string>
+    <string name="sx_routing_apply">Use preset</string>
+    <string name="sx_routing_tag_direct">Direct</string>
+    <string name="sx_routing_tag_proxy">VPN</string>
+    <string name="sx_routing_tag_block">Block</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Expires in %d day</item>
         <item quantity="other">Expires in %d days</item>
@@ -318,5 +342,9 @@
     <plurals name="sx_cat_apps">
         <item quantity="one">%d app</item>
         <item quantity="other">%d apps</item>
+    </plurals>
+    <plurals name="sx_split_selected">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
     </plurals>
 </resources>

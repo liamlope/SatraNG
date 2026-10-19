@@ -279,6 +279,30 @@
     <string name="sx_mbps">%1$s مگابیت</string>
     <string name="sx_badge_tunnel">تانل</string>
     <string name="sx_engine_applied">برای اعمال تغییر دوباره وصل می‌شویم</string>
+    <string name="sx_split_all">همه برنامه‌ها</string>
+    <string name="sx_split_only">فقط انتخاب‌شده‌ها</string>
+    <string name="sx_split_except">همه به‌جز</string>
+    <string name="sx_split_all_note">همه برنامه‌های این گوشی از VPN استفاده می‌کنند.</string>
+    <string name="sx_split_only_note">فقط برنامه‌هایی که تیک می‌زنید از VPN استفاده می‌کنند؛ بقیه مستقیم وصل می‌شوند.</string>
+    <string name="sx_split_except_note">برنامه‌هایی که تیک می‌زنید مستقیم وصل می‌شوند؛ بقیه از VPN استفاده می‌کنند.</string>
+    <string name="sx_split_none_title">برنامه‌ای پیدا نشد</string>
+    <string name="sx_split_none_msg">نام دیگری را امتحان کنید.</string>
+    <string name="sx_routing_title">مسیریابی</string>
+    <string name="sx_routing_preset">پیش‌تنظیم</string>
+    <string name="sx_routing_iran">ایران</string>
+    <string name="sx_routing_iran_note">سایت‌های ایرانی مستقیم، بقیه از طریق VPN</string>
+    <string name="sx_routing_russia">روسیه</string>
+    <string name="sx_routing_russia_note">سایت‌های روسی مستقیم، بقیه از طریق VPN</string>
+    <string name="sx_routing_custom_note">از قوانین خودتان استفاده می‌کنید. برای شروع دوباره یک پیش‌تنظیم انتخاب کنید.</string>
+    <string name="sx_routing_rules">قوانین</string>
+    <string name="sx_routing_rules_note">قوانین از بالا به پایین بررسی می‌شوند. برای جابه‌جایی نگه دارید؛ برای ویرایش بزنید.</string>
+    <string name="sx_routing_advanced">پیشرفته</string>
+    <string name="sx_routing_apply_title">پیش‌تنظیم %1$s استفاده شود؟</string>
+    <string name="sx_routing_apply_msg">قوانین فعلی جایگزین می‌شوند. قوانین قفل‌شده می‌مانند.</string>
+    <string name="sx_routing_apply">استفاده</string>
+    <string name="sx_routing_tag_direct">مستقیم</string>
+    <string name="sx_routing_tag_proxy">VPN</string>
+    <string name="sx_routing_tag_block">مسدود</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">%d روز دیگر منقضی می‌شود</item>
         <item quantity="other">%d روز دیگر منقضی می‌شود</item>
@@ -318,5 +342,9 @@
     <plurals name="sx_cat_apps">
         <item quantity="one">%d برنامه</item>
         <item quantity="other">%d برنامه</item>
+    </plurals>
+    <plurals name="sx_split_selected">
+        <item quantity="one">%d انتخاب‌شده</item>
+        <item quantity="other">%d انتخاب‌شده</item>
     </plurals>
 </resources>

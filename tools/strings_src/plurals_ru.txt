@@ -38,3 +38,7 @@ sx_cat_apps|one|%d приложение
 sx_cat_apps|few|%d приложения
 sx_cat_apps|many|%d приложений
 sx_cat_apps|other|%d приложения
+sx_split_selected|one|Выбрано: %d
+sx_split_selected|few|Выбрано: %d
+sx_split_selected|many|Выбрано: %d
+sx_split_selected|other|Выбрано: %d

@@ -32,6 +32,11 @@ import com.v2ray.ang.ui.compose.satra.SatraShapes
 import com.v2ray.ang.ui.compose.satra.SatraSpace
 import com.v2ray.ang.ui.compose.satra.SatraTextField
 import androidx.compose.ui.draw.alpha
+import com.v2ray.ang.ui.compose.satra.satraClickable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
 
 @Composable
 fun FormTextField(
@@ -80,6 +85,68 @@ fun FormDropdownField(
     supportingText: String? = null,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
+    if (!editable) {
+        // Read-only choice: a filled field that opens a bottom sheet list (no Material dropdown).
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = SatraSpace.Gutter, vertical = 4.dp)
+                .alpha(if (enabled) 1f else 0.5f),
+        ) {
+            SatraTextField(
+                value = value,
+                onValueChange = {},
+                label = label,
+                placeholder = placeholder,
+                supporting = supportingText,
+                readOnly = true,
+                trailing = {
+                    androidx.compose.material3.Icon(
+                        com.v2ray.ang.ui.compose.satra.SatraIcons.ChevronDown, null,
+                        tint = Satra.colors.textTertiary,
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                },
+            )
+            // Transparent tap target over the field.
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .then(
+                        if (enabled) Modifier.satraClickable(role = androidx.compose.ui.semantics.Role.DropdownList, pressedScale = 0.99f) { expanded = true }
+                        else Modifier
+                    ),
+            )
+        }
+        if (expanded) {
+            com.v2ray.ang.ui.compose.satra.SatraSheet(onDismiss = { expanded = false }) {
+                com.v2ray.ang.ui.compose.satra.SheetTitle(label)
+                androidx.compose.foundation.layout.Column(
+                    Modifier
+                        .padding(horizontal = SatraSpace.Gutter)
+                        .clip(SatraShapes.Large)
+                        .background(Satra.colors.surface)
+                        .androidx_verticalScroll(),
+                ) {
+                    options.forEachIndexed { i, option ->
+                        com.v2ray.ang.ui.compose.satra.SatraRow(
+                            title = option,
+                            trailing = if (option == value) ({
+                                androidx.compose.material3.Icon(
+                                    com.v2ray.ang.ui.compose.satra.SatraIcons.Check, null,
+                                    tint = Satra.colors.accent,
+                                )
+                            }) else null,
+                            onClick = { onValueChange(option); expanded = false },
+                        )
+                        if (i < options.lastIndex) com.v2ray.ang.ui.compose.satra.GroupSeparator()
+                    }
+                }
+                androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 16.dp))
+            }
+        }
+        return
+    }
     val menuScrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -158,3 +225,7 @@ internal fun satraFieldColors() = OutlinedTextFieldDefaults.colors(
         backgroundColor = Satra.colors.accent.copy(alpha = 0.35f),
     ),
 )
+
+@Composable
+private fun Modifier.androidx_verticalScroll(): Modifier =
+    this.then(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()))

@@ -18,3 +18,5 @@ sx_add_configs_done|one|%d server added|%d سرور اضافه شد
 sx_add_configs_done|other|%d servers added|%d سرور اضافه شد
 sx_cat_apps|one|%d app|%d برنامه
 sx_cat_apps|other|%d apps|%d برنامه
+sx_split_selected|one|%d selected|%d انتخاب‌شده
+sx_split_selected|other|%d selected|%d انتخاب‌شده

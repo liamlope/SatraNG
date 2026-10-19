@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import com.v2ray.ang.AppConfig.REALITY
 import com.v2ray.ang.AppConfig.TLS
 import com.v2ray.ang.R
+import com.v2ray.ang.ui.compose.satra.SatraScrollPage
+import androidx.compose.foundation.layout.fillMaxWidth
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.enums.NetworkType
@@ -449,45 +451,22 @@ abstract class BaseServerActivity : BaseComponentActivity() {
     ) {
         var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
         val scrollState = rememberScrollState()
-        Scaffold(
-            containerColor = androidx.compose.ui.graphics.Color.Transparent,
-            contentWindowInsets = WindowInsets(0),
-            topBar = {
-                AppTopBar(
-                    title = title,
-                    onBackClick = { finish() },
-                    actions = {
+        SatraScrollPage(
+            title = title,
+            onBack = { finish() },
+            scrollState = scrollState,
+            actions = {
                         if (editGuid.isNotEmpty() && !isRunning) {
-                            IconButton(onClick = { showDeleteDialog = true }) {
-                                Icon(
-                                    painterResource(R.drawable.ic_delete_24dp),
-                                    stringResource(R.string.acc_delete)
-                                )
-                            }
+                            com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Trash, contentDescription = stringResource(R.string.acc_delete), onClick = { showDeleteDialog = true }, tint = com.v2ray.ang.ui.compose.satra.Satra.colors.danger)
                         }
-                        IconButton(onClick = onSaveClick) {
-                            Icon(
-                                painterResource(R.drawable.ic_fab_check),
-                                stringResource(R.string.acc_save)
-                            )
-                        }
-                    }
-                )
-            }
-        ) { innerPadding ->
+                        com.v2ray.ang.ui.compose.satra.SatraBarTextAction(stringResource(R.string.sx_save), onClick = onSaveClick)
+                    },
+        ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .consumeWindowInsets(innerPadding)
-                    .imePadding()
-                    .verticalScroll(scrollState)
-                    .verticalScrollbar(scrollState)
-                    .padding(bottom = 36.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 content()
-                NavigationBarsSpacer()
             }
         }
         if (showDeleteDialog) {

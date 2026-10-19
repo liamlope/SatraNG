@@ -161,33 +161,13 @@ fun LogcatScreen(
                 searchPlaceholder = stringResource(R.string.menu_item_search),
                 actions = {
                     if (!showSearch) {
-                        IconButton(onClick = { showSearch = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_search_24dp),
-                                contentDescription = stringResource(R.string.acc_search)
-                            )
-                        }
+                        com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Search, contentDescription = stringResource(R.string.acc_search), onClick = { showSearch = true })
                     }
-                    IconButton(onClick = { viewModel.copyLogcat() }) {
-                        Icon(
-                            painterResource(R.drawable.ic_copy),
-                            contentDescription = stringResource(R.string.acc_copy_log)
-                        )
-                    }
-                    IconButton(onClick = { onShareLogcat() }) {
-                        Icon(
-                            painterResource(R.drawable.ic_share_24dp),
-                            contentDescription = stringResource(R.string.acc_share_log)
-                        )
-                    }
-                    IconButton(onClick = {
+                    com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Copy, contentDescription = stringResource(R.string.acc_copy_log), onClick = { viewModel.copyLogcat() })
+                    com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Share, contentDescription = stringResource(R.string.acc_share_log), onClick = { onShareLogcat() })
+                    com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Trash, contentDescription = stringResource(R.string.acc_clear_log), onClick = {
                         scope.launch(Dispatchers.IO) { viewModel.clearLogcat() }
-                    }) {
-                        Icon(
-                            painterResource(R.drawable.ic_delete_24dp),
-                            contentDescription = stringResource(R.string.acc_clear_log)
-                        )
-                    }
+                    }, tint = com.v2ray.ang.ui.compose.satra.Satra.colors.danger)
                 }
             )
         },

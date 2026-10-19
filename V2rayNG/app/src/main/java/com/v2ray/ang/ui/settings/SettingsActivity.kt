@@ -54,6 +54,7 @@ import com.v2ray.ang.ui.compose.SettingsMenuItem
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.ThemeManager
 import com.v2ray.ang.ui.compose.satraBackgroundBrush
+import com.v2ray.ang.ui.compose.satra.SatraScrollPage
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.ui.notification.NotificationControlActivity
 import com.v2ray.ang.ui.perappproxy.PerAppProxyActivity
@@ -255,27 +256,14 @@ fun SettingsScreen(
         SettingsDestination.PerApp -> R.string.title_pref_per_app_proxy
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        contentWindowInsets = WindowInsets(0),
-        modifier = Modifier
-            .fillMaxSize()
-            .background(satraBackgroundBrush(isDark)),
-        topBar = {
-            AppTopBar(
-                title = stringResource(titleRes),
-                onBackClick = {
-                    onFinish()
-                },
-                isLoading = isLoading
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+    SatraScrollPage(
+        title = stringResource(titleRes),
+        onBack = { onFinish() },
+        isLoading = isLoading,
+        scrollState = scrollState,
+        modifier = Modifier.background(satraBackgroundBrush(isDark)),
+    ) {
+        run {
             when (destination) {
                 SettingsDestination.Hub -> LaunchedEffect(Unit) { onFinish() }
                 SettingsDestination.Safety -> LaunchedEffect(Unit) { onFinish() }
@@ -286,12 +274,7 @@ fun SettingsScreen(
                     }
                 }
                 SettingsDestination.Appearance -> {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScrollbar(scrollState)
-                            .verticalScroll(scrollState)
-                    ) {
+                    run {
                         SettingsSwitchItem(
                         title = stringResource(R.string.title_pref_speed_enabled),
                         summary = stringResource(R.string.summary_pref_speed_enabled),
@@ -352,17 +335,10 @@ fun SettingsScreen(
                         ThemeManager.setThemeMode(it)
                         }
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        NavigationBarsSpacer()
                     }
                 }
                 SettingsDestination.Tunnel -> {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScrollbar(scrollState)
-                            .verticalScroll(scrollState)
-                    ) {
+                    run {
                         SettingsSwitchItem(
                         title = stringResource(R.string.title_pref_ipv6_enabled),
                         summary = stringResource(R.string.summary_pref_ipv6_enabled),
@@ -457,17 +433,10 @@ fun SettingsScreen(
                         keyboardNumber = true,
                         onValueChanged = { hevTunRwTimeout = it }
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        NavigationBarsSpacer()
                     }
                 }
                 SettingsDestination.Core -> {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScrollbar(scrollState)
-                            .verticalScroll(scrollState)
-                    ) {
+                    run {
                         SettingsSwitchItem(
                         title = stringResource(R.string.title_pref_sniffing_enabled),
                         summary = stringResource(R.string.summary_pref_sniffing_enabled),
@@ -564,17 +533,10 @@ fun SettingsScreen(
                         selectedValue = outboundResolveMethod,
                         onSelected = { outboundResolveMethod = it }
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        NavigationBarsSpacer()
                     }
                 }
                 SettingsDestination.Mux -> {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScrollbar(scrollState)
-                            .verticalScroll(scrollState)
-                    ) {
+                    run {
                         SettingsSwitchItem(
                         title = stringResource(R.string.title_pref_mux_enabled),
                         summary = stringResource(R.string.summary_pref_mux_enabled),
@@ -603,17 +565,10 @@ fun SettingsScreen(
                         enabled = mux && muxXudpConcurrencyInt >= 0,
                         onSelected = { muxXudpQuic = it }
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        NavigationBarsSpacer()
                     }
                 }
                 SettingsDestination.Fragment -> {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScrollbar(scrollState)
-                            .verticalScroll(scrollState)
-                    ) {
+                    run {
                         SettingsSwitchItem(
                         title = stringResource(R.string.title_pref_fragment_enabled),
                         checked = fragment,
@@ -646,17 +601,10 @@ fun SettingsScreen(
                         keyboardNumber = true,
                         onValueChanged = { fragmentMaxSplit = it }
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        NavigationBarsSpacer()
                     }
                 }
                 SettingsDestination.Observatory -> {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScrollbar(scrollState)
-                            .verticalScroll(scrollState)
-                    ) {
+                    run {
                         SettingsEditItem(
                         title = stringResource(R.string.title_pref_observatory_least_ping_interval),
                         value = observatoryLeastPingInterval,
@@ -701,17 +649,10 @@ fun SettingsScreen(
                         }
                         }
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        NavigationBarsSpacer()
                     }
                 }
                 SettingsDestination.Advanced -> {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScrollbar(scrollState)
-                            .verticalScroll(scrollState)
-                    ) {
+                    run {
                         SettingsSwitchItem(
                         title = stringResource(R.string.title_pref_is_booted),
                         summary = stringResource(R.string.summary_pref_is_booted),
@@ -759,17 +700,10 @@ fun SettingsScreen(
                             checked = autoSortAfterTest,
                             onCheckedChange = { autoSortAfterTest = it },
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        NavigationBarsSpacer()
                     }
                 }
                 SettingsDestination.Mode -> {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScrollbar(scrollState)
-                            .verticalScroll(scrollState)
-                    ) {
+                    run {
                         SettingsListItem(
                         title = stringResource(R.string.title_mode),
                         entries = modeEntries,
@@ -809,8 +743,6 @@ fun SettingsScreen(
                         }
                         }
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        NavigationBarsSpacer()
                     }
                 }
             }

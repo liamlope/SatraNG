@@ -229,11 +229,9 @@ fun ProxyChainScreen(
                 onBackClick = onBackClick,
                 actions = {
                     if (showDelete) {
-                        IconButton(onClick = { showProfileDeleteConfirm = true }) {
-                            Icon(painterResource(R.drawable.ic_delete_24dp), contentDescription = stringResource(R.string.acc_delete))
-                        }
+                        com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Trash, contentDescription = stringResource(R.string.acc_delete), onClick = { showProfileDeleteConfirm = true }, tint = com.v2ray.ang.ui.compose.satra.Satra.colors.danger)
                     }
-                    IconButton(onClick = {
+                    com.v2ray.ang.ui.compose.satra.SatraBarTextAction(stringResource(R.string.sx_save), onClick = {
                         val remarksErr = remarks.isBlank()
                         isRemarksError = remarksErr
 
@@ -241,9 +239,7 @@ fun ProxyChainScreen(
                         if (!hasError) {
                             onSave(remarks, members)
                         }
-                    }) {
-                        Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
-                    }
+                    })
                 }
             )
         },
@@ -325,7 +321,7 @@ fun ProxyChainScreen(
                                 editable = true,
                                 modifier = Modifier.weight(1f)
                             )
-                            IconButton(onClick = {
+                            com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Trash, contentDescription = stringResource(R.string.acc_remove), onClick = {
                                 if (member.isBlank()) {
                                     val (remainingMembers, remainingKeys) = withoutProxyChainMember(members, memberKeys, memberKey)
                                     members = remainingMembers
@@ -333,12 +329,7 @@ fun ProxyChainScreen(
                                 } else {
                                     memberToDeleteKey = memberKey
                                 }
-                            }) {
-                                Icon(
-                                    painterResource(R.drawable.ic_delete_24dp),
-                                    contentDescription = stringResource(R.string.acc_remove)
-                                )
-                            }
+                            }, tint = com.v2ray.ang.ui.compose.satra.Satra.colors.danger)
                         }
                     }
                 }
