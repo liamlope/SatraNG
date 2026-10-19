@@ -27,13 +27,15 @@ import java.util.concurrent.Semaphore
  */
 object ExitIpProbe {
 
-    /** Keep at most two private cores alive at once. */
-    private val gate = Semaphore(2)
+    /** Keep at most four private cores alive at once. */
+    private val gate = Semaphore(4)
 
-    private val endpoints = listOf(
+    /** IP-echo services tried in order (ipapi.co dropped: it answers 403 to most VPN exits). */
+    internal val endpoints = listOf(
         AppConfig.IP_API_URL,
+        "http://ip-api.com/json/?fields=status,countryCode,query",
+        "https://api.country.is/",
         "https://ipwho.is/",
-        "https://ipapi.co/json/",
     )
 
     private val runner = java.util.concurrent.Executors.newCachedThreadPool { r ->
@@ -44,7 +46,7 @@ object ExitIpProbe {
      * [probe] with a hard deadline, so a stuck core or endpoint can never hang a test batch or the
      * background locator. On timeout the probe thread is interrupted and abandoned.
      */
-    fun probeBounded(context: Context, guid: String, timeoutMs: Long = 35_000L): GeoIpResolver.GeoResult {
+    fun probeBounded(context: Context, guid: String, timeoutMs: Long = 50_000L): GeoIpResolver.GeoResult {
         val future = runner.submit<GeoIpResolver.GeoResult> { probe(context, guid) }
         return try {
             future.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)
@@ -65,15 +67,23 @@ object ExitIpProbe {
     /** @return the stored result, or [GeoIpResolver.GeoResult.UNKNOWN] if the probe could not run. */
     fun probe(context: Context, guid: String): GeoIpResolver.GeoResult {
         val found = throughConfig(context, guid) { port ->
+            // Warm the fresh core up (first dial + TLS) on the same URL ping uses.
+            val warm = HttpUtil.getUrlContent(UrlContentRequest(url = AppConfig.DELAY_TEST_URL, timeout = 10_000, httpPort = port))
+            LogUtil.i(AppConfig.TAG, "ExitIpProbe: $guid warm-up ${if (warm != null) "ok" else "failed"}")
             for (url in endpoints) {
                 if (Thread.currentThread().isInterrupted) break
-                val body = HttpUtil.getUrlContent(UrlContentRequest(url = url, timeout = 6000, httpPort = port)) ?: continue
-                val info = JsonUtil.fromJsonSafe(body, IPAPIInfo::class.java) ?: continue
-                val ip = listOf(info.ip, info.clientIp, info.ip_addr, info.query).firstOrNull { !it.isNullOrBlank() }
-                val country = listOf(info.country_code, info.countryCode, info.country, info.location?.country_code)
-                    .firstOrNull { !it.isNullOrBlank() }
+                val body = HttpUtil.getUrlContent(UrlContentRequest(url = url, timeout = 10_000, httpPort = port))
+                if (body == null) {
+                    LogUtil.w(AppConfig.TAG, "ExitIpProbe: $guid no answer from $url")
+                    continue
+                }
+                val (ip, country) = parseExitBody(body) ?: continue
                 val result = GeoIpResolver.storeExit(guid, ip, country)
-                if (result.exitVerified) return@throughConfig result
+                if (result.exitVerified) {
+                    LogUtil.i(AppConfig.TAG, "ExitIpProbe: $guid exit ${result.countryCode} via $url")
+                    return@throughConfig result
+                }
+                LogUtil.w(AppConfig.TAG, "ExitIpProbe: $guid no country from $url")
             }
             null
         }
@@ -182,4 +192,13 @@ object ExitIpProbe {
         root.add("inbounds", JsonArray().apply { add(inbound) })
         return JsonUtil.toJson(root)
     }
+}
+
+/** (exit ip, 2-letter country) from any endpoint's JSON, or null when the body isn't usable. */
+internal fun parseExitBody(body: String): Pair<String?, String?>? {
+    val info = JsonUtil.fromJsonSafe(body, IPAPIInfo::class.java) ?: return null
+    val ip = listOf(info.ip, info.clientIp, info.ip_addr, info.query).firstOrNull { !it.isNullOrBlank() }
+    val country = listOf(info.country_code, info.countryCode, info.country, info.location?.country_code)
+        .firstOrNull { !it.isNullOrBlank() && it.trim().length == 2 }?.trim()?.uppercase()
+    return ip to country
 }

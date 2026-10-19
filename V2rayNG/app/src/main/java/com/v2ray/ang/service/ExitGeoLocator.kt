@@ -21,7 +21,7 @@ import kotlinx.coroutines.runInterruptible
 
 /**
  * Finds the real exit country of configs in the background, right after they were imported, so
- * flags appear without the user running a ping test. Two probes at a time, a hard deadline per
+ * flags appear without the user running a ping test. Four probes at a time, a hard deadline per
  * probe, one retry for configs that answer but whose exit lookup failed, and cancellable as a
  * whole. Each finished config is reported through [onResult] (true = exit country measured).
  */
@@ -77,9 +77,9 @@ class ExitGeoLocator(
     }
 
     companion object {
-        const val PARALLEL = 2
+        const val PARALLEL = 4
         const val ATTEMPTS = 2
         const val RETRY_DELAY_MS = 3_000L
-        const val PROBE_TIMEOUT_MS = 30_000L
+        const val PROBE_TIMEOUT_MS = 50_000L
     }
 }

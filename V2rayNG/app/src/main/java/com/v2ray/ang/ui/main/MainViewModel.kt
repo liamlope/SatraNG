@@ -334,7 +334,7 @@ class MainViewModel(
                 null,
             )
             // Watchdog: if the test process dies, rows must not stay "Locating…" forever.
-            val budget = ((locating.size + 1) / 2) * 70_000L + 30_000L
+            val budget = ((locating.size + 3) / 4) * 110_000L + 30_000L
             delay(budget)
             todo.filter { it in locating }.forEach { onLocateResult(it) }
         }
