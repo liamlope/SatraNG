@@ -264,6 +264,7 @@
     <string name="sx_smart_connect">اتصال به سریع‌ترین</string>
     <string name="sx_smart_connect_sub">سرورها را می‌سنجد و به سریع‌ترین و پایدارترین وصل می‌شود.</string>
     <string name="sx_smart_finding">در حال یافتن سریع‌ترین سرور…</string>
+    <string name="sx_smart_chosen">اتصال به %1$s · %2$d میلی‌ثانیه</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">%d روز دیگر منقضی می‌شود</item>
         <item quantity="other">%d روز دیگر منقضی می‌شود</item>

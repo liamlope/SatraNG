@@ -264,6 +264,7 @@
     <string name="sx_smart_connect">Подключиться к самому быстрому</string>
     <string name="sx_smart_connect_sub">Проверяет серверы и подключается к самому быстрому и стабильному.</string>
     <string name="sx_smart_finding">Ищем самый быстрый сервер…</string>
+    <string name="sx_smart_chosen">Подключаемся к %1$s · %2$d мс</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Истекает через %d день</item>
         <item quantity="few">Истекает через %d дня</item>

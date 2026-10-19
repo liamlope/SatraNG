@@ -26,6 +26,7 @@ import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.ImportClassifier
 import com.v2ray.ang.handler.AngConfigManager
 import com.v2ray.ang.handler.SettingsChangeManager
+import com.v2ray.ang.handler.SmartPick
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.handler.UsagePeriods
 import com.v2ray.ang.handler.UsageStore
@@ -1500,15 +1501,45 @@ class MainViewModel(
                         if (answered >= SMART_EARLY_ANSWERS) break
                     }
                 }
-                val best = withContext(ioDispatcher) {
-                    candidates
-                        .mapNotNull { g -> MmkvManager.decodeServerAffiliationInfo(g)?.testDelayMillis?.takeIf { it > 0L }?.let { g to it } }
-                        .minByOrNull { it.second }?.first
+                val delayOf: (String) -> Long = { g -> MmkvManager.decodeServerAffiliationInfo(g)?.testDelayMillis ?: 0L }
+                val first = withContext(ioDispatcher) { candidates.associateWith(delayOf) }
+                // Second look at the quickest few: drops flaky servers and measures jitter.
+                val retest = SmartPick.retestSet(first)
+                val second = if (retest.size >= 2) {
+                    pingGuids(groupId, retest)
+                    val t0 = System.currentTimeMillis()
+                    while (System.currentTimeMillis() - t0 < SMART_RETEST_MS) {
+                        delay(300)
+                        val done = withContext(ioDispatcher) { retest.all { delayOf(it) != 0L } }
+                        if (done || !uiState.value.isTesting) break
+                    }
+                    withContext(ioDispatcher) { retest.associateWith { delayOf(it).let { d -> if (d == 0L) -1L else d } } }
+                } else emptyMap()
+                val now = System.currentTimeMillis()
+                val chosen = withContext(ioDispatcher) {
+                    SmartPick.pick(
+                        first.map { (g, d) ->
+                            SmartPick.Candidate(g, d, second[g], MmkvManager.decodeSettingsLong(LAST_OK_PREFIX + g, 0L))
+                        },
+                        now,
+                    )
                 }
+                if (second.isNotEmpty()) {
+                    // Put back the first-pass value for retests that failed, so rows are not left blank.
+                    withContext(ioDispatcher) {
+                        second.filterValues { it <= 0L }.keys.forEach { g ->
+                            first[g]?.takeIf { it > 0L }?.let { MmkvManager.encodeServerTestDelayMillis(g, it) }
+                        }
+                    }
+                }
+                val best = chosen?.guid
                 if (best == null) {
                     toastError(R.string.sx_smart_none)
                     return@launch
                 }
+                val name = withContext(ioDispatcher) { MmkvManager.decodeServerConfig(best)?.remarks.orEmpty() }
+                val ms = second[best]?.takeIf { it > 0L }?.let { (it + chosen.firstMs) / 2 } ?: chosen.firstMs
+                toast(dataSource.getString(R.string.sx_smart_chosen, name, ms))
                 updateSelectedGuid(best)
                 markUserRequestedStart()
                 _smartConnectRequest.update { it + 1 }
@@ -1516,6 +1547,18 @@ class MainViewModel(
                 _uiState.update { it.copy(smartConnecting = false) }
             }
         }
+    }
+
+    /** Real-delay test of just these configs (Smart Connect's retest). */
+    private suspend fun pingGuids(groupId: String, guids: List<String>) {
+        cancelAllPing()
+        withContext(ioDispatcher) { dataSource.clearAllTestDelayResults(guids) }
+        val request = testRequests.beginBulk(groupId)
+        _uiState.update { it.copy(isTesting = true, status = MainStatus.Testing) }
+        dataSource.sendMsg2TestService(
+            TestServiceMessage(key = AppConfig.MSG_MEASURE_CONFIG_START, subscriptionId = groupId, serverGuids = guids),
+            request.id,
+        )
     }
 
     fun prepareConnectGuid(): String? {
@@ -1606,6 +1649,8 @@ class MainViewModel(
             val guid = dataSource.getSelectServer()?.takeIf { it.isNotBlank() } ?: return@launch
             val result = GeoIpResolver.resolveExitAfterConnect(guid)
             if (result.exitVerified) {
+                // Traffic really flowed through this config: Smart Connect remembers it.
+                MmkvManager.encodeSettings(LAST_OK_PREFIX + guid, System.currentTimeMillis())
                 reloadServerList()
             }
         }
@@ -1648,6 +1693,8 @@ class MainViewModel(
         const val SMART_MAX_WAIT_MS = 20_000L
         const val SMART_EARLY_MS = 6_000L
         const val SMART_EARLY_ANSWERS = 3
+        const val SMART_RETEST_MS = 6_000L
+        private const val LAST_OK_PREFIX = "satra_last_ok_"
         const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
     }
 }
