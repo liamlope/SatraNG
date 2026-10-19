@@ -93,7 +93,7 @@ fun PingPill(ms: Long?, modifier: Modifier = Modifier, testing: Boolean = false,
                 text = when (grade) {
                     PingGrade.Unknown -> "—"
                     PingGrade.Failed -> failedLabel
-                    else -> String.format(java.util.Locale.getDefault(), "%d", shown)
+                    else -> String.format(currentLocale(), "%d", shown)
                 },
                 style = Satra.type.caption.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum"),
                 color = color,
@@ -188,7 +188,7 @@ fun PingButton(
                 testing -> testingLabel
                 grade == PingGrade.Unknown -> idleLabel
                 grade == PingGrade.Failed -> failedLabel
-                else -> ltr(String.format(java.util.Locale.getDefault(), "%d ms", shown))
+                else -> ltr(String.format(currentLocale(), "%d ms", shown))
             },
             style = Satra.type.headline.copy(fontSize = 15.sp, fontFeatureSettings = "tnum"),
             color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis,

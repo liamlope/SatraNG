@@ -239,7 +239,7 @@ class PremiumScreenshotTest {
         scenario.onActivity { act -> act.setContent {
             val base = LocalContext.current
             val locale = java.util.Locale.forLanguageTag(lang)
-            val cfg = Configuration(base.resources.configuration).apply {
+            val cfg = Configuration(LocalConfiguration.current).apply {
                 setLocale(locale)
                 fontScale = font
                 setLayoutDirection(locale)
