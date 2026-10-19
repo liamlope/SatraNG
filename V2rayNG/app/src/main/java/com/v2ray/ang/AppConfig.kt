@@ -218,6 +218,11 @@ object AppConfig {
     const val MSG_MEASURE_CONFIG_SUCCESS = 72
     const val MSG_MEASURE_CONFIG_NOTIFY = 73
     const val MSG_MEASURE_CONFIG_FINISH = 74
+    /** Background exit-country detection for freshly imported configs (runs in :tasks). */
+    const val MSG_LOCATE_START = 101
+    const val MSG_LOCATE_CANCEL = 102
+    const val MSG_LOCATE_RESULT = 103
+    const val MSG_LOCATE_FINISH = 104
 
     const val MSG_SUB_UPDATE_START = 8
     const val MSG_SUB_UPDATE_CANCEL = 81

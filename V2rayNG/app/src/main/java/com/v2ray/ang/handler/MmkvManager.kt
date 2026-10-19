@@ -241,6 +241,25 @@ object MmkvManager {
         return allServers
     }
 
+    /**
+     * Servers the user can use right now: everything except configs of disabled subscriptions.
+     * The Servers list, smart connect and background exit detection only look at these.
+     */
+    fun decodeActiveServerList(): MutableList<String> {
+        val disabled = decodeSubscriptions().filter { !it.subscription.enabled }.mapTo(HashSet()) { it.guid }
+        if (disabled.isEmpty()) return decodeAllServerList()
+        val result = mutableListOf<String>()
+        val subsList = decodeSubsList()
+        if (!subsList.contains(DEFAULT_SUBSCRIPTION_ID)) result.addAll(decodeServerList(DEFAULT_SUBSCRIPTION_ID))
+        subsList.filter { it !in disabled }.forEach { result.addAll(decodeServerList(it)) }
+        return result
+    }
+
+    /** False when the config belongs to a disabled subscription. */
+    fun isServerActive(guid: String): Boolean {
+        val subId = decodeServerConfig(guid)?.subscriptionId?.takeIf { it.isNotBlank() } ?: return true
+        return decodeSubscription(subId)?.enabled != false
+    }
 
     /**
      * Decodes the server configuration.
@@ -504,6 +523,20 @@ object MmkvManager {
         aff.resolvedIp = resolvedIp
         aff.exitIpVerified = exitIpVerified
         aff.geoUpdatedAt = System.currentTimeMillis()
+        serverAffStorage.encode(guid, JsonUtil.toJson(aff))
+    }
+
+    /** Stores the entry (server address) country. Leaves the measured exit country untouched. */
+    fun encodeServerEntry(guid: String, countryCode: String?, ip: String?) {
+        if (guid.isBlank()) return
+        val aff = decodeServerAffiliationInfo(guid) ?: ServerAffiliationInfo()
+        val now = System.currentTimeMillis()
+        aff.entryAttemptAt = now
+        if (countryCode != null) {
+            aff.entryCountryCode = countryCode
+            aff.entryIp = ip
+            aff.entryUpdatedAt = now
+        }
         serverAffStorage.encode(guid, JsonUtil.toJson(aff))
     }
 

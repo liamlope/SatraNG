@@ -30,7 +30,8 @@ data class SubRow(
     val item: SubscriptionItem,
     val configCount: Int,
 ) {
-    val title: String get() = item.profileTitle?.takeIf { it.isNotBlank() } ?: item.remarks
+    /** The name the user gave it; the provider's own title only when there is none. */
+    val title: String get() = item.remarks.takeIf { it.isNotBlank() } ?: item.profileTitle.orEmpty()
 }
 
 /** Outcome of the last update, shown once as a snackbar-like banner. */
@@ -72,7 +73,13 @@ class SubsViewModel(app: Application) : AndroidViewModel(app), SubsActions {
     private val _state = MutableStateFlow(SubsUiState())
     val state: StateFlow<SubsUiState> = _state.asStateFlow()
 
-    init { reload() }
+    init {
+        reload()
+        // Reload whenever subscriptions/servers change anywhere in the app (imports, updates).
+        viewModelScope.launch {
+            SettingsChangeManager.dataChanges.collect { reload() }
+        }
+    }
 
     override fun reload() {
         viewModelScope.launch(Dispatchers.IO) {

@@ -15,4 +15,12 @@ data class ServerAffiliationInfo(
     var favorite: Boolean = false,
     /** Last time a geo lookup was attempted (success or not), used to rate-limit retries. */
     var geoAttemptAt: Long = 0L,
+    /**
+     * Where the config's *server address* is (entry point), kept apart from the exit country.
+     * Never shown as the row's flag; used to tell tunnels (entry in Iran, exit abroad) apart.
+     */
+    var entryCountryCode: String? = null,
+    var entryIp: String? = null,
+    var entryUpdatedAt: Long = 0L,
+    var entryAttemptAt: Long = 0L,
 )

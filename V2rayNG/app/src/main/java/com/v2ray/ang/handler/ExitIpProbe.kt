@@ -36,6 +36,32 @@ object ExitIpProbe {
         "https://ipapi.co/json/",
     )
 
+    private val runner = java.util.concurrent.Executors.newCachedThreadPool { r ->
+        Thread(r, "exit-probe").apply { isDaemon = true }
+    }
+
+    /**
+     * [probe] with a hard deadline, so a stuck core or endpoint can never hang a test batch or the
+     * background locator. On timeout the probe thread is interrupted and abandoned.
+     */
+    fun probeBounded(context: Context, guid: String, timeoutMs: Long = 35_000L): GeoIpResolver.GeoResult {
+        val future = runner.submit<GeoIpResolver.GeoResult> { probe(context, guid) }
+        return try {
+            future.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+        } catch (e: java.util.concurrent.TimeoutException) {
+            future.cancel(true)
+            LogUtil.w(AppConfig.TAG, "ExitIpProbe: $guid timed out")
+            MmkvManager.markServerGeoAttempt(guid)
+            GeoIpResolver.GeoResult.UNKNOWN
+        } catch (e: InterruptedException) {
+            future.cancel(true)
+            Thread.currentThread().interrupt()
+            GeoIpResolver.GeoResult.UNKNOWN
+        } catch (e: Exception) {
+            GeoIpResolver.GeoResult.UNKNOWN
+        }
+    }
+
     /** @return the stored result, or [GeoIpResolver.GeoResult.UNKNOWN] if the probe could not run. */
     fun probe(context: Context, guid: String): GeoIpResolver.GeoResult {
         val profile = MmkvManager.decodeServerConfig(guid) ?: return GeoIpResolver.GeoResult.UNKNOWN
@@ -56,6 +82,7 @@ object ExitIpProbe {
             controller.startLoop(json, 0)
 
             for (url in endpoints) {
+                if (Thread.currentThread().isInterrupted) break
                 val body = HttpUtil.getUrlContent(UrlContentRequest(url = url, timeout = 6000, httpPort = port)) ?: continue
                 val info = JsonUtil.fromJsonSafe(body, IPAPIInfo::class.java) ?: continue
                 val ip = listOf(info.ip, info.clientIp, info.ip_addr, info.query).firstOrNull { !it.isNullOrBlank() }

@@ -73,6 +73,10 @@ class MainRepository(
                     requestId
                 )
                 AppConfig.MSG_MEASURE_CONFIG_CANCEL -> MainServiceEvent.MeasureConfigCancelled(requestId)
+                AppConfig.MSG_LOCATE_RESULT -> safeIntent
+                    .serializable<RealPingResult>("content")
+                    ?.let { MainServiceEvent.LocateResult(it.guid, it.delayMillis > 0L) }
+                AppConfig.MSG_LOCATE_FINISH -> MainServiceEvent.LocateFinished
 
                 else -> null
             }
@@ -140,7 +144,8 @@ class MainRepository(
                 }
             )
         }
-        result += MmkvManager.decodeSubscriptions()
+        // Disabled subscriptions are hidden from the Servers list (and so from smart connect).
+        result += MmkvManager.decodeSubscriptions().filter { it.subscription.enabled }
         return result
     }
 
@@ -149,7 +154,7 @@ class MainRepository(
 
     override fun getServerGuidList(groupId: String): List<String> =
         if (groupId.isEmpty()) {
-            MmkvManager.decodeAllServerList()
+            MmkvManager.decodeActiveServerList()
         } else {
             MmkvManager.decodeServerList(groupId)
         }

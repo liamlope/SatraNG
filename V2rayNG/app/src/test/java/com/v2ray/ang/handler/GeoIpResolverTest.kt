@@ -30,35 +30,46 @@ class GeoIpResolverTest {
 
     @Test
     fun display_neverGuessesFromRemarks_unknownIsGlobe() {
-        assertNull(GeoIpResolver.display(null, now).countryCode)
-        assertNull(GeoIpResolver.display(aff(null, false, 0), now).countryCode)
+        assertNull(GeoIpResolver.display(null).countryCode)
+        assertNull(GeoIpResolver.display(aff(null, false, 0)).countryCode)
     }
 
     @Test
-    fun display_respectsTtlPerSource() {
-        assertEquals("DE", GeoIpResolver.display(aff("DE", true, 6 * day), now).countryCode)
-        assertNull(GeoIpResolver.display(aff("DE", true, 8 * day), now).countryCode)
-        assertEquals("NL", GeoIpResolver.display(aff("NL", false, 2 * day), now).countryCode)
-        assertNull(GeoIpResolver.display(aff("NL", false, 4 * day), now).countryCode)
-        assertTrue(GeoIpResolver.display(aff("DE", true, day), now).exitVerified)
+    fun display_showsOnlyMeasuredExits_andKeepsThem() {
+        // A measured exit stays, however old: flags are stable until re-measured.
+        assertEquals("DE", GeoIpResolver.display(aff("DE", true, 400 * day)).countryCode)
+        assertTrue(GeoIpResolver.display(aff("DE", true, day)).exitVerified)
+        // Server-address guesses (older builds) are never shown as the flag.
+        assertNull(GeoIpResolver.display(aff("NL", false, 1000)).countryCode)
     }
 
     @Test
-    fun needsLookup_backgroundRespectsBackoffAndVerifiedCache() {
-        // nothing known -> look it up
+    fun display_entryCountryNeverReplacesExit() {
+        val a = aff("DE", true, day).apply { entryCountryCode = "IR" }
+        assertEquals("DE", GeoIpResolver.display(a).countryCode)
+        val b = aff(null, false, 0).apply { entryCountryCode = "IR" }
+        assertNull(GeoIpResolver.display(b).countryCode)
+    }
+
+    @Test
+    fun needsLookup_measuresOnceThenOnlyOnRecheck() {
         assertTrue(GeoIpResolver.needsLookup(null, now))
-        // verified and fresh -> never in background
-        assertFalse(GeoIpResolver.needsLookup(aff("DE", true, day), now))
-        // soft guess -> upgrade to an exit measurement, unless we tried a minute ago
-        assertTrue(GeoIpResolver.needsLookup(aff("NL", false, day), now))
-        assertFalse(GeoIpResolver.needsLookup(aff("NL", false, day, attemptAgeMs = 60_000), now))
+        // known exit: never in the background, even when old
+        assertFalse(GeoIpResolver.needsLookup(aff("DE", true, 400 * day), now))
+        // recheck (subscription updated / Retry) measures again
+        assertTrue(GeoIpResolver.needsLookup(aff("DE", true, 1000), now, recheck = true))
+        // failures wait for the backoff
+        assertFalse(GeoIpResolver.needsLookup(aff(null, false, 0, attemptAgeMs = 60_000), now))
+        assertTrue(GeoIpResolver.needsLookup(aff(null, false, 0, attemptAgeMs = day), now))
     }
 
     @Test
-    fun needsLookup_pingTestRefreshesOldExitsOnly() {
-        assertFalse(GeoIpResolver.needsLookup(aff("DE", true, 60 * 60 * 1000), now, force = true))
-        assertTrue(GeoIpResolver.needsLookup(aff("DE", true, 7 * 60 * 60 * 1000), now, force = true))
-        assertTrue(GeoIpResolver.needsLookup(aff("NL", false, 1000), now, force = true))
+    fun needsEntryLookup_respectsTtlAndBackoff() {
+        assertTrue(GeoIpResolver.needsEntryLookup(null, now))
+        val fresh = ServerAffiliationInfo(entryCountryCode = "IR", entryUpdatedAt = now - day)
+        assertFalse(GeoIpResolver.needsEntryLookup(fresh, now))
+        val tried = ServerAffiliationInfo(entryAttemptAt = now - 60_000)
+        assertFalse(GeoIpResolver.needsEntryLookup(tried, now))
     }
 
     @Test

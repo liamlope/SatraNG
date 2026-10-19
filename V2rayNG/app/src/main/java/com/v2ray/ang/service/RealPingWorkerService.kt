@@ -68,8 +68,7 @@ class RealPingWorkerService(
                     if (scope.isActive) {
                         onEvent(RealPingEvent.Result(guid, result))
                     }
-                    // A config that answers is worth locating: measure where it really exits.
-                    if (result > 0L && scope.isActive) probeExitCountry(guid)
+                    // Ping tests never measure exit IPs: flags stay stable (see GeoIpResolver).
                 } catch (_: Throwable) {
                     // ignore
                 } finally {
@@ -106,12 +105,6 @@ class RealPingWorkerService(
         } catch (_: Throwable) {
             // ignore
         }
-    }
-
-    private fun probeExitCountry(guid: String) {
-        val aff = MmkvManager.decodeServerAffiliationInfo(guid)
-        if (!GeoIpResolver.needsLookup(aff, System.currentTimeMillis(), force = true)) return
-        ExitIpProbe.probe(context, guid)
     }
 
     private suspend fun startRealPing(guid: String): Long {

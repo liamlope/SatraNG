@@ -13,22 +13,24 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Country shown on a config row.
+ * Country shown on a config row: only ever the **exit IP**, measured by sending a request
+ * *through that config*. Never the remark text and never the server address.
  *
- * Order of truth, never the remark text:
- *  1. **Exit IP** measured by sending a request *through that config* ([ExitIpProbe] / after connect).
- *  2. **Server address** resolved to an IP and looked up (approximate; CDN fronted or relay configs
- *     can differ from the real exit), shown only until an exit measurement exists.
- *  3. Unknown: the UI shows a neutral globe.
+ * Stability rules:
+ *  - The exit is measured once in the background when the config arrives (subscription added),
+ *    then kept. It is measured again only when the user connects to that config (through the live
+ *    tunnel), when its subscription is updated, or when the user taps Retry. Ping tests never probe.
+ *  - A failed re-measurement keeps the known exit; it is never replaced by a guess.
+ *  - The server address country is stored separately as *entry* info ([resolveEntry]); it is used to
+ *    recognise tunnels (entry in Iran, exit abroad) and is never shown as the flag.
+ *  - Unknown: the UI shows a neutral globe.
  *
  * Reads are pure MMKV (safe on the UI thread). All network work is explicit and off-thread.
  */
 object GeoIpResolver {
 
-    const val EXIT_TTL_MS = 7L * 24 * 60 * 60 * 1000
+    /** Entry (server address) lookups are refreshed after this; exits do not expire. */
     const val HOST_TTL_MS = 3L * 24 * 60 * 60 * 1000
-    /** A ping test re-measures exits older than this. */
-    const val EXIT_REFRESH_ON_PING_MS = 6L * 60 * 60 * 1000
     const val ATTEMPT_BACKOFF_MS = 10L * 60 * 1000
 
     data class GeoResult(
@@ -44,30 +46,35 @@ object GeoIpResolver {
 
     // ---- pure policy (unit tested) ----
 
-    fun isFresh(aff: ServerAffiliationInfo?, nowMs: Long): Boolean {
-        aff ?: return false
-        if (aff.countryCode.isNullOrBlank()) return false
-        val ttl = if (aff.exitIpVerified) EXIT_TTL_MS else HOST_TTL_MS
-        return nowMs - aff.geoUpdatedAt < ttl
+    /** True when a measured exit country is known. Exits stay valid until re-measured. */
+    fun hasExit(aff: ServerAffiliationInfo?): Boolean =
+        aff != null && aff.exitIpVerified && !aff.countryCode.isNullOrBlank()
+
+    /**
+     * True when the background locator should measure this config's exit now.
+     * [recheck] (subscription updated / user retry) measures again even when an exit is known.
+     */
+    fun needsLookup(aff: ServerAffiliationInfo?, nowMs: Long, recheck: Boolean = false): Boolean {
+        if (recheck) return true
+        if (hasExit(aff)) return false
+        return nowMs - (aff?.geoAttemptAt ?: 0L) >= ATTEMPT_BACKOFF_MS
     }
 
-    /** True when a background lookup should run for this config now. */
-    fun needsLookup(aff: ServerAffiliationInfo?, nowMs: Long, force: Boolean = false): Boolean {
-        if (force) return !(aff?.exitIpVerified == true && nowMs - (aff.geoUpdatedAt) < EXIT_REFRESH_ON_PING_MS)
-        if (isFresh(aff, nowMs) && aff?.exitIpVerified == true) return false
-        val last = aff?.geoAttemptAt ?: 0L
-        if (nowMs - last < ATTEMPT_BACKOFF_MS) return false
-        return !isFresh(aff, nowMs) || aff?.exitIpVerified != true
+    /** True when the entry (server address) country should be looked up in the background. */
+    fun needsEntryLookup(aff: ServerAffiliationInfo?, nowMs: Long): Boolean {
+        if (aff != null && !aff.entryCountryCode.isNullOrBlank() && nowMs - aff.entryUpdatedAt < HOST_TTL_MS) return false
+        return nowMs - (aff?.entryAttemptAt ?: 0L) >= ATTEMPT_BACKOFF_MS
     }
 
     // ---- UI read path ----
 
     fun displayForProfile(guid: String, profile: ProfileItem): GeoResult = display(MmkvManager.decodeServerAffiliationInfo(guid))
 
-    internal fun display(aff: ServerAffiliationInfo?, nowMs: Long = System.currentTimeMillis()): GeoResult {
-        if (!isFresh(aff, nowMs)) return GeoResult.UNKNOWN
+    internal fun display(aff: ServerAffiliationInfo?): GeoResult {
+        // Older builds stored server-address guesses in the same fields; those are not exits.
+        if (!hasExit(aff)) return GeoResult.UNKNOWN
         aff!!
-        return GeoResult(aff.countryCode, aff.countryName, aff.resolvedIp, aff.exitIpVerified)
+        return GeoResult(aff.countryCode, aff.countryName ?: countryNameForCode(aff.countryCode), aff.resolvedIp, true)
     }
 
     // ---- network paths (call off the main thread) ----
@@ -97,33 +104,28 @@ object GeoIpResolver {
     }
 
     /**
-     * Fallback when no exit measurement exists: resolve the server address and look the IP up.
-     * Never overwrites a fresh exit-verified value.
+     * Looks up where the config's server address is (entry point) and stores it as entry info.
+     * Never touches the exit country. Returns the entry country code, or null.
      */
-    fun resolveHostSoft(guid: String, profile: ProfileItem, viaHttpPort: Int = 0): GeoResult {
+    fun resolveEntry(guid: String, profile: ProfileItem, viaHttpPort: Int = 0): String? {
         val now = System.currentTimeMillis()
         val aff = MmkvManager.decodeServerAffiliationInfo(guid)
-        if (aff?.exitIpVerified == true && isFresh(aff, now)) return display(aff, now)
-        if (!needsLookup(aff, now)) return display(aff, now)
+        if (!needsEntryLookup(aff, now)) return aff?.entryCountryCode
         val last = attempts[guid] ?: 0L
-        if (now - last < ATTEMPT_BACKOFF_MS) return display(aff, now)
+        if (now - last < ATTEMPT_BACKOFF_MS) return aff?.entryCountryCode
         attempts[guid] = now
-        markAttempt(guid)
 
         val host = profile.server?.trim().orEmpty()
-        if (host.isBlank()) return GeoResult.UNKNOWN
+        if (host.isBlank()) return null
         return try {
             val ip = if (isIpLiteral(host)) host else InetAddress.getByName(host).hostAddress
-            if (ip.isNullOrBlank()) return GeoResult.UNKNOWN
-            val code = lookupIp(ip, viaHttpPort)
-            if (code == null) GeoResult.UNKNOWN else {
-                val name = countryNameForCode(code)
-                MmkvManager.encodeServerGeo(guid, code, name, ip, exitIpVerified = false)
-                GeoResult(code, name, ip, false)
-            }
+            val code = if (ip.isNullOrBlank()) null else lookupIp(ip, viaHttpPort)
+            MmkvManager.encodeServerEntry(guid, code, ip)
+            code ?: aff?.entryCountryCode
         } catch (e: Exception) {
-            LogUtil.w(AppConfig.TAG, "Host geo failed for ${host}: ${e.message}")
-            GeoResult.UNKNOWN
+            LogUtil.w(AppConfig.TAG, "Entry geo failed for ${host}: ${e.message}")
+            MmkvManager.encodeServerEntry(guid, null, null)
+            aff?.entryCountryCode
         }
     }
 

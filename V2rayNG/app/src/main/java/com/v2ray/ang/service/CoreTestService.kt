@@ -30,6 +30,7 @@ class CoreTestService : Service() {
 
     // manage active batch workers so each batch is independent and cancellable
     private val activeWorkers = ConcurrentHashMap<RealPingWorkerService, String>()
+    @Volatile private var locator: ExitGeoLocator? = null
     private val cancelAction by lazy {
         val intent = Intent(this, CoreTestService::class.java).putExtra(
             "content",
@@ -71,6 +72,8 @@ class CoreTestService : Service() {
     override fun onDestroy() {
         LogUtil.i(AppConfig.TAG, "CoreTestService is being destroyed, cancelling ${activeWorkers.size} active workers")
         cancelWorkers()
+        locator?.cancel()
+        locator = null
         NotificationHelper.stopForeground(this)
         super.onDestroy()
     }
@@ -101,11 +104,54 @@ class CoreTestService : Service() {
                 message, startId, intent.getStringExtra(MessageHelper.EXTRA_REQUEST_ID).orEmpty()
             )
             AppConfig.MSG_MEASURE_CONFIG_CANCEL -> handleMeasureCancel()
+            AppConfig.MSG_LOCATE_START -> handleLocateStart(message)
+            AppConfig.MSG_LOCATE_CANCEL -> {
+                locator?.cancel()
+                locator = null
+                stopIfIdle()
+            }
             else -> {
                 NotificationHelper.stopForeground(this); stopSelf(startId)
             }
         }
         return START_NOT_STICKY
+    }
+
+    private fun handleLocateStart(message: TestServiceMessage) {
+        locator?.cancel()
+        if (message.serverGuids.isEmpty()) {
+            locator = null
+            stopIfIdle()
+            return
+        }
+        NotificationHelper.updateNotification(
+            channelType = NotificationChannelType.CORE_TEST,
+            context = this,
+            title = getString(R.string.app_name),
+            content = getString(R.string.sx_locating_servers),
+        )
+        lateinit var created: ExitGeoLocator
+        created = ExitGeoLocator(
+            context = this,
+            guids = message.serverGuids,
+            onResult = { guid, ok ->
+                MessageHelper.sendMsg2UI(this, AppConfig.MSG_LOCATE_RESULT, RealPingResult(guid, if (ok) 1L else -1L))
+            },
+            onFinish = {
+                MessageHelper.sendMsg2UI(this, AppConfig.MSG_LOCATE_FINISH, "")
+                if (locator === created) locator = null
+                stopIfIdle()
+            },
+        )
+        locator = created
+        created.start()
+    }
+
+    private fun stopIfIdle() {
+        if (activeWorkers.isEmpty() && locator == null) {
+            NotificationHelper.stopForeground(this)
+            stopSelf()
+        }
     }
 
     private fun handleMeasureStart(message: TestServiceMessage, startId: Int, requestId: String) {
@@ -173,10 +219,7 @@ class CoreTestService : Service() {
 
                 MessageHelper.sendMsg2UI(this, AppConfig.MSG_MEASURE_CONFIG_FINISH, event.status, requestId)
                 onWorkerDone()
-                if (activeWorkers.isEmpty()) {
-                    NotificationHelper.stopForeground(this)
-                    stopSelf()
-                }
+                stopIfIdle()
             }
         }
     }
@@ -184,8 +227,8 @@ class CoreTestService : Service() {
     private fun handleMeasureCancel() {
         LogUtil.i(AppConfig.TAG, "CoreTestService received cancel message, cancelling ${activeWorkers.size} active workers")
         cancelWorkers()
-        NotificationHelper.stopForeground(this)
-        stopSelf()
+        // A background exit-country lookup may still be running; it stops the service when done.
+        stopIfIdle()
     }
 
     private fun cancelWorkers() {
