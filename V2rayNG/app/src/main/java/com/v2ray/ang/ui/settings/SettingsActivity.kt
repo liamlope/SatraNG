@@ -36,6 +36,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.AppConfig.VPN
 import com.v2ray.ang.R
+import com.v2ray.ang.extension.toast
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.handler.MmkvManager
@@ -162,6 +163,7 @@ fun SettingsScreen(
 
     var hevTunLogLevel by rememberMmkvString(AppConfig.PREF_HEV_TUNNEL_LOGLEVEL, AppConfig.DEFAULT_HEV_TUNNEL_LOGLEVEL)
     var hevTunRwTimeout by rememberMmkvString(AppConfig.PREF_HEV_TUNNEL_RW_TIMEOUT, "")
+    val engineCtx = androidx.compose.ui.platform.LocalContext.current
     var useHevTun by rememberMmkvBool(AppConfig.PREF_USE_HEV_TUNNEL, AppConfig.DEFAULT_USE_HEV_TUNNEL)
 
     var enableLocalProxy by rememberMmkvBool(AppConfig.PREF_ENABLE_LOCAL_PROXY, true)
@@ -432,6 +434,11 @@ fun SettingsScreen(
                         useHevTun = it
                         if (it && !enableLocalProxy) {
                         enableLocalProxy = true
+                        }
+                        // Xray engine needs route-only sniffing for app-aware routing / limits.
+                        if (!it) routeOnlyEnabled = true
+                        com.v2ray.ang.core.LauncherManager.restartIfRunning(engineCtx) {
+                            engineCtx.toast(R.string.sx_engine_applied)
                         }
                         }
                         )

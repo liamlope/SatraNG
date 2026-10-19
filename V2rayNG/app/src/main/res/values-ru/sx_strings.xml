@@ -178,10 +178,6 @@
     <string name="sx_period_monthly">Ежемесячно</string>
     <string name="sx_limit_block_all">Блокировать полностью</string>
     <string name="sx_limit_block_all_sub">Никакой трафик не разрешён</string>
-    <string name="sx_limit_engine_title">Нужен расширенный туннель</string>
-    <string name="sx_limit_engine_msg">Лимиты для приложений работают с туннелем Xray на Android 10 и новее.</string>
-    <string name="sx_limit_engine_confirm">SatraNG переключится на туннель Xray и перезапустит VPN. Вернуть прежний режим можно в расширенных настройках.</string>
-    <string name="sx_limit_engine_enable">Переключить</string>
     <string name="sx_limit_android_old">Лимиты для приложений требуют Android 10 или новее. Лимиты для сайтов работают на любой версии.</string>
     <string name="sx_preset_youtube">YouTube</string>
     <string name="sx_preset_instagram">Instagram</string>
@@ -237,13 +233,6 @@
     <string name="sx_limit_reset_sub">За этот период использовано %1$s. Счёт начнётся с нуля.</string>
     <string name="sx_limit_delete_msg">Лимит и его счётчик будут удалены. Больше ничего не блокируется.</string>
     <string name="sx_usage_apps_none_yet">Трафик приложений через VPN ещё не записан. Подключитесь — данные появятся в течение минуты.</string>
-    <string name="sx_engine_sheet_title">Включить лимиты для приложений</string>
-    <string name="sx_engine_sheet_why">Чтобы считать и блокировать отдельное приложение, SatraNG должен знать, какое приложение открыло соединение. Стандартный туннель этого не видит, поэтому SatraNG переключится на туннель Xray, который это умеет.</string>
-    <string name="sx_engine_sheet_restart">VPN один раз перезапустится — на секунду-другую.</string>
-    <string name="sx_engine_sheet_battery">Скорость в обычном использовании не меняется. Очень большие загрузки могут расходовать немного больше заряда.</string>
-    <string name="sx_engine_sheet_undo">Вернуть можно в «Настройки › Расширенные». Лимиты приложений тогда приостановятся, лимиты сайтов продолжат работать.</string>
-    <string name="sx_engine_sheet_enable">Включить и перезапустить VPN</string>
-    <string name="sx_engine_sheet_later">Не сейчас</string>
     <string name="sx_locating_servers">Определяем расположение серверов…</string>
     <string name="sx_geo_locating">Определяем расположение…</string>
     <string name="sx_geo_failed">Расположение не найдено</string>
@@ -289,6 +278,7 @@
     <string name="sx_sort_speed">Скорость</string>
     <string name="sx_mbps">%1$s Мбит/с</string>
     <string name="sx_badge_tunnel">Туннель</string>
+    <string name="sx_engine_applied">Переподключение, чтобы применить изменение</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Истекает через %d день</item>
         <item quantity="few">Истекает через %d дня</item>

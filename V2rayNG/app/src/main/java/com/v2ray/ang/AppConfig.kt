@@ -188,7 +188,13 @@ object AppConfig {
     const val DEFAULT_SOCKS_ENABLE_UDP = true
     const val DEFAULT_LOCAL_DNS_ENABLED = true
     const val DEFAULT_SNIFFING_ENABLED = true
-    const val DEFAULT_USE_HEV_TUNNEL = true
+    /**
+     * SatraNG uses the Xray tunnel engine by default on Android 10+ so per-app and category limits
+     * work out of the box (the core can see which app owns each connection). Older Android has no
+     * owner lookup, so the lighter hev engine stays the default there.
+     */
+    @JvmField
+    val DEFAULT_USE_HEV_TUNNEL = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q
     const val DEFAULT_APPEND_HTTP_PROXY = true
     const val DEFAULT_IPV6_ENABLED = true
     const val DEFAULT_OUTBOUND_DOMAIN_RESOLVE_METHOD = "1"
@@ -196,6 +202,7 @@ object AppConfig {
     const val DEFAULT_HEV_TUNNEL_LOGLEVEL = "warn"
     const val DEFAULT_MUX_XUDP_CONCURRENCY = "8"
     const val PREF_SATRA_LOCAL_PORTS_MIGRATED = "pref_satra_local_ports_migrated_v1"
+    const val PREF_SATRA_ENGINE_XRAY_MIGRATED = "pref_satra_engine_xray_migrated_v1"
     const val PREF_SATRA_TUNNEL_DEFAULTS_SEEDED = "pref_satra_tunnel_defaults_seeded_v1"
 
     /** Message constants for communication. */

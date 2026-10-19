@@ -42,7 +42,6 @@ import com.v2ray.ang.ui.subs.EditSheet
 import com.v2ray.ang.ui.servers.ServerActionsSheet
 import com.v2ray.ang.ui.usage.GlobalRow
 import com.v2ray.ang.ui.usage.RuleRow
-import com.v2ray.ang.ui.usage.EngineSheet
 import com.v2ray.ang.ui.usage.UsageActions
 import com.v2ray.ang.ui.usage.UsageContent
 import com.v2ray.ang.ui.usage.UsageUiState
@@ -320,13 +319,13 @@ class PremiumScreenshotTest {
     // ---------- Sheets (rendered inline) ----------
 
     @Test fun sheetLimitSiteDark() = shot("sheet_limit_site", true, heightDp = 900, inlineSheets = true, still = true) {
-        LimitEditorSheet(EditorTarget.NewSite, usage(), {}, {}, {}, {}, {}, {})
+        LimitEditorSheet(EditorTarget.NewSite, usage(), {}, {}, {}, {}, {})
     }
     @Test fun sheetLimitSiteFaLight() = shot("sheet_limit_site", false, "fa", heightDp = 900, inlineSheets = true, still = true) {
-        LimitEditorSheet(EditorTarget.NewSite, usage(), {}, {}, {}, {}, {}, {})
+        LimitEditorSheet(EditorTarget.NewSite, usage(), {}, {}, {}, {}, {})
     }
     @Test fun sheetLimitEditAppDark() = shot("sheet_limit_app", true, heightDp = 900, inlineSheets = true, still = true) {
-        LimitEditorSheet(EditorTarget.Edit(usage().rules[0].rule), usage(), {}, {}, {}, {}, {}, {})
+        LimitEditorSheet(EditorTarget.Edit(usage().rules[0].rule), usage(), {}, {}, {}, {}, {})
     }
     private val pickerApps = listOf(
         com.v2ray.ang.dto.AppInfo("Instagram", "com.instagram.android", false, 0, com.v2ray.ang.handler.AppCategory.SOCIAL),
@@ -348,19 +347,13 @@ class PremiumScreenshotTest {
         }
     }
     @Test fun sheetLimitCategoryRuDark() = shot("sheet_limit_category", true, "ru", heightDp = 900, inlineSheets = true, still = true) {
-        LimitEditorSheet(EditorTarget.NewCategory(com.v2ray.ang.handler.AppCategory.VIDEO), usage(), {}, {}, {}, {}, {}, {})
-    }
-    @Test fun sheetEngineDark() = shot("sheet_engine", true, heightDp = 700, inlineSheets = true, still = true) {
-        EngineSheet({}, {})
-    }
-    @Test fun sheetEngineRuLight() = shot("sheet_engine", false, "ru", heightDp = 760, inlineSheets = true, still = true) {
-        EngineSheet({}, {})
+        LimitEditorSheet(EditorTarget.NewCategory(com.v2ray.ang.handler.AppCategory.VIDEO), usage(), {}, {}, {}, {}, {})
     }
     @Test fun sheetLimitGlobalLightEn() = shot("sheet_limit_global", false, heightDp = 900, inlineSheets = true, still = true) {
-        LimitEditorSheet(EditorTarget.Global, usage(), {}, {}, {}, {}, {}, {})
+        LimitEditorSheet(EditorTarget.Global, usage(), {}, {}, {}, {}, {})
     }
     @Test fun sheetLimitGlobalFaDarkLarge() = shot("sheet_limit_global", true, "fa", font = 1.3f, heightDp = 1100, inlineSheets = true, still = true) {
-        LimitEditorSheet(EditorTarget.Global, usage(), {}, {}, {}, {}, {}, {})
+        LimitEditorSheet(EditorTarget.Global, usage(), {}, {}, {}, {}, {})
     }
     @Test fun sheetSubEditDark() = shot("sheet_sub_edit", true, heightDp = 900, inlineSheets = true, still = true) {
         EditSheet(subs().rows[0], "", "", noSubs, NoNav, {}, {})

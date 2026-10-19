@@ -41,6 +41,7 @@ object SettingsManager {
         ensureDefaultSettings()
         migrateLegacyLocalPorts()
         seedSatraTunnelDefaults()
+        migrateToXrayEngine()
         //ensureDefaultSubscription()
         initRoutingRulesets(context)
         migrateServerListToSubscriptions()
@@ -535,6 +536,20 @@ object SettingsManager {
         ensureDefaultBool(AppConfig.PREF_AUTO_CONNECT, true)
         ensureDefaultBool(AppConfig.PREF_USER_REQUESTED_STOP, false)
         MmkvManager.encodeSettings(AppConfig.PREF_SATRA_TUNNEL_DEFAULTS_SEEDED, true)
+    }
+
+    /**
+     * One-time switch of existing installs to the Xray tunnel engine (Android 10+), so app and
+     * category limits work without any extra step. Runs at app start, before any tunnel is built
+     * by this process; a tunnel that is already up picks it up on its next (re)connect.
+     */
+    private fun migrateToXrayEngine() {
+        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SATRA_ENGINE_XRAY_MIGRATED, false)) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MmkvManager.encodeSettings(AppConfig.PREF_USE_HEV_TUNNEL, false)
+            MmkvManager.encodeSettings(AppConfig.PREF_ROUTE_ONLY_ENABLED, true)
+        }
+        MmkvManager.encodeSettings(AppConfig.PREF_SATRA_ENGINE_XRAY_MIGRATED, true)
     }
 
     private fun migrateHysteria2PinSHA256() {

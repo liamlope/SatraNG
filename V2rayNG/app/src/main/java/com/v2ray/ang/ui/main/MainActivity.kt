@@ -247,7 +247,7 @@ class MainActivity : HelperBaseComponentActivity(), AppNav {
     override fun enableAppEnforcement() {
         UsageLimitEngine.enableAppEnforcement()
         usageViewModel.refreshApps()
-        LauncherManager.restartService(this)
+        LauncherManager.restartIfRunning(this) { toast(R.string.sx_engine_applied) }
     }
 
     override fun openSystemVpnSettings() {

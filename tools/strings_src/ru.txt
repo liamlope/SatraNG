@@ -176,10 +176,6 @@ sx_period_weekly	Еженедельно
 sx_period_monthly	Ежемесячно
 sx_limit_block_all	Блокировать полностью
 sx_limit_block_all_sub	Никакой трафик не разрешён
-sx_limit_engine_title	Нужен расширенный туннель
-sx_limit_engine_msg	Лимиты для приложений работают с туннелем Xray на Android 10 и новее.
-sx_limit_engine_confirm	SatraNG переключится на туннель Xray и перезапустит VPN. Вернуть прежний режим можно в расширенных настройках.
-sx_limit_engine_enable	Переключить
 sx_limit_android_old	Лимиты для приложений требуют Android 10 или новее. Лимиты для сайтов работают на любой версии.
 sx_preset_youtube	YouTube
 sx_preset_instagram	Instagram
@@ -235,13 +231,6 @@ sx_limit_reset	Сбросить счётчик
 sx_limit_reset_sub	За этот период использовано %1$s. Счёт начнётся с нуля.
 sx_limit_delete_msg	Лимит и его счётчик будут удалены. Больше ничего не блокируется.
 sx_usage_apps_none_yet	Трафик приложений через VPN ещё не записан. Подключитесь — данные появятся в течение минуты.
-sx_engine_sheet_title	Включить лимиты для приложений
-sx_engine_sheet_why	Чтобы считать и блокировать отдельное приложение, SatraNG должен знать, какое приложение открыло соединение. Стандартный туннель этого не видит, поэтому SatraNG переключится на туннель Xray, который это умеет.
-sx_engine_sheet_restart	VPN один раз перезапустится — на секунду-другую.
-sx_engine_sheet_battery	Скорость в обычном использовании не меняется. Очень большие загрузки могут расходовать немного больше заряда.
-sx_engine_sheet_undo	Вернуть можно в «Настройки › Расширенные». Лимиты приложений тогда приостановятся, лимиты сайтов продолжат работать.
-sx_engine_sheet_enable	Включить и перезапустить VPN
-sx_engine_sheet_later	Не сейчас
 sx_locating_servers	Определяем расположение серверов…
 sx_geo_locating	Определяем расположение…
 sx_geo_failed	Расположение не найдено
@@ -287,3 +276,4 @@ sx_speed_test_sub	Скачивает до 8 МБ через этот серве�
 sx_sort_speed	Скорость
 sx_mbps	%1$s Мбит/с
 sx_badge_tunnel	Туннель
+sx_engine_applied	Переподключение, чтобы применить изменение

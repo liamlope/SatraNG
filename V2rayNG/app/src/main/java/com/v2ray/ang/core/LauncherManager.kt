@@ -74,6 +74,16 @@ object LauncherManager {
         startService(context, guid)
     }
 
+    /**
+     * Restarts the tunnel only when one is running and reports it, so a settings change that needs
+     * a fresh tunnel is applied quietly (callers show a tiny toast in [onRestarted]).
+     */
+    fun restartIfRunning(context: Context, onRestarted: () -> Unit = {}) {
+        MessageHelper.sendMsg2ServiceForResult(context, AppConfig.MSG_STATE_RESTART, "") { handled ->
+            if (handled) onRestarted()
+        }
+    }
+
     /** Restarts the active daemon, or delegates to the caller's permission-aware start flow. */
     fun restartServiceOrStart(context: Context, startIfStopped: () -> Unit) {
         MessageHelper.sendMsg2ServiceForResult(context, AppConfig.MSG_STATE_RESTART, "") { handled ->

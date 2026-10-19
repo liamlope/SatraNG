@@ -178,10 +178,6 @@
     <string name="sx_period_monthly">ماهانه</string>
     <string name="sx_limit_block_all">مسدودسازی کامل</string>
     <string name="sx_limit_block_all_sub">هیچ داده‌ای مجاز نیست</string>
-    <string name="sx_limit_engine_title">نیازمند تونل پیشرفته</string>
-    <string name="sx_limit_engine_msg">محدودیت برای هر برنامه با موتور تونل Xray در اندروید ۱۰ یا بالاتر کار می‌کند.</string>
-    <string name="sx_limit_engine_confirm">SatraNG به موتور تونل Xray تغییر می‌کند و VPN را دوباره راه‌اندازی می‌کند. می‌توانید در تنظیمات پیشرفته برگردید.</string>
-    <string name="sx_limit_engine_enable">تغییر بده</string>
     <string name="sx_limit_android_old">محدودیت برنامه‌ها به اندروید ۱۰ یا بالاتر نیاز دارد. محدودیت وب‌سایت‌ها در همه نسخه‌ها کار می‌کند.</string>
     <string name="sx_preset_youtube">یوتیوب</string>
     <string name="sx_preset_instagram">اینستاگرام</string>
@@ -237,13 +233,6 @@
     <string name="sx_limit_reset_sub">%1$s در این دوره مصرف شده. از صفر شروع می‌شود.</string>
     <string name="sx_limit_delete_msg">محدودیت و شمارنده‌اش حذف می‌شود و دیگر چیزی مسدود نیست.</string>
     <string name="sx_usage_apps_none_yet">هنوز ترافیک VPN برای برنامه‌ها ثبت نشده. وصل شوید؛ ظرف یک دقیقه نمایش داده می‌شود.</string>
-    <string name="sx_engine_sheet_title">فعال کردن محدودیت برنامه‌ها</string>
-    <string name="sx_engine_sheet_why">برای شمارش و مسدود کردن یک برنامه، SatraNG باید بداند هر اتصال را کدام برنامه باز کرده. تونل پیش‌فرض این را نمی‌داند؛ پس SatraNG به موتور تونل Xray که این امکان را دارد جابه‌جا می‌شود.</string>
-    <string name="sx_engine_sheet_restart">VPN یک بار، برای یکی دو ثانیه، دوباره راه‌اندازی می‌شود.</string>
-    <string name="sx_engine_sheet_battery">سرعت در استفادهٔ روزمره تغییری نمی‌کند. دانلودهای خیلی سنگین ممکن است کمی باتری بیشتری مصرف کنند.</string>
-    <string name="sx_engine_sheet_undo">می‌توانید در تنظیمات › پیشرفته برگردید. در آن حالت محدودیت برنامه‌ها متوقف می‌شود ولی محدودیت سایت‌ها کار می‌کند.</string>
-    <string name="sx_engine_sheet_enable">فعال‌سازی و راه‌اندازی دوبارهٔ VPN</string>
-    <string name="sx_engine_sheet_later">فعلاً نه</string>
     <string name="sx_locating_servers">در حال یافتن موقعیت سرورها…</string>
     <string name="sx_geo_locating">در حال یافتن موقعیت…</string>
     <string name="sx_geo_failed">موقعیت پیدا نشد</string>
@@ -289,6 +278,7 @@
     <string name="sx_sort_speed">سرعت</string>
     <string name="sx_mbps">%1$s مگابیت</string>
     <string name="sx_badge_tunnel">تانل</string>
+    <string name="sx_engine_applied">برای اعمال تغییر دوباره وصل می‌شویم</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">%d روز دیگر منقضی می‌شود</item>
         <item quantity="other">%d روز دیگر منقضی می‌شود</item>

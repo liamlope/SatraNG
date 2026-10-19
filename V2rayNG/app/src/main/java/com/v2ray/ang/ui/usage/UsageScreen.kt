@@ -103,7 +103,6 @@ fun UsageScreen(vm: UsageViewModel, live: LiveUiState, nav: AppNav) {
 fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageActions) {
     var editor by remember { mutableStateOf<EditorTarget?>(null) }
     var pickingApp by remember { mutableStateOf(false) }
-    var confirmEngine by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf<UsageRule?>(null) }
     val c = Satra.colors
@@ -134,11 +133,6 @@ fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageA
         item(key = "limits-h") {
             Spacer(Modifier.height(8.dp))
             SectionHeader(stringResource(R.string.sx_limits))
-        }
-        if (state.rules.any { it.needsEngine } && state.appRulesSupported) {
-            item(key = "engine") {
-                EngineCard(onEnable = { confirmEngine = true }, Modifier.padding(horizontal = SatraSpace.Gutter).padding(bottom = 12.dp))
-            }
         }
         if (state.rules.isEmpty()) {
             item(key = "limits-empty") {
@@ -216,11 +210,15 @@ fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageA
             item(key = "apps") {
                 InsetGroup(footer = stringResource(R.string.sx_usage_apps_footer)) {
                     state.apps.take(25).forEach { app ->
+                        // An app that already has a limit opens that limit instead of creating a duplicate.
+                        val existingRule = state.rules.firstOrNull { it.rule.kind == RuleKind.APP && it.rule.packageName == app.packageName }?.rule
                         row {
                             AppUsageRowView(
                                 app, maxBytes,
-                                limited = state.rules.any { it.rule.kind == RuleKind.APP && it.rule.packageName == app.packageName },
-                                onClick = app.packageName?.let { pkg -> { editor = EditorTarget.NewApp(pkg, app.label) } },
+                                limited = existingRule != null,
+                                onClick = app.packageName?.let { pkg ->
+                                    { editor = existingRule?.let { EditorTarget.Edit(it) } ?: EditorTarget.NewApp(pkg, app.label) }
+                                },
                             )
                         }
                     }
@@ -259,23 +257,14 @@ fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageA
                 vm.saveRule(rule)
                 editor = null
                 if (rule.matchesApps && rule.enabled && state.appRulesSupported && !state.engineReady) {
-                    when (state.engineChoice) {
-                        true -> nav.enableAppEnforcement()
-                        null -> confirmEngine = true
-                        false -> Unit // asked before and declined; the card keeps offering it
-                    }
+                    // Limits should simply work: switch engines quietly (only happens if the user
+                    // turned the Xray engine off in Advanced settings).
+                    nav.enableAppEnforcement()
                 }
             },
             onDelete = { id -> vm.deleteRule(id); editor = null },
             onReset = { id -> vm.resetRule(id); editor = null },
             onSaveGlobal = { vm.saveGlobal(it); editor = null },
-            onEnableEngine = { confirmEngine = true },
-        )
-    }
-    if (confirmEngine) {
-        EngineSheet(
-            onEnable = { confirmEngine = false; vm.setEngineChoice(true); nav.enableAppEnforcement() },
-            onLater = { confirmEngine = false; vm.setEngineChoice(false) },
         )
     }
     confirmDelete?.let { rule ->
@@ -420,54 +409,6 @@ private fun AppUsageRowView(app: AppUsageRow, maxBytes: Long, limited: Boolean, 
 
 // ───────────────────────────── Limits ─────────────────────────────
 
-@Composable
-private fun EngineCard(onEnable: () -> Unit, modifier: Modifier) {
-    val c = Satra.colors
-    SatraCard(modifier, containerColor = c.warningSoft) {
-        Row(verticalAlignment = Alignment.Top) {
-            Icon(SatraIcons.Warning, null, tint = c.warning, modifier = Modifier.size(22.dp))
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Text(stringResource(R.string.sx_limit_engine_title), style = Satra.type.headline, color = c.textPrimary)
-                Text(stringResource(R.string.sx_limit_engine_msg), style = Satra.type.footnote, color = c.textSecondary)
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        SatraButton(stringResource(R.string.sx_limit_engine_enable), onEnable, compact = true)
-    }
-}
-
-/** One-time explanation shown before switching to the engine that can see which app sent what. */
-@Composable
-internal fun EngineSheet(onEnable: () -> Unit, onLater: () -> Unit) {
-    val c = Satra.colors
-    SatraSheet(onDismiss = onLater) {
-        Column(Modifier.padding(horizontal = SatraSpace.Gutter)) {
-            IconTile(SatraIcons.Apps, c.accent, size = 48.dp)
-            Spacer(Modifier.height(14.dp))
-            Text(stringResource(R.string.sx_engine_sheet_title), style = Satra.type.title2, color = c.textPrimary)
-            Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.sx_engine_sheet_why), style = Satra.type.body, color = c.textSecondary)
-            Spacer(Modifier.height(14.dp))
-            listOf(
-                SatraIcons.Refresh to R.string.sx_engine_sheet_restart,
-                SatraIcons.Speed to R.string.sx_engine_sheet_battery,
-                SatraIcons.Gear to R.string.sx_engine_sheet_undo,
-            ).forEach { (icon, text) ->
-                Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
-                    Icon(icon, null, tint = c.accent, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Text(stringResource(text), style = Satra.type.footnote, color = c.textSecondary)
-                }
-            }
-            Spacer(Modifier.height(20.dp))
-            SatraButton(stringResource(R.string.sx_engine_sheet_enable), onEnable, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(6.dp))
-            SatraButton(stringResource(R.string.sx_engine_sheet_later), onLater, style = SatraButtonStyle.Plain, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(12.dp))
-        }
-    }
-}
 
 @Composable
 private fun periodNoun(period: LimitPeriod): String = stringResource(
@@ -598,7 +539,6 @@ internal fun LimitEditorSheet(
     onDelete: (String) -> Unit,
     onReset: (String) -> Unit,
     onSaveGlobal: (GlobalLimit) -> Unit,
-    onEnableEngine: () -> Unit,
 ) {
     val c = Satra.colors
     val ctx = LocalContext.current
@@ -691,9 +631,6 @@ internal fun LimitEditorSheet(
                         }
                     }
                 }
-                if (state.appRulesSupported && !state.engineReady) {
-                    Notice(stringResource(R.string.sx_limit_engine_msg), action = stringResource(R.string.sx_limit_engine_enable), onAction = onEnableEngine)
-                }
             }
             if (kind == RuleKind.CATEGORY && !isGlobal) {
                 if (!state.appRulesSupported) {
@@ -709,9 +646,6 @@ internal fun LimitEditorSheet(
                             )
                         }
                     }
-                }
-                if (state.appRulesSupported && !state.engineReady) {
-                    Notice(stringResource(R.string.sx_limit_engine_msg), action = stringResource(R.string.sx_limit_engine_enable), onAction = onEnableEngine)
                 }
             }
             if (kind == RuleKind.DOMAIN && !isGlobal) {

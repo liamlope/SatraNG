@@ -43,8 +43,9 @@ object UsageLimitEngine {
      * than hev under sustained heavy traffic (slightly more battery on big downloads, no visible
      * difference for browsing/streaming); one extra system call per new connection for the UID
      * lookup; routing results are the same. It is upstream v2rayNG's own engine, so compatibility
-     * is the same as stock v2rayNG with "hev tun" switched off. We therefore keep hev as the
-     * default and switch only when the user creates an app limit and agrees once.
+     * is the same as stock v2rayNG with "hev tun" switched off. SatraNG therefore uses it by
+     * default on Android 10+ (see AppConfig.DEFAULT_USE_HEV_TUNNEL); if the user switches back to
+     * hev in Advanced settings, saving an app/category limit switches it on again quietly.
      */
 
     /** The user's answer to the one-time "turn on per-app limits" sheet: true, false or null (not asked). */

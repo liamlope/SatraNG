@@ -130,10 +130,6 @@ sx_period_weekly	Weekly	هفتگی
 sx_period_monthly	Monthly	ماهانه
 sx_limit_block_all	Block completely	مسدودسازی کامل
 sx_limit_block_all_sub	No data is allowed at all	هیچ داده‌ای مجاز نیست
-sx_limit_engine_title	Needs the advanced tunnel	نیازمند تونل پیشرفته
-sx_limit_engine_msg	Per-app limits work with the Xray tunnel engine on Android 10 or newer.	محدودیت برای هر برنامه با موتور تونل Xray در اندروید ۱۰ یا بالاتر کار می‌کند.
-sx_limit_engine_confirm	SatraNG will switch to the Xray tunnel engine and restart your VPN. You can switch back in Advanced settings.	SatraNG به موتور تونل Xray تغییر می‌کند و VPN را دوباره راه‌اندازی می‌کند. می‌توانید در تنظیمات پیشرفته برگردید.
-sx_limit_engine_enable	Switch now	تغییر بده
 sx_limit_android_old	Per-app limits need Android 10 or newer. Website limits work on every version.	محدودیت برنامه‌ها به اندروید ۱۰ یا بالاتر نیاز دارد. محدودیت وب‌سایت‌ها در همه نسخه‌ها کار می‌کند.
 sx_preset_youtube	YouTube	یوتیوب
 sx_preset_instagram	Instagram	اینستاگرام
@@ -189,13 +185,6 @@ sx_limit_reset	Reset usage	صفر کردن مصرف
 sx_limit_reset_sub	%1$s used this period. Starts again from zero.	%1$s در این دوره مصرف شده. از صفر شروع می‌شود.
 sx_limit_delete_msg	The limit and its counter are removed. Nothing is blocked any more.	محدودیت و شمارنده‌اش حذف می‌شود و دیگر چیزی مسدود نیست.
 sx_usage_apps_none_yet	No VPN traffic recorded for apps yet. Connect and it shows up within a minute.	هنوز ترافیک VPN برای برنامه‌ها ثبت نشده. وصل شوید؛ ظرف یک دقیقه نمایش داده می‌شود.
-sx_engine_sheet_title	Turn on per-app limits	فعال کردن محدودیت برنامه‌ها
-sx_engine_sheet_why	To count and block one app, SatraNG has to know which app opened each connection. The default tunnel can’t tell, so SatraNG switches to the Xray tunnel engine, which can.	برای شمارش و مسدود کردن یک برنامه، SatraNG باید بداند هر اتصال را کدام برنامه باز کرده. تونل پیش‌فرض این را نمی‌داند؛ پس SatraNG به موتور تونل Xray که این امکان را دارد جابه‌جا می‌شود.
-sx_engine_sheet_restart	Your VPN restarts once, for a second or two.	VPN یک بار، برای یکی دو ثانیه، دوباره راه‌اندازی می‌شود.
-sx_engine_sheet_battery	Everyday speed stays the same. Very large downloads may use slightly more battery.	سرعت در استفادهٔ روزمره تغییری نمی‌کند. دانلودهای خیلی سنگین ممکن است کمی باتری بیشتری مصرف کنند.
-sx_engine_sheet_undo	You can switch back in Settings › Advanced. App limits pause then; website limits keep working.	می‌توانید در تنظیمات › پیشرفته برگردید. در آن حالت محدودیت برنامه‌ها متوقف می‌شود ولی محدودیت سایت‌ها کار می‌کند.
-sx_engine_sheet_enable	Turn on and restart VPN	فعال‌سازی و راه‌اندازی دوبارهٔ VPN
-sx_engine_sheet_later	Not now	فعلاً نه
 sx_locating_servers	Finding where your servers are…	در حال یافتن موقعیت سرورها…
 sx_geo_locating	Finding location…	در حال یافتن موقعیت…
 sx_geo_failed	Location not found	موقعیت پیدا نشد
@@ -241,3 +230,4 @@ sx_speed_test_sub	Downloads up to 8 MB through this server	تا ۸ مگابای�
 sx_sort_speed	Speed	سرعت
 sx_mbps	%1$s Mbps	%1$s مگابیت
 sx_badge_tunnel	Tunnel	تانل
+sx_engine_applied	Reconnecting to apply the change	برای اعمال تغییر دوباره وصل می‌شویم
