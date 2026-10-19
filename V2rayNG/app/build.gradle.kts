@@ -13,8 +13,8 @@ android {
         applicationId = "com.satra.ng"
         minSdk = 24
         targetSdk = 37
-        versionCode = 751
-        versionName = "2.3.11"
+        versionCode = 752
+        versionName = "2.3.12"
 
         val abiFilterList = (properties["ABI_FILTERS"] as? String)?.split(';')
         splits {
