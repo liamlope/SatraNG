@@ -491,4 +491,22 @@
     <string name="sx_rx_not_installed">That app isn’t installed</string>
     <string name="sx_rx_dup">Already in the list</string>
     <string name="sx_rx_remove">Remove %1$s</string>
+    <string name="sx_hs_title">Share VPN over hotspot</string>
+    <string name="sx_hs_sub">Let trusted devices use this connection</string>
+    <string name="sx_hs_toggle">Share over hotspot / Wi-Fi</string>
+    <string name="sx_hs_toggle_sub">SOCKS5 and HTTP proxy on this phone’s network</string>
+    <string name="sx_hs_warn">Only for devices you trust: anyone on this network with the details can use your VPN. Turns off when you disconnect.</string>
+    <string name="sx_hs_auth">Require password</string>
+    <string name="sx_hs_auth_sub">Recommended. A random password is created for you.</string>
+    <string name="sx_hs_no_ip">No hotspot or Wi-Fi network found. Turn on the hotspot, then come back.</string>
+    <string name="sx_hs_user">Username</string>
+    <string name="sx_hs_pass">Password</string>
+    <string name="sx_hs_link">Link</string>
+    <string name="sx_hs_qr">Proxy QR code</string>
+    <string name="sx_hs_copy">Copy</string>
+    <string name="sx_hs_howto">How to connect</string>
+    <string name="sx_hs_step_phone">Phone</string>
+    <string name="sx_hs_step_phone_sub">Join this hotspot → Wi-Fi details → Proxy: Manual → enter the IP and HTTP port (and the password when asked).</string>
+    <string name="sx_hs_step_pc">PC</string>
+    <string name="sx_hs_step_pc_sub">Join this hotspot → Settings → Network → Proxy → manual setup with the IP and HTTP port, or use SOCKS5 in your browser or app.</string>
 </resources>

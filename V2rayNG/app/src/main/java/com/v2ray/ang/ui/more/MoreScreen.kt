@@ -123,6 +123,10 @@ fun MoreContent(
                         stringResource(R.string.sx_set_security_check), stringResource(R.string.sx_set_security_check_sub),
                         SatraIcons.ShieldCheck, c.success, "security leak dns ipv6 webrtc check test",
                     ) { secCtx.startActivity(android.content.Intent(secCtx, com.v2ray.ang.ui.security.SecurityCheckActivity::class.java)) },
+                    navRow(
+                        stringResource(R.string.sx_hs_title), stringResource(R.string.sx_hs_sub),
+                        SatraIcons.Wifi, c.info, "hotspot share lan tether proxy wifi",
+                    ) { secCtx.startActivity(android.content.Intent(secCtx, com.v2ray.ang.ui.hotspot.HotspotShareActivity::class.java)) },
                     spec(stringResource(R.string.sx_set_mode), stringResource(R.string.sx_set_mode_sub), "vpn proxy mode") {
                         row {
                             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {

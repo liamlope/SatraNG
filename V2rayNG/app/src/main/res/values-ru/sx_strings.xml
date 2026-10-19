@@ -515,4 +515,22 @@
     <string name="sx_rx_not_installed">Это приложение не установлено</string>
     <string name="sx_rx_dup">Уже в списке</string>
     <string name="sx_rx_remove">Удалить %1$s</string>
+    <string name="sx_hs_title">Раздать VPN через точку доступа</string>
+    <string name="sx_hs_sub">Доверенные устройства используют это подключение</string>
+    <string name="sx_hs_toggle">Раздача через точку доступа / Wi-Fi</string>
+    <string name="sx_hs_toggle_sub">SOCKS5 и HTTP-прокси в сети этого телефона</string>
+    <string name="sx_hs_warn">Только для доверенных устройств: любой в этой сети с этими данными сможет пользоваться вашим VPN. Выключается при отключении.</string>
+    <string name="sx_hs_auth">Требовать пароль</string>
+    <string name="sx_hs_auth_sub">Рекомендуется. Будет создан случайный пароль.</string>
+    <string name="sx_hs_no_ip">Точка доступа или Wi-Fi не найдены. Включите точку доступа и вернитесь.</string>
+    <string name="sx_hs_user">Имя пользователя</string>
+    <string name="sx_hs_pass">Пароль</string>
+    <string name="sx_hs_link">Ссылка</string>
+    <string name="sx_hs_qr">QR-код прокси</string>
+    <string name="sx_hs_copy">Копировать</string>
+    <string name="sx_hs_howto">Как подключиться</string>
+    <string name="sx_hs_step_phone">Телефон</string>
+    <string name="sx_hs_step_phone_sub">Подключитесь к точке доступа → сведения о Wi-Fi → Прокси: вручную → IP и HTTP-порт (и пароль, если спросят).</string>
+    <string name="sx_hs_step_pc">Компьютер</string>
+    <string name="sx_hs_step_pc_sub">Подключитесь к точке доступа → Параметры → Сеть → Прокси → вручную: IP и HTTP-порт, или SOCKS5 в браузере или приложении.</string>
 </resources>

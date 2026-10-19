@@ -185,6 +185,16 @@ fun HomeScreen(
                                 compact = true,
                             )
                         }
+                        val hsCtx = androidx.compose.ui.platform.LocalContext.current
+                        com.v2ray.ang.ui.compose.satra.SatraCard(onClick = {
+                            details = false
+                            hsCtx.startActivity(android.content.Intent(hsCtx, com.v2ray.ang.ui.hotspot.HotspotShareActivity::class.java))
+                        }) {
+                            com.v2ray.ang.ui.compose.satra.SatraRow(
+                                stringResource(R.string.sx_hs_title), subtitle = stringResource(R.string.sx_hs_sub),
+                                icon = SatraIcons.Wifi, iconColor = Satra.colors.info, chevron = true,
+                            )
+                        }
                         TrafficCard(live, onOpenUsage = { details = false; onOpenUsage() })
                         state.quota?.let { QuotaCard(it) }
                     }

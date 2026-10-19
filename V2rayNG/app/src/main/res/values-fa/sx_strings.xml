@@ -491,4 +491,22 @@
     <string name="sx_rx_not_installed">این برنامه نصب نیست</string>
     <string name="sx_rx_dup">از قبل در فهرست هست</string>
     <string name="sx_rx_remove">حذف %1$s</string>
+    <string name="sx_hs_title">اشتراک VPN با هات‌اسپات</string>
+    <string name="sx_hs_sub">دستگاه‌های مورد اعتماد از همین اتصال استفاده کنند</string>
+    <string name="sx_hs_toggle">اشتراک از طریق هات‌اسپات / وای‌فای</string>
+    <string name="sx_hs_toggle_sub">پروکسی SOCKS5 و HTTP روی شبکهٔ این گوشی</string>
+    <string name="sx_hs_warn">فقط برای دستگاه‌های مورد اعتماد: هر کسی در این شبکه با این مشخصات می‌تواند از VPN شما استفاده کند. با قطع اتصال خاموش می‌شود.</string>
+    <string name="sx_hs_auth">نیاز به رمز عبور</string>
+    <string name="sx_hs_auth_sub">توصیه می‌شود. یک رمز تصادفی برایتان ساخته می‌شود.</string>
+    <string name="sx_hs_no_ip">هات‌اسپات یا وای‌فایی پیدا نشد. هات‌اسپات را روشن کنید و برگردید.</string>
+    <string name="sx_hs_user">نام کاربری</string>
+    <string name="sx_hs_pass">رمز عبور</string>
+    <string name="sx_hs_link">لینک</string>
+    <string name="sx_hs_qr">کد QR پروکسی</string>
+    <string name="sx_hs_copy">کپی</string>
+    <string name="sx_hs_howto">نحوهٔ اتصال</string>
+    <string name="sx_hs_step_phone">گوشی</string>
+    <string name="sx_hs_step_phone_sub">به این هات‌اسپات وصل شوید ← جزئیات وای‌فای ← پروکسی: دستی ← آی‌پی و پورت HTTP را وارد کنید (و در صورت درخواست، رمز).</string>
+    <string name="sx_hs_step_pc">رایانه</string>
+    <string name="sx_hs_step_pc_sub">به این هات‌اسپات وصل شوید ← تنظیمات ← شبکه ← پروکسی ← تنظیم دستی با آی‌پی و پورت HTTP، یا SOCKS5 در مرورگر یا برنامه.</string>
 </resources>

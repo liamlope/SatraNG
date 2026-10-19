@@ -192,6 +192,8 @@ object CoreServiceManager {
      */
     fun stopCoreLoop(): Boolean {
         connectionTestScope.coroutineContext.cancelChildren()
+        // Hotspot sharing never outlives the connection (a restart keeps it).
+        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_USER_REQUESTED_STOP, false)) com.v2ray.ang.handler.HotspotShare.onDisconnect()
         val service = getService() ?: return false
 
         networkMonitor?.unregister()

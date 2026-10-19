@@ -342,6 +342,9 @@
         <activity
             android:name=".ui.security.SecurityCheckActivity"
             android:exported="false" />
+        <activity
+            android:name=".ui.hotspot.HotspotShareActivity"
+            android:exported="false" />
         <!-- =====================Tasker===================== -->
         <activity
             android:name=".ui.shortcut.TaskerActivity"

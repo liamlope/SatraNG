@@ -524,9 +524,8 @@ object CoreConfigManager {
             inbound1.settings = V2rayConfig.InboundBean.InSettingsBean()
         }
 
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_PROXY_SHARING) != true) {
-            inbound1.listen = AppConfig.LOOPBACK
-        }
+        // LAN/hotspot sharing binds every interface; otherwise loopback only.
+        inbound1.listen = if (MmkvManager.decodeSettingsBool(AppConfig.PREF_PROXY_SHARING) == true) "0.0.0.0" else AppConfig.LOOPBACK
         inbound1.port = socksPort
         inbound1.settings?.udp =
             MmkvManager.decodeSettingsBool(AppConfig.PREF_SOCKS_ENABLE_UDP, AppConfig.DEFAULT_SOCKS_ENABLE_UDP)
