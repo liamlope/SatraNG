@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notification / status-bar icon: the new SatraNG "S" mark, white on transparent. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="40" android:viewportHeight="40">
+    <group android:translateX="-34" android:translateY="-31">
+        <path android:pathData="M65.5,35.5 A11.5,10.75 0 1 0 54,51.25 A11.5,10.75 0 1 1 42.5,67"
+            android:strokeColor="#FFFFFFFF" android:strokeWidth="7"
+            android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+    </group>
+</vector>

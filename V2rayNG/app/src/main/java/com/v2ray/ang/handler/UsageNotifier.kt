@@ -96,7 +96,8 @@ object UsageNotifier {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val builder = NotificationCompat.Builder(ctx, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_stat_satra)
+            .setSmallIcon(R.drawable.ic_notif_satra)
+            .setColor(com.v2ray.ang.handler.NOTIF_ORANGE)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))

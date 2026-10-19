@@ -325,7 +325,7 @@
             android:name=".service.QSTileService"
             android:exported="true"
             android:foregroundServiceType="specialUse"
-            android:icon="@drawable/ic_satra_glyph"
+            android:icon="@drawable/ic_notif_satra"
             android:label="@string/app_tile_name"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:process=":daemon">

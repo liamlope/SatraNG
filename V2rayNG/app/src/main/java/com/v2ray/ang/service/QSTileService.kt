@@ -32,7 +32,7 @@ class QSTileService : TileService() {
     fun setState(state: Int) {
         val tile = qsTile ?: return
         val on = state == Tile.STATE_ACTIVE
-        tile.icon = Icon.createWithResource(applicationContext, R.drawable.ic_satra_glyph)
+        tile.icon = Icon.createWithResource(applicationContext, R.drawable.ic_notif_satra)
         tile.state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         // Label = the config it connects to (or is connected through).
         val name = if (on) CoreServiceManager.getRunningServerName().ifBlank { ToggleSurfaces.selectedName(this) }

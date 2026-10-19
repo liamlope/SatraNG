@@ -112,11 +112,7 @@ fun AboutScreen(
                             .background(Color.White.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_satra_mark),
-                            contentDescription = null,
-                            modifier = Modifier.size(56.dp)
-                        )
+                        com.v2ray.ang.ui.compose.satra.SatraLogo(connected = false, size = 56.dp)
                     }
                     Text(
                         text = stringResource(R.string.app_name),

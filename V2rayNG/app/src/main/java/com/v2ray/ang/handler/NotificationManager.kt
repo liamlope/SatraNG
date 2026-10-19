@@ -104,7 +104,7 @@ object NotificationManager {
             if (isEmpty()) append(service.getString(R.string.app_name))
         }
         mBuilder = NotificationCompat.Builder(service, channelId)
-            .setSmallIcon(R.drawable.ic_stat_satra)
+            .setSmallIcon(R.drawable.ic_notif_satra)
             .setContentTitle(title)
             .setContentText(subtitle)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -112,6 +112,7 @@ object NotificationManager {
             .setShowWhen(false)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentPendingIntent)
+            .setColor(NOTIF_GREEN) // shown only while connected
         if (prefs.actionStop) {
             mBuilder?.addAction(
                 R.drawable.ic_delete_24dp,
@@ -130,12 +131,13 @@ object NotificationManager {
         // Lock screen: the channel hides private text, so give it a public version that still
         // carries Disconnect (no config name shown there).
         val publicBuilder = NotificationCompat.Builder(service, channelId)
-            .setSmallIcon(R.drawable.ic_stat_satra)
+            .setSmallIcon(R.drawable.ic_notif_satra)
             .setContentTitle(title)
             .setContentText(service.getString(R.string.app_name))
             .setOngoing(true)
             .setShowWhen(false)
             .setContentIntent(contentPendingIntent)
+            .setColor(NOTIF_GREEN)
             .addAction(R.drawable.ic_delete_24dp, service.getString(R.string.notification_action_stop_v2ray), stopV2RayPendingIntent)
         mBuilder?.setPublicVersion(publicBuilder.build())
         mBuilder?.setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
@@ -209,13 +211,8 @@ object NotificationManager {
      */
     private fun updateNotification(contentText: String?, proxyTraffic: Long, directTraffic: Long) {
         if (mBuilder != null) {
-            if (proxyTraffic < NOTIFICATION_ICON_THRESHOLD && directTraffic < NOTIFICATION_ICON_THRESHOLD) {
-                mBuilder?.setSmallIcon(R.drawable.ic_stat_satra)
-            } else if (proxyTraffic > directTraffic) {
-                mBuilder?.setSmallIcon(R.drawable.ic_stat_proxy)
-            } else {
-                mBuilder?.setSmallIcon(R.drawable.ic_stat_direct)
-            }
+            // One icon always (the old proxy/direct icons were the previous logo).
+            mBuilder?.setSmallIcon(R.drawable.ic_notif_satra)
             mBuilder?.setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             mBuilder?.setContentText(contentText)
             getNotificationManager()?.notify(NOTIFICATION_ID, mBuilder?.build())
@@ -307,3 +304,7 @@ object NotificationManager {
         return CoreServiceManager.serviceControl?.get()?.getService()
     }
 }
+
+/** Brand colours for notification accents: green while protected. */
+internal const val NOTIF_GREEN = 0xFF22C55E.toInt()
+internal const val NOTIF_ORANGE = 0xFFFF5E00.toInt()
