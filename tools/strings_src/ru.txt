@@ -264,3 +264,17 @@ sx_smart_chosen	Подключаемся к %1$s · %2$d мс
 sx_topup_mb	+%1$s МБ
 sx_topup_gb	+%1$s ГБ
 sx_notif_topup_hint	Нажмите на объём, чтобы сразу разрешить больше.
+sx_cat_social	Соцсети
+sx_cat_messaging	Мессенджеры
+sx_cat_video	Видео и музыка
+sx_cat_games	Игры
+sx_cat_browsers	Браузеры
+sx_cat_vpn	VPN и прокси
+sx_cat_shopping	Покупки
+sx_cat_productivity	Работа и продуктивность
+sx_cat_other	Другое
+sx_cat_system	Системные
+sx_show_system_apps	Показать системные приложения
+sx_cat_limit_all	Ограничить все
+sx_limit_edit_cat_title	Лимит категории
+sx_limit_cat_note	У всех приложений группы общий счётчик. Приложения со своим лимитом считаются отдельно.

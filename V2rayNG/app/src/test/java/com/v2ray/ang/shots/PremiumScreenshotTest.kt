@@ -328,6 +328,28 @@ class PremiumScreenshotTest {
     @Test fun sheetLimitEditAppDark() = shot("sheet_limit_app", true, heightDp = 900, inlineSheets = true, still = true) {
         LimitEditorSheet(EditorTarget.Edit(usage().rules[0].rule), usage(), {}, {}, {}, {}, {}, {})
     }
+    private val pickerApps = listOf(
+        com.v2ray.ang.dto.AppInfo("Instagram", "com.instagram.android", false, 0, com.v2ray.ang.handler.AppCategory.SOCIAL),
+        com.v2ray.ang.dto.AppInfo("Telegram", "org.telegram.messenger", false, 0, com.v2ray.ang.handler.AppCategory.MESSAGING),
+        com.v2ray.ang.dto.AppInfo("WhatsApp", "com.whatsapp", false, 0, com.v2ray.ang.handler.AppCategory.MESSAGING),
+        com.v2ray.ang.dto.AppInfo("YouTube", "com.google.android.youtube", true, 0, com.v2ray.ang.handler.AppCategory.VIDEO),
+        com.v2ray.ang.dto.AppInfo("Chrome", "com.android.chrome", true, 0, com.v2ray.ang.handler.AppCategory.BROWSERS),
+        com.v2ray.ang.dto.AppInfo("Clash of Clans", "com.supercell.clashofclans", false, 0, com.v2ray.ang.handler.AppCategory.GAMES),
+        com.v2ray.ang.dto.AppInfo("Settings extra", "com.vendor.extra", true, 0, com.v2ray.ang.handler.AppCategory.SYSTEM),
+    )
+    @Test fun sheetAppPickerDark() = shot("sheet_app_picker", true, heightDp = 900, inlineSheets = true, still = true) {
+        com.v2ray.ang.ui.compose.satra.SatraSheet(onDismiss = {}) {
+            com.v2ray.ang.ui.compose.satra.AppPickerContent("Choose an app", pickerApps, false, emptySet(), false, {}, setOf("com.whatsapp"), onPickCategory = {})
+        }
+    }
+    @Test fun sheetAppPickerFaLight() = shot("sheet_app_picker", false, "fa", heightDp = 900, inlineSheets = true, still = true) {
+        com.v2ray.ang.ui.compose.satra.SatraSheet(onDismiss = {}) {
+            com.v2ray.ang.ui.compose.satra.AppPickerContent("انتخاب برنامه", pickerApps, false, emptySet(), false, {}, onPickCategory = {})
+        }
+    }
+    @Test fun sheetLimitCategoryRuDark() = shot("sheet_limit_category", true, "ru", heightDp = 900, inlineSheets = true, still = true) {
+        LimitEditorSheet(EditorTarget.NewCategory(com.v2ray.ang.handler.AppCategory.VIDEO), usage(), {}, {}, {}, {}, {}, {})
+    }
     @Test fun sheetEngineDark() = shot("sheet_engine", true, heightDp = 700, inlineSheets = true, still = true) {
         EngineSheet({}, {})
     }

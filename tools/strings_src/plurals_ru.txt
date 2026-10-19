@@ -34,3 +34,7 @@ sx_add_configs_done|one|Добавлен %d сервер
 sx_add_configs_done|few|Добавлено %d сервера
 sx_add_configs_done|many|Добавлено %d серверов
 sx_add_configs_done|other|Добавлено %d сервера
+sx_cat_apps|one|%d приложение
+sx_cat_apps|few|%d приложения
+sx_cat_apps|many|%d приложений
+sx_cat_apps|other|%d приложения

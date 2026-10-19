@@ -102,7 +102,9 @@ object UsageLimitEngine {
         val additions = ArrayList<V2rayConfig.RoutingBean.RulesBean>()
         val cloneTags = HashSet<String>()
 
-        for (rule in rules) {
+        // First match wins in the core: single apps and websites before whole categories, so an
+        // app with its own limit is counted there and not in its category.
+        for (rule in rules.sortedBy { if (it.kind == RuleKind.CATEGORY) 1 else 0 }) {
             val matcher = when (rule.kind) {
                 RuleKind.APP -> {
                     if (!appOk || rule.packageName.isBlank()) continue
@@ -113,6 +115,13 @@ object UsageLimitEngine {
                 RuleKind.DOMAIN -> {
                     if (rule.domains.isEmpty()) continue
                     V2rayConfig.RoutingBean.RulesBean(domain = rule.domains)
+                }
+                RuleKind.CATEGORY -> {
+                    val cat = rule.appCategory ?: continue
+                    if (!appOk) continue
+                    val uids = PackageUidResolver.packageNamesToUids(context, AppCategories.packagesIn(context, cat)).distinct()
+                    if (uids.isEmpty()) continue
+                    V2rayConfig.RoutingBean.RulesBean(process = uids)
                 }
             }
             if (isBlockedNow(rule)) {

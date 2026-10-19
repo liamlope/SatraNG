@@ -266,6 +266,20 @@
     <string name="sx_topup_mb">+%1$s مگابایت</string>
     <string name="sx_topup_gb">+%1$s گیگابایت</string>
     <string name="sx_notif_topup_hint">برای اجازهٔ حجم بیشتر، همین حالا روی یک مقدار بزنید.</string>
+    <string name="sx_cat_social">شبکهٔ اجتماعی</string>
+    <string name="sx_cat_messaging">پیام‌رسان</string>
+    <string name="sx_cat_video">ویدیو و موسیقی</string>
+    <string name="sx_cat_games">بازی</string>
+    <string name="sx_cat_browsers">مرورگر</string>
+    <string name="sx_cat_vpn">VPN و پروکسی</string>
+    <string name="sx_cat_shopping">خرید</string>
+    <string name="sx_cat_productivity">کار و بهره‌وری</string>
+    <string name="sx_cat_other">سایر</string>
+    <string name="sx_cat_system">سیستمی</string>
+    <string name="sx_show_system_apps">نمایش برنامه‌های سیستمی</string>
+    <string name="sx_cat_limit_all">محدود کردن همه</string>
+    <string name="sx_limit_edit_cat_title">محدودیت دسته</string>
+    <string name="sx_limit_cat_note">همهٔ برنامه‌های این دسته یک شمارندهٔ مشترک دارند. برنامه‌ای که محدودیت جداگانه دارد، همان‌جا شمرده می‌شود.</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">%d روز دیگر منقضی می‌شود</item>
         <item quantity="other">%d روز دیگر منقضی می‌شود</item>
@@ -301,5 +315,9 @@
     <plurals name="sx_add_configs_done">
         <item quantity="one">%d سرور اضافه شد</item>
         <item quantity="other">%d سرور اضافه شد</item>
+    </plurals>
+    <plurals name="sx_cat_apps">
+        <item quantity="one">%d برنامه</item>
+        <item quantity="other">%d برنامه</item>
     </plurals>
 </resources>

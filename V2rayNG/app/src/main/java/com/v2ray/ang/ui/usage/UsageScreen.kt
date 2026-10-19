@@ -83,6 +83,7 @@ internal sealed interface EditorTarget {
     data class Edit(val rule: UsageRule) : EditorTarget
     data class NewApp(val packageName: String? = null, val label: String = "") : EditorTarget
     data object NewSite : EditorTarget
+    data class NewCategory(val category: com.v2ray.ang.handler.AppCategory) : EditorTarget
     data object Global : EditorTarget
 }
 
@@ -245,6 +246,8 @@ fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageA
                 pickingApp = false
                 picked.firstOrNull()?.let { editor = EditorTarget.NewApp(it) }
             },
+            onPickCategory = { cat -> pickingApp = false; editor = EditorTarget.NewCategory(cat) },
+            disabledCategories = state.rules.mapNotNull { it.rule.takeIf { r -> r.kind == RuleKind.CATEGORY }?.appCategory }.toSet(),
         )
     }
     editor?.let { target ->
@@ -255,7 +258,7 @@ fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageA
             onSaveRule = { rule ->
                 vm.saveRule(rule)
                 editor = null
-                if (rule.kind == RuleKind.APP && rule.enabled && state.appRulesSupported && !state.engineReady) {
+                if (rule.matchesApps && rule.enabled && state.appRulesSupported && !state.engineReady) {
                     when (state.engineChoice) {
                         true -> nav.enableAppEnforcement()
                         null -> confirmEngine = true
@@ -487,11 +490,17 @@ private fun RuleCard(
     var menu by remember { mutableStateOf(false) }
     SatraCard(modifier, onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (rule.kind == RuleKind.APP) AppIcon(row.iconPackage, size = 40.dp)
-            else IconTile(SatraIcons.Globe, c.info, size = 40.dp)
+            when (rule.kind) {
+                RuleKind.APP -> AppIcon(row.iconPackage, size = 40.dp)
+                RuleKind.CATEGORY -> IconTile(SatraIcons.Apps, c.accent, size = 40.dp)
+                RuleKind.DOMAIN -> IconTile(SatraIcons.Globe, c.info, size = 40.dp)
+            }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(rule.label, style = Satra.type.headline, color = c.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    rule.appCategory?.let { com.v2ray.ang.ui.compose.satra.categoryLabel(it) } ?: rule.label,
+                    style = Satra.type.headline, color = c.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     when {
                         rule.alwaysBlock -> stringResource(R.string.sx_limit_always_block)
@@ -588,8 +597,11 @@ internal fun LimitEditorSheet(
     val kind = when (target) {
         is EditorTarget.Edit -> target.rule.kind
         is EditorTarget.NewApp -> RuleKind.APP
+        is EditorTarget.NewCategory -> RuleKind.CATEGORY
         else -> RuleKind.DOMAIN
     }
+    val category = existing?.appCategory ?: (target as? EditorTarget.NewCategory)?.category
+    val categoryName = category?.let { com.v2ray.ang.ui.compose.satra.categoryLabel(it) }.orEmpty()
     val initialMb: Long = when {
         existing != null -> existing.limitBytes / (1024 * 1024)
         isGlobal -> state.global.limit.limitBytes / (1024 * 1024)
@@ -631,6 +643,7 @@ internal fun LimitEditorSheet(
     val canSave = when {
         isGlobal -> !globalOn || amountMb > 0L
         kind == RuleKind.APP -> appOk && amountValid
+        kind == RuleKind.CATEGORY -> category != null && amountValid
         else -> domainsValid && label.isNotBlank() && amountValid
     }
 
@@ -641,6 +654,7 @@ internal fun LimitEditorSheet(
                 text = when {
                     isGlobal -> stringResource(R.string.sx_limit_global)
                     kind == RuleKind.APP -> stringResource(R.string.sx_limit_edit_app_title)
+                    kind == RuleKind.CATEGORY -> stringResource(R.string.sx_limit_edit_cat_title)
                     else -> stringResource(R.string.sx_limit_edit_site_title)
                 },
                 subtitle = if (isGlobal) stringResource(R.string.sx_limit_global_sub) else null,
@@ -663,6 +677,25 @@ internal fun LimitEditorSheet(
                                 leading = { AppIcon(pkg.takeIf { it.isNotBlank() }, size = 40.dp) },
                                 chevron = existing == null,
                                 onClick = if (existing == null) ({ pickingApp = true }) else null,
+                            )
+                        }
+                    }
+                }
+                if (state.appRulesSupported && !state.engineReady) {
+                    Notice(stringResource(R.string.sx_limit_engine_msg), action = stringResource(R.string.sx_limit_engine_enable), onAction = onEnableEngine)
+                }
+            }
+            if (kind == RuleKind.CATEGORY && !isGlobal) {
+                if (!state.appRulesSupported) {
+                    Notice(stringResource(R.string.sx_limit_android_old), warning = true)
+                }
+                Box(Modifier.padding(top = 6.dp)) {
+                    InsetGroup {
+                        row {
+                            SatraRow(
+                                title = categoryName,
+                                subtitle = stringResource(R.string.sx_limit_cat_note),
+                                leading = { IconTile(SatraIcons.Apps, c.accent, size = 40.dp) },
                             )
                         }
                     }
@@ -787,8 +820,9 @@ internal fun LimitEditorSheet(
                             onSaveRule(
                                 base.copy(
                                     kind = kind,
-                                    label = label.ifBlank { pkg },
+                                    label = if (kind == RuleKind.CATEGORY) categoryName else label.ifBlank { pkg },
                                     packageName = if (kind == RuleKind.APP) pkg else "",
+                                    category = if (kind == RuleKind.CATEGORY) category?.name.orEmpty() else "",
                                     domains = if (kind == RuleKind.DOMAIN) parsedDomains else emptyList(),
                                     limitBytes = if (blockAll) 0L else amountMb * 1024 * 1024,
                                     period = period,

@@ -266,6 +266,20 @@
     <string name="sx_topup_mb">+%1$s МБ</string>
     <string name="sx_topup_gb">+%1$s ГБ</string>
     <string name="sx_notif_topup_hint">Нажмите на объём, чтобы сразу разрешить больше.</string>
+    <string name="sx_cat_social">Соцсети</string>
+    <string name="sx_cat_messaging">Мессенджеры</string>
+    <string name="sx_cat_video">Видео и музыка</string>
+    <string name="sx_cat_games">Игры</string>
+    <string name="sx_cat_browsers">Браузеры</string>
+    <string name="sx_cat_vpn">VPN и прокси</string>
+    <string name="sx_cat_shopping">Покупки</string>
+    <string name="sx_cat_productivity">Работа и продуктивность</string>
+    <string name="sx_cat_other">Другое</string>
+    <string name="sx_cat_system">Системные</string>
+    <string name="sx_show_system_apps">Показать системные приложения</string>
+    <string name="sx_cat_limit_all">Ограничить все</string>
+    <string name="sx_limit_edit_cat_title">Лимит категории</string>
+    <string name="sx_limit_cat_note">У всех приложений группы общий счётчик. Приложения со своим лимитом считаются отдельно.</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Истекает через %d день</item>
         <item quantity="few">Истекает через %d дня</item>
@@ -319,5 +333,11 @@
         <item quantity="few">Добавлено %d сервера</item>
         <item quantity="many">Добавлено %d серверов</item>
         <item quantity="other">Добавлено %d сервера</item>
+    </plurals>
+    <plurals name="sx_cat_apps">
+        <item quantity="one">%d приложение</item>
+        <item quantity="few">%d приложения</item>
+        <item quantity="many">%d приложений</item>
+        <item quantity="other">%d приложения</item>
     </plurals>
 </resources>

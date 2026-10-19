@@ -4,7 +4,8 @@ import com.google.gson.Gson
 import java.util.Locale
 import java.util.UUID
 
-enum class RuleKind { APP, DOMAIN }
+/** APP: one package. DOMAIN: websites. CATEGORY: every installed app of an [AppCategory]. */
+enum class RuleKind { APP, DOMAIN, CATEGORY }
 
 /**
  * A traffic rule. [limitBytes] == 0 means "always block"; otherwise traffic is counted per
@@ -25,8 +26,15 @@ data class UsageRule(
     val period: LimitPeriod = LimitPeriod.DAILY,
     val enabled: Boolean = true,
     val createdAt: Long = 0L,
+    /** [AppCategory] name for [RuleKind.CATEGORY]. */
+    val category: String = "",
 ) {
     val alwaysBlock: Boolean get() = limitBytes <= 0L
+
+    /** App and category rules match by app (UID), so they need the Xray tunnel engine. */
+    val matchesApps: Boolean get() = kind == RuleKind.APP || kind == RuleKind.CATEGORY
+
+    val appCategory: AppCategory? get() = AppCategory.entries.firstOrNull { it.name == category }
 
     /** Tag of the counting outbound clone for this rule. */
     val outboundTag: String get() = "$COUNT_TAG_PREFIX${id.take(8)}"
@@ -118,7 +126,7 @@ object UsageRulesRepository {
         if (raw.isNullOrBlank()) return emptyList()
         return try {
             gson.fromJson(raw, Array<UsageRule>::class.java)
-                ?.filter { it.id.isNotBlank() && (it.kind == RuleKind.APP || it.kind == RuleKind.DOMAIN) }
+                ?.filter { r -> r.id.isNotBlank() && (r.kind as RuleKind?) != null && (r.kind != RuleKind.CATEGORY || r.appCategory != null) }
                 ?.map { it.sanitized() }
                 .orEmpty()
         } catch (_: Exception) {

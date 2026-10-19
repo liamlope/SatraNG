@@ -217,3 +217,17 @@ sx_smart_chosen	Connecting to %1$s · %2$d ms	اتصال به %1$s · %2$d می�
 sx_topup_mb	+%1$s MB	+%1$s مگابایت
 sx_topup_gb	+%1$s GB	+%1$s گیگابایت
 sx_notif_topup_hint	Tap an amount to allow more right away.	برای اجازهٔ حجم بیشتر، همین حالا روی یک مقدار بزنید.
+sx_cat_social	Social	شبکهٔ اجتماعی
+sx_cat_messaging	Messaging	پیام‌رسان
+sx_cat_video	Video & music	ویدیو و موسیقی
+sx_cat_games	Games	بازی
+sx_cat_browsers	Browsers	مرورگر
+sx_cat_vpn	VPN & proxy	VPN و پروکسی
+sx_cat_shopping	Shopping	خرید
+sx_cat_productivity	Work & productivity	کار و بهره‌وری
+sx_cat_other	Other	سایر
+sx_cat_system	System	سیستمی
+sx_show_system_apps	Show system apps	نمایش برنامه‌های سیستمی
+sx_cat_limit_all	Limit all	محدود کردن همه
+sx_limit_edit_cat_title	Category limit	محدودیت دسته
+sx_limit_cat_note	All apps in this group share one counter. Apps with their own limit are counted there instead.	همهٔ برنامه‌های این دسته یک شمارندهٔ مشترک دارند. برنامه‌ای که محدودیت جداگانه دارد، همان‌جا شمرده می‌شود.

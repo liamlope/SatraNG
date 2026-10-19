@@ -151,7 +151,7 @@ class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
                 blocked = blocked,
                 nextResetMs = UsagePeriods.nextReset(rule.period, now),
                 iconPackage = rule.packageName.takeIf { rule.kind == RuleKind.APP },
-                needsEngine = rule.kind == RuleKind.APP && rule.enabled && !UsageLimitEngine.canEnforceAppRules(),
+                needsEngine = rule.matchesApps && rule.enabled && !UsageLimitEngine.canEnforceAppRules(),
             )
         }
         val g = UsageRulesRepository.global()

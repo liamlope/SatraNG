@@ -16,3 +16,5 @@ sx_add_sub_done|one|Subscription added: %d server|اشتراک اضافه شد: 
 sx_add_sub_done|other|Subscription added: %d servers|اشتراک اضافه شد: %d سرور
 sx_add_configs_done|one|%d server added|%d سرور اضافه شد
 sx_add_configs_done|other|%d servers added|%d سرور اضافه شد
+sx_cat_apps|one|%d app|%d برنامه
+sx_cat_apps|other|%d apps|%d برنامه

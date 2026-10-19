@@ -37,7 +37,7 @@ object AppManagerUtil {
                 }
                 val appName = applicationInfo.loadLabel(packageManager).toString()
                 val isSystemApp = applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM > 0
-                apps.add(AppInfo(appName, packageName, isSystemApp, 0))
+                apps.add(AppInfo(appName, packageName, isSystemApp, 0, com.v2ray.ang.handler.AppCategories.of(applicationInfo)))
             }
 
             return@withContext apps

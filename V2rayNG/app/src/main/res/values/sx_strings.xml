@@ -266,6 +266,20 @@
     <string name="sx_topup_mb">+%1$s MB</string>
     <string name="sx_topup_gb">+%1$s GB</string>
     <string name="sx_notif_topup_hint">Tap an amount to allow more right away.</string>
+    <string name="sx_cat_social">Social</string>
+    <string name="sx_cat_messaging">Messaging</string>
+    <string name="sx_cat_video">Video &amp; music</string>
+    <string name="sx_cat_games">Games</string>
+    <string name="sx_cat_browsers">Browsers</string>
+    <string name="sx_cat_vpn">VPN &amp; proxy</string>
+    <string name="sx_cat_shopping">Shopping</string>
+    <string name="sx_cat_productivity">Work &amp; productivity</string>
+    <string name="sx_cat_other">Other</string>
+    <string name="sx_cat_system">System</string>
+    <string name="sx_show_system_apps">Show system apps</string>
+    <string name="sx_cat_limit_all">Limit all</string>
+    <string name="sx_limit_edit_cat_title">Category limit</string>
+    <string name="sx_limit_cat_note">All apps in this group share one counter. Apps with their own limit are counted there instead.</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Expires in %d day</item>
         <item quantity="other">Expires in %d days</item>
@@ -301,5 +315,9 @@
     <plurals name="sx_add_configs_done">
         <item quantity="one">%d server added</item>
         <item quantity="other">%d servers added</item>
+    </plurals>
+    <plurals name="sx_cat_apps">
+        <item quantity="one">%d app</item>
+        <item quantity="other">%d apps</item>
     </plurals>
 </resources>
