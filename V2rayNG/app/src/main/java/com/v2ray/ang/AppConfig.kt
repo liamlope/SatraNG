@@ -223,6 +223,10 @@ object AppConfig {
     const val MSG_LOCATE_CANCEL = 102
     const val MSG_LOCATE_RESULT = 103
     const val MSG_LOCATE_FINISH = 104
+    const val MSG_SPEED_START = 105
+    const val MSG_SPEED_CANCEL = 106
+    const val MSG_SPEED_RESULT = 107
+    const val MSG_SPEED_FINISH = 108
 
     const val MSG_SUB_UPDATE_START = 8
     const val MSG_SUB_UPDATE_CANCEL = 81

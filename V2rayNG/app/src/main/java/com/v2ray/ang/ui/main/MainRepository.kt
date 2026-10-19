@@ -77,6 +77,10 @@ class MainRepository(
                     .serializable<RealPingResult>("content")
                     ?.let { MainServiceEvent.LocateResult(it.guid, it.delayMillis > 0L) }
                 AppConfig.MSG_LOCATE_FINISH -> MainServiceEvent.LocateFinished
+                AppConfig.MSG_SPEED_RESULT -> safeIntent
+                    .serializable<RealPingResult>("content")
+                    ?.let { MainServiceEvent.SpeedResult(it.guid, it.delayMillis) }
+                AppConfig.MSG_SPEED_FINISH -> MainServiceEvent.SpeedFinished
 
                 else -> null
             }

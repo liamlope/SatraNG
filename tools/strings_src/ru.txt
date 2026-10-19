@@ -278,3 +278,13 @@ sx_show_system_apps	Показать системные приложения
 sx_cat_limit_all	Ограничить все
 sx_limit_edit_cat_title	Лимит категории
 sx_limit_cat_note	У всех приложений группы общий счётчик. Приложения со своим лимитом считаются отдельно.
+sx_speed_test	Тест скорости
+sx_speed_test_all	Тест скорости всех
+sx_speed_cancel	Остановить тест скорости
+sx_speed_testing	Проверяем скорость…
+sx_speed_failed	Тест скорости не удался
+sx_speed_all_started	Проверяем самые быстрые серверы по очереди (до 8 МБ на каждый)…
+sx_speed_test_sub	Скачивает до 8 МБ через этот сервер
+sx_sort_speed	Скорость
+sx_mbps	%1$s Мбит/с
+sx_badge_tunnel	Туннель

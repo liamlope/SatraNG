@@ -526,6 +526,14 @@ object MmkvManager {
         serverAffStorage.encode(guid, JsonUtil.toJson(aff))
     }
 
+    fun encodeServerSpeed(guid: String, bps: Long) {
+        if (guid.isBlank()) return
+        val aff = decodeServerAffiliationInfo(guid) ?: ServerAffiliationInfo()
+        aff.speedBps = bps
+        aff.speedAt = System.currentTimeMillis()
+        serverAffStorage.encode(guid, JsonUtil.toJson(aff))
+    }
+
     /** Stores the entry (server address) country. Leaves the measured exit country untouched. */
     fun encodeServerEntry(guid: String, countryCode: String?, ip: String?) {
         if (guid.isBlank()) return

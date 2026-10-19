@@ -280,6 +280,16 @@
     <string name="sx_cat_limit_all">Ограничить все</string>
     <string name="sx_limit_edit_cat_title">Лимит категории</string>
     <string name="sx_limit_cat_note">У всех приложений группы общий счётчик. Приложения со своим лимитом считаются отдельно.</string>
+    <string name="sx_speed_test">Тест скорости</string>
+    <string name="sx_speed_test_all">Тест скорости всех</string>
+    <string name="sx_speed_cancel">Остановить тест скорости</string>
+    <string name="sx_speed_testing">Проверяем скорость…</string>
+    <string name="sx_speed_failed">Тест скорости не удался</string>
+    <string name="sx_speed_all_started">Проверяем самые быстрые серверы по очереди (до 8 МБ на каждый)…</string>
+    <string name="sx_speed_test_sub">Скачивает до 8 МБ через этот сервер</string>
+    <string name="sx_sort_speed">Скорость</string>
+    <string name="sx_mbps">%1$s Мбит/с</string>
+    <string name="sx_badge_tunnel">Туннель</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Истекает через %d день</item>
         <item quantity="few">Истекает через %d дня</item>

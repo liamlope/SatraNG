@@ -231,3 +231,13 @@ sx_show_system_apps	Show system apps	نمایش برنامه‌های سیستم
 sx_cat_limit_all	Limit all	محدود کردن همه
 sx_limit_edit_cat_title	Category limit	محدودیت دسته
 sx_limit_cat_note	All apps in this group share one counter. Apps with their own limit are counted there instead.	همهٔ برنامه‌های این دسته یک شمارندهٔ مشترک دارند. برنامه‌ای که محدودیت جداگانه دارد، همان‌جا شمرده می‌شود.
+sx_speed_test	Speed test	تست سرعت
+sx_speed_test_all	Speed test all	تست سرعت همه
+sx_speed_cancel	Stop speed test	توقف تست سرعت
+sx_speed_testing	Testing speed…	در حال تست سرعت…
+sx_speed_failed	Speed test failed	تست سرعت ناموفق
+sx_speed_all_started	Testing the quickest servers one by one (up to 8 MB each)…	سریع‌ترین سرورها یکی‌یکی تست می‌شوند (هر کدام تا ۸ مگابایت)…
+sx_speed_test_sub	Downloads up to 8 MB through this server	تا ۸ مگابایت از طریق این سرور دانلود می‌کند
+sx_sort_speed	Speed	سرعت
+sx_mbps	%1$s Mbps	%1$s مگابیت
+sx_badge_tunnel	Tunnel	تانل

@@ -17,4 +17,6 @@ sealed class MainServiceEvent {
     data class MeasureConfigCancelled(val requestId: String) : MainServiceEvent()
     data class LocateResult(val guid: String, val ok: Boolean) : MainServiceEvent()
     data object LocateFinished : MainServiceEvent()
+    data class SpeedResult(val guid: String, val bps: Long) : MainServiceEvent()
+    data object SpeedFinished : MainServiceEvent()
 }

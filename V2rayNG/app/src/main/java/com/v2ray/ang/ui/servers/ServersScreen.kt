@@ -137,6 +137,12 @@ fun ServersContent(
                         SatraMenuItem(stringResource(R.string.sx_sort_default), { menu = false; onAction(MainAction.SetSort(ServerSort.Default)) }, if (state.sort == ServerSort.Default) SatraIcons.Check else SatraIcons.Sort)
                         SatraMenuItem(stringResource(R.string.sx_sort_ping), { menu = false; onAction(MainAction.SetSort(ServerSort.Ping)) }, if (state.sort == ServerSort.Ping) SatraIcons.Check else SatraIcons.Pulse)
                         SatraMenuItem(stringResource(R.string.sx_sort_name), { menu = false; onAction(MainAction.SetSort(ServerSort.Name)) }, if (state.sort == ServerSort.Name) SatraIcons.Check else SatraIcons.Tag)
+                        SatraMenuItem(stringResource(R.string.sx_sort_speed), { menu = false; onAction(MainAction.SetSort(ServerSort.Speed)) }, if (state.sort == ServerSort.Speed) SatraIcons.Check else SatraIcons.Bolt)
+                        if (state.speedTesting.isEmpty()) {
+                            SatraMenuItem(stringResource(R.string.sx_speed_test_all), { menu = false; onAction(MainAction.SpeedTestAll) }, SatraIcons.Bolt)
+                        } else {
+                            SatraMenuItem(stringResource(R.string.sx_speed_cancel), { menu = false; onAction(MainAction.CancelSpeedTest) }, SatraIcons.Close)
+                        }
                         SatraMenuItem(stringResource(R.string.sx_remove_duplicates), { menu = false; confirm = ConfirmKind.RemoveDuplicates }, SatraIcons.Copy)
                         SatraMenuItem(stringResource(R.string.sx_remove_invalid), { menu = false; confirm = ConfirmKind.RemoveInvalid }, SatraIcons.Ban)
                         SatraMenuItem(stringResource(R.string.sx_remove_all), { menu = false; confirm = ConfirmKind.RemoveAll }, SatraIcons.Trash, destructive = true)
@@ -199,6 +205,7 @@ fun ServersContent(
                         row = row,
                         selected = row.guid == state.selectedGuid,
                         testing = state.isTesting && row.testDelayMillis == 0L,
+                        speedTesting = row.guid in state.speedTesting,
                         onSelect = { nav.action(MainAction.SelectServer(row.guid)) },
                         onMore = { actionsFor = row },
                         onFavorite = { onAction(MainAction.ToggleFavorite(row.guid)) },
@@ -259,6 +266,7 @@ private fun ServerItem(
     row: ServerRowUiModel,
     selected: Boolean,
     testing: Boolean,
+    speedTesting: Boolean,
     onSelect: () -> Unit,
     onMore: () -> Unit,
     onFavorite: () -> Unit,
@@ -336,6 +344,7 @@ private fun ServerItem(
                     }
                 }
                 ServerSubtitle(row, onRetryLocation)
+                ServerTags(row, speedTesting)
             }
             PingPill(row.testDelayMillis, testing = testing)
             SatraIconButton(SatraIcons.More, stringResource(R.string.sx_more_options), onMore, tint = c.textSecondary, size = 20.dp)
@@ -376,6 +385,44 @@ fun SmartConnectCard(busy: Boolean, onClick: () -> Unit, modifier: Modifier = Mo
             }
         }
     }
+}
+
+/** Small, quiet facts about a config: tunnel, CDN fronting, last speed test. Nothing when none. */
+@Composable
+internal fun ServerTags(row: ServerRowUiModel, speedTesting: Boolean) {
+    val c = Satra.colors
+    val speed = when {
+        speedTesting -> stringResource(R.string.sx_speed_testing) to c.textTertiary
+        row.speedBps > 0L -> stringResource(
+            R.string.sx_mbps,
+            java.text.NumberFormat.getNumberInstance(com.v2ray.ang.ui.compose.satra.currentLocale())
+                .apply { maximumFractionDigits = 1; minimumFractionDigits = 1 }
+                .format(row.speedBps * 8 / 1_000_000.0),
+        ) to c.success
+        row.speedBps < 0L -> stringResource(R.string.sx_speed_failed) to c.textTertiary
+        else -> null
+    }
+    if (!row.tunnel && row.cdn == null && speed == null) return
+    Row(
+        Modifier.padding(top = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (row.tunnel) Tag(stringResource(R.string.sx_badge_tunnel), c.info)
+        row.cdn?.let { Tag(it, c.textSecondary) }
+        speed?.let { (text, color) -> Tag(text, color) }
+    }
+}
+
+@Composable
+private fun Tag(text: String, color: androidx.compose.ui.graphics.Color) {
+    Text(
+        text,
+        style = Satra.type.caption,
+        color = color,
+        maxLines = 1,
+        modifier = Modifier.clip(SatraShapes.Small).background(color.copy(alpha = 0.10f)).padding(horizontal = 6.dp, vertical = 1.dp),
+    )
 }
 
 /** "Germany · VLESS / ws / tls", or the detection state while the exit country is unknown. */
@@ -432,6 +479,7 @@ internal fun ServerActionsSheet(server: ServerRowUiModel, nav: AppNav, onAction:
             InsetGroup {
                 row { SatraRow(stringResource(R.string.sx_server_use), icon = SatraIcons.Power, iconColor = c.accent, onClick = { onDismiss(); nav.action(MainAction.SelectServer(server.guid)) }) }
                 row { SatraRow(stringResource(if (server.favorite) R.string.sx_server_unfavorite else R.string.sx_server_favorite), icon = SatraIcons.Star, iconColor = c.warning, onClick = { onDismiss(); onAction(MainAction.ToggleFavorite(server.guid)) }) }
+                row { SatraRow(stringResource(R.string.sx_speed_test), subtitle = stringResource(R.string.sx_speed_test_sub), icon = SatraIcons.Bolt, iconColor = c.success, onClick = { onDismiss(); onAction(MainAction.SpeedTest(server.guid)) }) }
                 row { SatraRow(stringResource(R.string.sx_server_recheck), icon = SatraIcons.Globe, iconColor = c.info, onClick = { onDismiss(); onAction(MainAction.RecheckServer(server.guid)) }) }
                 row { SatraRow(stringResource(R.string.sx_server_edit), icon = SatraIcons.Edit, iconColor = c.textSecondary, onClick = { onDismiss(); nav.action(MainAction.EditServer(server.guid, server.profile)) }) }
             }

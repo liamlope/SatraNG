@@ -280,6 +280,16 @@
     <string name="sx_cat_limit_all">Limit all</string>
     <string name="sx_limit_edit_cat_title">Category limit</string>
     <string name="sx_limit_cat_note">All apps in this group share one counter. Apps with their own limit are counted there instead.</string>
+    <string name="sx_speed_test">Speed test</string>
+    <string name="sx_speed_test_all">Speed test all</string>
+    <string name="sx_speed_cancel">Stop speed test</string>
+    <string name="sx_speed_testing">Testing speed…</string>
+    <string name="sx_speed_failed">Speed test failed</string>
+    <string name="sx_speed_all_started">Testing the quickest servers one by one (up to 8 MB each)…</string>
+    <string name="sx_speed_test_sub">Downloads up to 8 MB through this server</string>
+    <string name="sx_sort_speed">Speed</string>
+    <string name="sx_mbps">%1$s Mbps</string>
+    <string name="sx_badge_tunnel">Tunnel</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Expires in %d day</item>
         <item quantity="other">Expires in %d days</item>

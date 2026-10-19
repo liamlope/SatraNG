@@ -16,7 +16,7 @@ sealed interface MainStatus {
 /** Drives the hero connect button; richer than a plain running flag. */
 enum class ConnectPhase { Idle, Connecting, Connected, Disconnecting, Failed }
 
-enum class ServerSort { Default, Ping, Name }
+enum class ServerSort { Default, Ping, Name, Speed }
 
 /**
  * Main UI state
@@ -36,6 +36,8 @@ data class MainUiState(
     val autoReconnecting: Boolean = false,
     /** "Connect to the fastest" is testing servers / about to connect. */
     val smartConnecting: Boolean = false,
+    /** Configs queued or running a download speed test. */
+    val speedTesting: Set<String> = emptySet(),
     /** One-tap Add is importing (subscription download in progress). */
     val importing: Boolean = false,
     /** Show the "more ways to add" sheet (clipboard had nothing usable, or user asked). */
@@ -105,6 +107,11 @@ sealed interface MainAction {
     data class RecheckServer(val guid: String) : MainAction
     /** Retry finding the real exit country of one config (tap on a "not found" location). */
     data class LocateServer(val guid: String) : MainAction
+    /** Download speed test of one config. */
+    data class SpeedTest(val guid: String) : MainAction
+    /** Speed test the quickest configs of the list one by one, then sort by speed. */
+    data object SpeedTestAll : MainAction
+    data object CancelSpeedTest : MainAction
 }
 
 /** Screens opened from the tab UI as separate activities. */

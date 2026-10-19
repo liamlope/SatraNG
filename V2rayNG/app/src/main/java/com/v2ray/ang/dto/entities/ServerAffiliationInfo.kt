@@ -23,4 +23,7 @@ data class ServerAffiliationInfo(
     var entryIp: String? = null,
     var entryUpdatedAt: Long = 0L,
     var entryAttemptAt: Long = 0L,
+    /** Last download speed test through this config, bytes per second (<0 = failed, 0 = never). */
+    var speedBps: Long = 0L,
+    var speedAt: Long = 0L,
 )

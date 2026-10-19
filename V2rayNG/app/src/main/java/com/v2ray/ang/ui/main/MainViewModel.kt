@@ -242,6 +242,7 @@ class MainViewModel(
 
     // ---------- Service events ----------
     init {
+        com.v2ray.ang.handler.CdnRanges.loadStored()
         collectServiceEvents()
         setupGroupTab()
         collectDataChanges()
@@ -349,6 +350,7 @@ class MainViewModel(
                     countryCode = geo.countryCode ?: row.countryCode,
                     countryName = geo.countryName ?: row.countryName,
                     exitVerified = geo.exitVerified,
+                    tunnel = row.cdn == null && com.v2ray.ang.handler.CdnRanges.isTunnel(row.entryCountryCode, geo.countryCode ?: row.countryCode, null),
                     geoState = when {
                         geo.exitVerified -> GeoState.Located
                         (geo.countryCode ?: row.countryCode) == null -> GeoState.Failed
@@ -451,6 +453,19 @@ class MainViewModel(
             }
 
             is MainServiceEvent.LocateResult -> onLocateResult(event.guid)
+
+            is MainServiceEvent.SpeedResult -> {
+                _uiState.update { it.copy(speedTesting = it.speedTesting - event.guid) }
+                patchRowEverywhere(event.guid) { it.copy(speedBps = event.bps) }
+            }
+
+            MainServiceEvent.SpeedFinished -> {
+                _uiState.update { it.copy(speedTesting = emptySet()) }
+                if (sortBySpeedAfter) {
+                    sortBySpeedAfter = false
+                    onAction(MainAction.SetSort(ServerSort.Speed))
+                }
+            }
 
             MainServiceEvent.LocateFinished -> {
                 val left = locating.toList()
@@ -588,6 +603,12 @@ class MainViewModel(
             MainAction.UndoHandled -> _uiState.update { it.copy(undoName = null) }
             is MainAction.RecheckServer -> recheckServer(action.guid)
             is MainAction.LocateServer -> locateServers(listOf(action.guid), recheck = true)
+            is MainAction.SpeedTest -> startSpeedTest(listOf(action.guid), sortAfter = false)
+            MainAction.SpeedTestAll -> speedTestAll()
+            MainAction.CancelSpeedTest -> {
+                dataSource.sendMsg2TestService(TestServiceMessage(key = AppConfig.MSG_SPEED_CANCEL), null)
+                _uiState.update { it.copy(speedTesting = emptySet()) }
+            }
             MainAction.SmartConnect -> smartConnect()
             is MainAction.ShowAddSheet -> _uiState.update { it.copy(addSheet = action.show) }
             is MainAction.ShareQRCode -> {
@@ -713,6 +734,7 @@ class MainViewModel(
                 if (d > 0L) d else Long.MAX_VALUE
             }
             ServerSort.Name -> byFavorite.thenBy { rows[it].remarks.lowercase() }
+            ServerSort.Speed -> byFavorite.thenByDescending { rows[it].speedBps }
         }
     }
 
@@ -732,9 +754,17 @@ class MainViewModel(
                 if (!geoInFlight.add(row.guid)) continue
                 try {
                     val port = if (uiState.value.isRunning) SettingsManager.getHttpPort() else 0
+                    com.v2ray.ang.handler.CdnRanges.refreshIfStale(port)
                     val entry = GeoIpResolver.resolveEntry(row.guid, row.profile, port)
                     if (entry != null && entry != row.entryCountryCode) {
-                        patchRowEverywhere(row.guid) { it.copy(entryCountryCode = entry) }
+                        val a = MmkvManager.decodeServerAffiliationInfo(row.guid)
+                        val cdn = cdnOf(a, row.profile)
+                        patchRowEverywhere(row.guid) {
+                            it.copy(
+                                entryCountryCode = entry, cdn = cdn?.label,
+                                tunnel = com.v2ray.ang.handler.CdnRanges.isTunnel(entry, it.countryCode, cdn),
+                            )
+                        }
                     }
                 } catch (e: CancellationException) {
                     throw e
@@ -1567,6 +1597,33 @@ class MainViewModel(
                 _smartConnectRequest.update { it + 1 }
             } finally {
                 _uiState.update { it.copy(smartConnecting = false) }
+            }
+        }
+    }
+
+    private var sortBySpeedAfter = false
+
+    private fun startSpeedTest(guids: List<String>, sortAfter: Boolean) {
+        if (guids.isEmpty()) return
+        sortBySpeedAfter = sortAfter
+        _uiState.update { it.copy(speedTesting = guids.toSet()) }
+        dataSource.sendMsg2TestService(TestServiceMessage(key = AppConfig.MSG_SPEED_START, serverGuids = guids), null)
+    }
+
+    /**
+     * Bulk speed test: the configs that answered the last ping (quickest first), else the list
+     * order, at most [com.v2ray.ang.service.CoreTestService.SPEED_MAX]; then the list is sorted by speed.
+     */
+    private fun speedTestAll() {
+        viewModelScope.launch(ioDispatcher) {
+            val groupId = uiState.value.selectedGroupId
+            val list = if (groupId.isNotBlank()) MmkvManager.decodeServerList(groupId) else MmkvManager.decodeActiveServerList()
+            val pinged = list.mapNotNull { g -> MmkvManager.decodeServerAffiliationInfo(g)?.testDelayMillis?.takeIf { it > 0L }?.let { g to it } }
+                .sortedBy { it.second }.map { it.first }
+            val pick = (pinged.ifEmpty { list }).take(com.v2ray.ang.service.CoreTestService.SPEED_MAX)
+            withContext(Dispatchers.Main) {
+                if (pick.isNotEmpty()) toast(R.string.sx_speed_all_started)
+                startSpeedTest(pick, sortAfter = true)
             }
         }
     }

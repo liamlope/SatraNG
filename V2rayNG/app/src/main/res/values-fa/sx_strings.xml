@@ -280,6 +280,16 @@
     <string name="sx_cat_limit_all">محدود کردن همه</string>
     <string name="sx_limit_edit_cat_title">محدودیت دسته</string>
     <string name="sx_limit_cat_note">همهٔ برنامه‌های این دسته یک شمارندهٔ مشترک دارند. برنامه‌ای که محدودیت جداگانه دارد، همان‌جا شمرده می‌شود.</string>
+    <string name="sx_speed_test">تست سرعت</string>
+    <string name="sx_speed_test_all">تست سرعت همه</string>
+    <string name="sx_speed_cancel">توقف تست سرعت</string>
+    <string name="sx_speed_testing">در حال تست سرعت…</string>
+    <string name="sx_speed_failed">تست سرعت ناموفق</string>
+    <string name="sx_speed_all_started">سریع‌ترین سرورها یکی‌یکی تست می‌شوند (هر کدام تا ۸ مگابایت)…</string>
+    <string name="sx_speed_test_sub">تا ۸ مگابایت از طریق این سرور دانلود می‌کند</string>
+    <string name="sx_sort_speed">سرعت</string>
+    <string name="sx_mbps">%1$s مگابیت</string>
+    <string name="sx_badge_tunnel">تانل</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">%d روز دیگر منقضی می‌شود</item>
         <item quantity="other">%d روز دیگر منقضی می‌شود</item>

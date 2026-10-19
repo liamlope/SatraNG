@@ -31,6 +31,8 @@ class CoreTestService : Service() {
     // manage active batch workers so each batch is independent and cancellable
     private val activeWorkers = ConcurrentHashMap<RealPingWorkerService, String>()
     @Volatile private var locator: ExitGeoLocator? = null
+    @Volatile private var speedJob: java.util.concurrent.Future<*>? = null
+    private val speedRunner = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "speed-test").apply { isDaemon = true } }
     private val cancelAction by lazy {
         val intent = Intent(this, CoreTestService::class.java).putExtra(
             "content",
@@ -105,6 +107,13 @@ class CoreTestService : Service() {
             )
             AppConfig.MSG_MEASURE_CONFIG_CANCEL -> handleMeasureCancel()
             AppConfig.MSG_LOCATE_START -> handleLocateStart(message)
+            AppConfig.MSG_SPEED_START -> handleSpeedStart(message)
+            AppConfig.MSG_SPEED_CANCEL -> {
+                speedJob?.cancel(true)
+                speedJob = null
+                MessageHelper.sendMsg2UI(this, AppConfig.MSG_SPEED_FINISH, "")
+                stopIfIdle()
+            }
             AppConfig.MSG_LOCATE_CANCEL -> {
                 locator?.cancel()
                 locator = null
@@ -147,8 +156,38 @@ class CoreTestService : Service() {
         created.start()
     }
 
+    /** Download speed tests, strictly one config at a time (they would skew each other). */
+    private fun handleSpeedStart(message: TestServiceMessage) {
+        speedJob?.cancel(true)
+        val guids = message.serverGuids.distinct().take(SPEED_MAX)
+        if (guids.isEmpty()) {
+            speedJob = null
+            stopIfIdle()
+            return
+        }
+        NotificationHelper.updateNotification(
+            channelType = NotificationChannelType.CORE_TEST,
+            context = this,
+            title = getString(R.string.app_name),
+            content = getString(R.string.sx_speed_testing),
+        )
+        lateinit var self: java.util.concurrent.Future<*>
+        self = speedRunner.submit {
+            for (guid in guids) {
+                if (Thread.currentThread().isInterrupted) break
+                val bps = com.v2ray.ang.handler.ExitIpProbe.speed(this, guid)
+                if (Thread.currentThread().isInterrupted) break
+                MessageHelper.sendMsg2UI(this, AppConfig.MSG_SPEED_RESULT, RealPingResult(guid, bps))
+            }
+            MessageHelper.sendMsg2UI(this, AppConfig.MSG_SPEED_FINISH, "")
+            if (speedJob === self) speedJob = null
+            stopIfIdle()
+        }
+        speedJob = self
+    }
+
     private fun stopIfIdle() {
-        if (activeWorkers.isEmpty() && locator == null) {
+        if (activeWorkers.isEmpty() && locator == null && speedJob == null) {
             NotificationHelper.stopForeground(this)
             stopSelf()
         }
@@ -239,5 +278,10 @@ class CoreTestService : Service() {
                 MessageHelper.sendMsg2UI(this, AppConfig.MSG_MEASURE_CONFIG_CANCEL, "", requestId)
             }
         }
+    }
+
+    companion object {
+        /** Bounded: a bulk test never downloads more than this many configs' worth. */
+        const val SPEED_MAX = 12
     }
 }

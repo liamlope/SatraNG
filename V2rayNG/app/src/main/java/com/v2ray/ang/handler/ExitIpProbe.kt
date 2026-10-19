@@ -64,23 +64,7 @@ object ExitIpProbe {
 
     /** @return the stored result, or [GeoIpResolver.GeoResult.UNKNOWN] if the probe could not run. */
     fun probe(context: Context, guid: String): GeoIpResolver.GeoResult {
-        val profile = MmkvManager.decodeServerConfig(guid) ?: return GeoIpResolver.GeoResult.UNKNOWN
-        if (profile.configType == EConfigType.CUSTOM) return GeoIpResolver.GeoResult.UNKNOWN
-        if (!gate.tryAcquire(20, java.util.concurrent.TimeUnit.SECONDS)) return GeoIpResolver.GeoResult.UNKNOWN
-        var controller: libv2ray.CoreController? = null
-        try {
-            val built = CoreConfigManager.getV2rayConfig4Speedtest(context, guid)
-            if (!built.status) return GeoIpResolver.GeoResult.UNKNOWN
-            val port = freeLoopbackPort() ?: return GeoIpResolver.GeoResult.UNKNOWN
-            val json = withProbeInbound(built.content, port) ?: return GeoIpResolver.GeoResult.UNKNOWN
-
-            controller = CoreNativeManager.newCoreController(object : CoreCallbackHandler {
-                override fun startup(): Long = 0
-                override fun shutdown(): Long = 0
-                override fun onEmitStatus(l: Long, s: String?): Long = 0
-            })
-            controller.startLoop(json, 0)
-
+        val found = throughConfig(context, guid) { port ->
             for (url in endpoints) {
                 if (Thread.currentThread().isInterrupted) break
                 val body = HttpUtil.getUrlContent(UrlContentRequest(url = url, timeout = 6000, httpPort = port)) ?: continue
@@ -89,13 +73,90 @@ object ExitIpProbe {
                 val country = listOf(info.country_code, info.countryCode, info.country, info.location?.country_code)
                     .firstOrNull { !it.isNullOrBlank() }
                 val result = GeoIpResolver.storeExit(guid, ip, country)
-                if (result.exitVerified) return result
+                if (result.exitVerified) return@throughConfig result
             }
-            MmkvManager.markServerGeoAttempt(guid)
-            return GeoIpResolver.GeoResult.UNKNOWN
+            null
+        }
+        if (found == null) MmkvManager.markServerGeoAttempt(guid)
+        return found ?: GeoIpResolver.GeoResult.UNKNOWN
+    }
+
+    private val speedUrls = listOf(
+        "https://speed.cloudflare.com/__down?bytes=$SPEED_MAX_BYTES",
+        "http://cachefly.cachefly.net/10mb.test",
+    )
+
+    /**
+     * Download speed through [guid]: streams up to [SPEED_MAX_BYTES] for at most [SPEED_MAX_MS]
+     * and returns bytes per second measured from the first byte (connection setup excluded).
+     * Returns -1 when nothing could be downloaded. Stores the result.
+     */
+    fun speed(context: Context, guid: String): Long {
+        val bps = throughConfig(context, guid) { port ->
+            for (url in speedUrls) {
+                if (Thread.currentThread().isInterrupted) break
+                val r = runCatching { download(url, port) }.getOrNull()
+                if (r != null && r > 0L) return@throughConfig r
+            }
+            null
+        } ?: -1L
+        MmkvManager.encodeServerSpeed(guid, bps)
+        return bps
+    }
+
+    private fun download(url: String, port: Int): Long? {
+        val proxy = java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress(AppConfig.LOOPBACK, port))
+        val conn = (java.net.URL(url).openConnection(proxy) as java.net.HttpURLConnection).apply {
+            connectTimeout = 6000; readTimeout = 6000; useCaches = false
+            setRequestProperty("Accept-Encoding", "identity")
+        }
+        try {
+            if (conn.responseCode !in 200..299) return null
+            val buf = ByteArray(64 * 1024)
+            conn.inputStream.use { input ->
+                var first = 0L
+                var total = 0L
+                val deadline = System.currentTimeMillis() + SPEED_MAX_MS
+                while (total < SPEED_MAX_BYTES && System.currentTimeMillis() < deadline) {
+                    if (Thread.currentThread().isInterrupted) return null
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    if (first == 0L) first = System.nanoTime()
+                    total += n
+                }
+                val secs = (System.nanoTime() - first) / 1e9
+                if (first == 0L || total < 64 * 1024 || secs <= 0.05) return null
+                return (total / secs).toLong()
+            }
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    const val SPEED_MAX_BYTES = 8L * 1024 * 1024
+    const val SPEED_MAX_MS = 8_000L
+
+    /** Starts a private core for [guid] with a loopback HTTP inbound, runs [block], tears it down. */
+    private fun <T> throughConfig(context: Context, guid: String, block: (port: Int) -> T?): T? {
+        val profile = MmkvManager.decodeServerConfig(guid) ?: return null
+        if (profile.configType == EConfigType.CUSTOM) return null
+        if (!gate.tryAcquire(20, java.util.concurrent.TimeUnit.SECONDS)) return null
+        var controller: libv2ray.CoreController? = null
+        try {
+            val built = CoreConfigManager.getV2rayConfig4Speedtest(context, guid)
+            if (!built.status) return null
+            val port = freeLoopbackPort() ?: return null
+            val json = withProbeInbound(built.content, port) ?: return null
+            controller = CoreNativeManager.newCoreController(object : CoreCallbackHandler {
+                override fun startup(): Long = 0
+                override fun shutdown(): Long = 0
+                override fun onEmitStatus(l: Long, s: String?): Long = 0
+            })
+            controller.startLoop(json, 0)
+            return block(port)
         } catch (e: Throwable) {
             LogUtil.w(AppConfig.TAG, "ExitIpProbe: $guid failed: ${e.message}")
-            return GeoIpResolver.GeoResult.UNKNOWN
+            return null
         } finally {
             runCatching { controller?.stopLoop() }
             gate.release()
