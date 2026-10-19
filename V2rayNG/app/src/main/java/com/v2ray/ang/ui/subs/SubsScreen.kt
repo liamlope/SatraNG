@@ -264,8 +264,8 @@ private fun SubCard(
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { badges.forEach { it() } }
         }
-        val announce = item.announce
-        if (item.showAnnounce && !announce.isNullOrBlank()) {
+        val announce = com.v2ray.ang.handler.SubscriptionUserinfoParser.displayText(item.announce)
+        if (item.showAnnounce && announce.isNotBlank()) {
             Spacer(Modifier.height(10.dp))
             Text(announce, style = Satra.type.footnote, color = c.textSecondary, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }

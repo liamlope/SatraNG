@@ -24,10 +24,13 @@ object SubscriptionUserinfoParser {
             }
         }
 
-        normalized["profile-title"]?.takeIf { it.isNotBlank() }?.let {
-            subscription.profileTitle = decodeMaybeBase64Title(it)
+        normalized["profile-title"]?.let { decodeMaybeBase64Title(it) }?.takeIf { it.isNotBlank() }?.let {
+            subscription.profileTitle = it
         }
-        normalized["announce"]?.takeIf { it.isNotBlank() }?.let { subscription.announce = it }
+        normalized["announce"]?.let { raw ->
+            // Panels send "base64:<text>"; an empty payload means "no announcement", never the raw prefix.
+            subscription.announce = decodeMaybeBase64Title(raw).trim().takeIf { it.isNotBlank() }
+        }
         normalized["support-url"]?.takeIf { it.isNotBlank() }?.let { subscription.supportUrl = it }
         normalized["profile-web-page-url"]?.takeIf { it.isNotBlank() }?.let {
             subscription.profileWebPageUrl = it
@@ -54,13 +57,19 @@ object SubscriptionUserinfoParser {
         return out
     }
 
-    private fun decodeMaybeBase64Title(value: String): String {
+    /** Text safe to show for a stored header value (older builds saved the raw "base64:" form). */
+    fun displayText(raw: String?): String = raw?.let { decodeMaybeBase64Title(it) }.orEmpty()
+
+    /** "base64:..." values are decoded; an undecodable or empty payload yields "" (never the raw prefix). */
+    internal fun decodeMaybeBase64Title(
+        value: String,
+        decode: (String) -> ByteArray = { android.util.Base64.decode(it, android.util.Base64.DEFAULT) },
+    ): String {
         val trimmed = value.trim()
         if (trimmed.startsWith("base64:", ignoreCase = true)) {
-            val b64 = trimmed.substringAfter(':')
-            return runCatching {
-                String(android.util.Base64.decode(b64, android.util.Base64.DEFAULT))
-            }.getOrDefault(trimmed)
+            val b64 = trimmed.substringAfter(':').trim()
+            if (b64.isEmpty()) return ""
+            return runCatching { String(decode(b64), Charsets.UTF_8).trim() }.getOrDefault("")
         }
         return trimmed
     }
