@@ -98,7 +98,7 @@ fun MoreContent(
         add(
             Section(
                 stringResource(R.string.sx_set_connection), null,
-                listOf(
+                listOfNotNull(
                     spec(stringResource(R.string.sx_set_smart), stringResource(R.string.sx_set_smart_sub), "auto fastest reconnect best") {
                         row { SatraSwitchRow(stringResource(R.string.sx_set_smart), s.smartConnect, vm::setSmartConnect, subtitle = stringResource(R.string.sx_set_smart_sub), icon = SatraIcons.Bolt, iconColor = c.accent) }
                     },
@@ -108,7 +108,8 @@ fun MoreContent(
                     spec(stringResource(R.string.sx_set_sub_on_open), stringResource(R.string.sx_set_sub_on_open_sub), "subscription update refresh launch open") {
                         row { SatraSwitchRow(stringResource(R.string.sx_set_sub_on_open), s.subUpdateOnOpen, vm::setSubUpdateOnOpen, subtitle = stringResource(R.string.sx_set_sub_on_open_sub), icon = SatraIcons.Refresh, iconColor = c.info) }
                     },
-                    spec(stringResource(R.string.sx_set_killswitch), stringResource(R.string.sx_set_killswitch_sub), "always-on lockdown block kill") {
+                    // The kill switch is a system VPN setting; it means nothing in Proxy-only mode.
+                    if (!s.vpnMode) null else spec(stringResource(R.string.sx_set_killswitch), stringResource(R.string.sx_set_killswitch_sub), "always-on lockdown block kill") {
                         row {
                             SatraRow(
                                 stringResource(R.string.sx_set_killswitch), subtitle = stringResource(R.string.sx_set_killswitch_sub),
