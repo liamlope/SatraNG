@@ -34,6 +34,9 @@ object UsageSampler {
     private var job: Job? = null
 
     @Volatile
+    private var appContext: Context? = null
+
+    @Volatile
     var totals = Totals()
         private set
 
@@ -41,11 +44,14 @@ object UsageSampler {
     fun start(context: Context) {
         if (job?.isActive == true) return
         val app = context.applicationContext
+        appContext = app
         finalizeStaleSession()
         val startedAt = System.currentTimeMillis()
         val serverName = MmkvManager.getSelectServer()?.let { MmkvManager.decodeServerConfig(it)?.remarks }.orEmpty()
         job = scope.launch {
             runCatching { UsageStore.prune() }
+            runCatching { VpnAppUsageTracker.begin(app) }
+            var lastAppSample = System.currentTimeMillis()
             var sessionUp = 0L
             var sessionDown = 0L
             var lastTick = System.currentTimeMillis()
@@ -113,6 +119,11 @@ object UsageSampler {
                     }
                     if (reload) CoreServiceManager.reloadForPolicyChange()
 
+                    if (now - lastAppSample >= VpnAppUsageTracker.SAMPLE_EVERY_MS) {
+                        lastAppSample = now
+                        runCatching { VpnAppUsageTracker.sample(app, now) }
+                    }
+
                     if (++tickCount % 5 == 0 && !globalNotified) {
                         globalNotified = checkGlobalLimit(app, now)
                     }
@@ -129,6 +140,7 @@ object UsageSampler {
         job?.cancel()
         job = null
         if (!running) return
+        appContext?.let { ctx -> scope.launch { runCatching { VpnAppUsageTracker.end(ctx) } } }
         val live = UsageStore.live()
         val end = System.currentTimeMillis()
         if (live.sessionStartMs > 0L) {

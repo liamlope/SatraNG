@@ -43,6 +43,9 @@ import com.v2ray.ang.handler.UsagePeriods
 import com.v2ray.ang.handler.GeoIpResolver
 import com.v2ray.ang.ui.app.AppNav
 import com.v2ray.ang.ui.compose.satra.AppIcon
+import com.v2ray.ang.ui.compose.satra.SatraIconButton
+import com.v2ray.ang.ui.compose.satra.SatraMenu
+import com.v2ray.ang.ui.compose.satra.SatraMenuItem
 import com.v2ray.ang.ui.compose.satra.AppPickerSheet
 import com.v2ray.ang.ui.compose.satra.ChipRow
 import com.v2ray.ang.ui.compose.satra.FormLabel
@@ -101,6 +104,7 @@ fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageA
     var pickingApp by remember { mutableStateOf(false) }
     var confirmEngine by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf<UsageRule?>(null) }
     val c = Satra.colors
 
     SatraLargeTitleScaffold(title = stringResource(R.string.sx_usage_title), bottomPadding = 28.dp) {
@@ -154,7 +158,9 @@ fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageA
                     row,
                     onClick = { editor = EditorTarget.Edit(row.rule) },
                     onToggle = { vm.setRuleEnabled(row.rule.id, it) },
-                    modifier = Modifier.padding(horizontal = SatraSpace.Gutter).padding(bottom = 10.dp),
+                    onReset = { vm.resetRule(row.rule.id) },
+                    onDelete = { confirmDelete = row.rule },
+                    modifier = Modifier.padding(horizontal = SatraSpace.Gutter).padding(bottom = 10.dp).animateItem(),
                 )
             }
         }
@@ -199,7 +205,7 @@ fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageA
         } else if (state.apps.isEmpty()) {
             item(key = "apps-empty") {
                 Text(
-                    stringResource(if (state.appsLoading) R.string.sx_loading else R.string.sx_usage_apps_empty),
+                    stringResource(if (state.appsLoading) R.string.sx_loading else R.string.sx_usage_apps_none_yet),
                     style = Satra.type.callout, color = c.textSecondary,
                     modifier = Modifier.padding(horizontal = SatraSpace.Gutter + 4.dp),
                 )
@@ -246,20 +252,38 @@ fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageA
             target = target,
             state = state,
             onDismiss = { editor = null },
-            onSaveRule = { vm.saveRule(it); editor = null },
+            onSaveRule = { rule ->
+                vm.saveRule(rule)
+                editor = null
+                if (rule.kind == RuleKind.APP && rule.enabled && state.appRulesSupported && !state.engineReady) {
+                    when (state.engineChoice) {
+                        true -> nav.enableAppEnforcement()
+                        null -> confirmEngine = true
+                        false -> Unit // asked before and declined; the card keeps offering it
+                    }
+                }
+            },
             onDelete = { id -> vm.deleteRule(id); editor = null },
+            onReset = { id -> vm.resetRule(id); editor = null },
             onSaveGlobal = { vm.saveGlobal(it); editor = null },
             onEnableEngine = { confirmEngine = true },
         )
     }
     if (confirmEngine) {
+        EngineSheet(
+            onEnable = { confirmEngine = false; vm.setEngineChoice(true); nav.enableAppEnforcement() },
+            onLater = { confirmEngine = false; vm.setEngineChoice(false) },
+        )
+    }
+    confirmDelete?.let { rule ->
         SatraAlert(
-            title = stringResource(R.string.sx_limit_engine_title),
-            message = stringResource(R.string.sx_limit_engine_confirm),
-            confirmText = stringResource(R.string.sx_limit_engine_enable),
+            title = stringResource(R.string.sx_subs_delete_title, rule.label),
+            message = stringResource(R.string.sx_limit_delete_msg),
+            confirmText = stringResource(R.string.sx_delete),
             dismissText = stringResource(R.string.sx_cancel),
-            onConfirm = { confirmEngine = false; nav.enableAppEnforcement() },
-            onDismiss = { confirmEngine = false },
+            destructive = true,
+            onConfirm = { confirmDelete = null; vm.deleteRule(rule.id) },
+            onDismiss = { confirmDelete = null },
         )
     }
     if (confirmClear) {
@@ -400,6 +424,38 @@ private fun EngineCard(onEnable: () -> Unit, modifier: Modifier) {
     }
 }
 
+/** One-time explanation shown before switching to the engine that can see which app sent what. */
+@Composable
+internal fun EngineSheet(onEnable: () -> Unit, onLater: () -> Unit) {
+    val c = Satra.colors
+    SatraSheet(onDismiss = onLater) {
+        Column(Modifier.padding(horizontal = SatraSpace.Gutter)) {
+            IconTile(SatraIcons.Apps, c.accent, size = 48.dp)
+            Spacer(Modifier.height(14.dp))
+            Text(stringResource(R.string.sx_engine_sheet_title), style = Satra.type.title2, color = c.textPrimary)
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.sx_engine_sheet_why), style = Satra.type.body, color = c.textSecondary)
+            Spacer(Modifier.height(14.dp))
+            listOf(
+                SatraIcons.Refresh to R.string.sx_engine_sheet_restart,
+                SatraIcons.Speed to R.string.sx_engine_sheet_battery,
+                SatraIcons.Gear to R.string.sx_engine_sheet_undo,
+            ).forEach { (icon, text) ->
+                Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
+                    Icon(icon, null, tint = c.accent, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text(stringResource(text), style = Satra.type.footnote, color = c.textSecondary)
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+            SatraButton(stringResource(R.string.sx_engine_sheet_enable), onEnable, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(6.dp))
+            SatraButton(stringResource(R.string.sx_engine_sheet_later), onLater, style = SatraButtonStyle.Plain, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
 @Composable
 private fun periodNoun(period: LimitPeriod): String = stringResource(
     when (period) {
@@ -418,9 +474,17 @@ private fun formatReset(ms: Long): String {
 }
 
 @Composable
-private fun RuleCard(row: RuleRow, onClick: () -> Unit, onToggle: (Boolean) -> Unit, modifier: Modifier) {
+private fun RuleCard(
+    row: RuleRow,
+    onClick: () -> Unit,
+    onToggle: (Boolean) -> Unit,
+    onReset: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier,
+) {
     val c = Satra.colors
     val rule = row.rule
+    var menu by remember { mutableStateOf(false) }
     SatraCard(modifier, onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (rule.kind == RuleKind.APP) AppIcon(row.iconPackage, size = 40.dp)
@@ -435,6 +499,15 @@ private fun RuleCard(row: RuleRow, onClick: () -> Unit, onToggle: (Boolean) -> U
                     },
                     style = Satra.type.footnote, color = c.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
+            }
+            Box {
+                SatraIconButton(SatraIcons.More, stringResource(R.string.sx_more_options), { menu = true }, tint = c.textSecondary)
+                SatraMenu(menu, { menu = false }) {
+                    if (!rule.alwaysBlock) {
+                        SatraMenuItem(stringResource(R.string.sx_limit_reset), { menu = false; onReset() }, SatraIcons.Refresh)
+                    }
+                    SatraMenuItem(stringResource(R.string.sx_delete), { menu = false; onDelete() }, SatraIcons.Trash, destructive = true)
+                }
             }
             SatraSwitch(rule.enabled, onToggle, contentDescription = rule.label)
         }
@@ -504,6 +577,7 @@ internal fun LimitEditorSheet(
     onDismiss: () -> Unit,
     onSaveRule: (UsageRule) -> Unit,
     onDelete: (String) -> Unit,
+    onReset: (String) -> Unit,
     onSaveGlobal: (GlobalLimit) -> Unit,
     onEnableEngine: () -> Unit,
 ) {
@@ -675,6 +749,21 @@ internal fun LimitEditorSheet(
                         style = Satra.type.caption, color = c.textSecondary,
                         modifier = Modifier.padding(horizontal = 26.dp).padding(top = 6.dp),
                     )
+                }
+            }
+            if (existing != null && !existing.alwaysBlock) {
+                val used = state.rules.firstOrNull { it.rule.id == existing.id }?.usedBytes ?: 0L
+                Spacer(Modifier.height(14.dp))
+                InsetGroup {
+                    row {
+                        SatraRow(
+                            title = stringResource(R.string.sx_limit_reset),
+                            subtitle = stringResource(R.string.sx_limit_reset_sub, formatBytes(used)),
+                            icon = SatraIcons.Refresh,
+                            iconColor = c.info,
+                            onClick = { onReset(existing.id) },
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(18.dp))

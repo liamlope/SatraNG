@@ -24,17 +24,73 @@ object UsageLimitEngine {
 
     fun canEnforceAppRules(): Boolean = SettingsManager.canUseProcessRouting()
 
+    /*
+     * Why per-app limits need the Xray tunnel engine
+     * ----------------------------------------------
+     * Default engine (hev-socks5-tunnel): a small C tun2socks turns every packet from the TUN
+     * device into a SOCKS5 connection to the core's local inbound. The core then only sees
+     * "127.0.0.1 → destination"; which app opened the connection is lost, so no per-app routing
+     * rule (and therefore no per-app counter or block) can ever match. Website limits still work
+     * because they match on the destination domain.
+     *
+     * Xray tunnel engine: the core reads the TUN device itself. On Android 10+ it can ask the
+     * system for the owning UID of each connection (ConnectivityManager.getConnectionOwnerUid), so
+     * "process"/app routing rules match and each limited app gets its own counted outbound.
+     * Route-only sniffing is turned on with it so the sniffed domain is used for rule matching
+     * without rewriting the destination the app asked for.
+     *
+     * Trade-offs when it is on: the VPN restarts once; the Go network stack uses somewhat more CPU
+     * than hev under sustained heavy traffic (slightly more battery on big downloads, no visible
+     * difference for browsing/streaming); one extra system call per new connection for the UID
+     * lookup; routing results are the same. It is upstream v2rayNG's own engine, so compatibility
+     * is the same as stock v2rayNG with "hev tun" switched off. We therefore keep hev as the
+     * default and switch only when the user creates an app limit and agrees once.
+     */
+
+    /** The user's answer to the one-time "turn on per-app limits" sheet: true, false or null (not asked). */
+    fun engineChoice(): Boolean? = when (MmkvManager.decodeSettingsString(PREF_ENGINE_CHOICE)) {
+        "on" -> true
+        "off" -> false
+        else -> null
+    }
+
+    fun setEngineChoice(on: Boolean) = MmkvManager.encodeSettings(PREF_ENGINE_CHOICE, if (on) "on" else "off")
+
+    private const val PREF_ENGINE_CHOICE = "pref_satra_app_engine_choice"
+
     /** Switches to the engine that supports per-app routing. Caller restarts the VPN afterwards. */
     fun enableAppEnforcement() {
         MmkvManager.encodeSettings(AppConfig.PREF_USE_HEV_TUNNEL, false)
         MmkvManager.encodeSettings(AppConfig.PREF_ROUTE_ONLY_ENABLED, true)
     }
 
-    /** True when [rule] is currently supposed to be blocked by the config we build now. */
+    /**
+     * True when [rule] is currently supposed to be blocked by the config we build now. Checks the
+     * cap again instead of trusting the stored flag, so raising a limit unblocks immediately.
+     */
     fun isBlockedNow(rule: UsageRule, nowMs: Long = System.currentTimeMillis()): Boolean {
         if (rule.alwaysBlock) return true
+        if (!rule.enabled || rule.limitBytes <= 0L) return false
         val rt = UsageStore.ruleRuntime(rule.id) ?: return false
-        return rt.blocked && rt.periodKey == UsagePeriods.periodKey(rule.period, nowMs)
+        return rt.blocked && rt.periodKey == UsagePeriods.periodKey(rule.period, nowMs) &&
+            rt.used >= rule.limitBytes + rt.bonus
+    }
+
+    /**
+     * Re-checks a rule right after the user edited it. A higher cap (or a different period)
+     * releases the block at once; the warning re-arms when usage is back under 80 %.
+     */
+    fun reevaluate(rule: UsageRule, nowMs: Long = System.currentTimeMillis()) {
+        val prev = UsageStore.ruleRuntime(rule.id) ?: return
+        var rt = LimitEvaluator.step(rule.limitBytes, rule.period, prev, 0L, nowMs).runtime
+        if (rule.limitBytes <= 0L) rt = rt.copy(blocked = false, warned = false)
+        else if (rt.used < (rule.limitBytes + rt.bonus) * LimitEvaluator.WARN_FRACTION) rt = rt.copy(warned = false)
+        if (rt != prev) UsageStore.resetRuleRuntime(rule.id, rt)
+    }
+
+    /** "Reset usage": the rule's counter starts from zero for the current period and any block lifts. */
+    fun resetRule(rule: UsageRule, nowMs: Long = System.currentTimeMillis()) {
+        UsageStore.resetRuleRuntime(rule.id, RuleRuntime(periodKey = UsagePeriods.periodKey(rule.period, nowMs)))
     }
 
     /** Adds the rule-derived outbounds and routing rules to a freshly built [config]. */
@@ -92,9 +148,14 @@ object UsageLimitEngine {
         for (rule in UsageRulesRepository.rules()) {
             if (!rule.enabled || rule.alwaysBlock) continue
             val delta = statsByTag[rule.outboundTag] ?: 0L
+            val gen = UsageStore.ruleGeneration(rule.id)
             val previous = UsageStore.ruleRuntime(rule.id)
             val step = LimitEvaluator.step(rule.limitBytes, rule.period, previous, delta, nowMs)
-            if (step.runtime != previous) UsageStore.putRuleRuntime(rule.id, step.runtime)
+            if (step.runtime != previous) {
+                // The user reset this rule while we were computing: keep their reset.
+                if (UsageStore.ruleGeneration(rule.id) != gen) continue
+                UsageStore.putRuleRuntime(rule.id, step.runtime)
+            }
             if (step.event != LimitEvent.None) events += rule to step.event
         }
         return events

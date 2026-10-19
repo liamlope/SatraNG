@@ -71,15 +71,20 @@ data class UsageUiState(
     val global: GlobalRow = GlobalRow(GlobalLimit(), 0L, 0L),
     val appRulesSupported: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q,
     val engineReady: Boolean = false,
+    /** Remembered answer to the engine sheet; null = never asked. */
+    val engineChoice: Boolean? = null,
 )
 
 interface UsageActions {
     fun setRange(days: Int)
     fun saveRule(rule: UsageRule)
     fun deleteRule(id: String)
+    /** Counter back to zero for the current period; lifts a block. */
+    fun resetRule(id: String)
     fun setRuleEnabled(id: String, enabled: Boolean)
     fun saveGlobal(limit: GlobalLimit)
     fun clearHistory()
+    fun setEngineChoice(on: Boolean)
 }
 
 class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
@@ -101,13 +106,16 @@ class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
 
     fun onVisible() {
         if (tickJob?.isActive == true) return
+        // Charts and rule counters refresh every few seconds (live speed lives on Home and is
+        // per second there). Unchanged data produces an equal state, so nothing recomposes.
         tickJob = viewModelScope.launch(Dispatchers.IO) {
+            var n = 0
             while (isActive) {
                 refreshLedger()
-                delay(2_000)
+                if (n++ % 6 == 0) loadApps()
+                delay(LEDGER_REFRESH_MS)
             }
         }
-        refreshApps()
     }
 
     fun onHidden() {
@@ -157,6 +165,7 @@ class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
                 rules = rules,
                 global = GlobalRow(g, gUsed, UsagePeriods.nextReset(g.period, now)),
                 engineReady = UsageLimitEngine.canEnforceAppRules(),
+                engineChoice = UsageLimitEngine.engineChoice(),
             )
         }
     }
@@ -168,13 +177,24 @@ class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
             _state.update { it.copy(hasUsageAccess = false, apps = emptyList(), appsLoading = false) }
             return
         }
-        _state.update { it.copy(hasUsageAccess = true, appsLoading = true) }
-        appsJob = viewModelScope.launch(Dispatchers.IO) {
-            val now = System.currentTimeMillis()
-            val start = UsagePeriods.lastDayStarts(_state.value.rangeDays, now).first()
-            val rows = AppUsageReader.query(ctx, start, now).take(60).map { it.toRow() }
-            _state.update { it.copy(apps = rows, appsLoading = false) }
+        if (_state.value.apps.isEmpty()) _state.update { it.copy(hasUsageAccess = true, appsLoading = true) }
+        appsJob = viewModelScope.launch(Dispatchers.IO) { loadApps() }
+    }
+
+    /**
+     * Per-app rows come only from traffic recorded while the VPN was connected
+     * ([com.v2ray.ang.handler.VpnAppUsageTracker]); Android's lifetime totals are never shown.
+     */
+    private fun loadApps() {
+        val ctx = getApplication<Application>()
+        val has = AppUsageReader.hasAccess(ctx)
+        if (!has) {
+            _state.update { it.copy(hasUsageAccess = false, apps = emptyList(), appsLoading = false) }
+            return
         }
+        val keys = UsagePeriods.lastDayKeys(_state.value.rangeDays, System.currentTimeMillis())
+        val rows = AppUsageReader.toRows(ctx, UsageStore.appTraffic(keys)).take(60).map { it.toRow() }
+        _state.update { it.copy(hasUsageAccess = true, apps = rows, appsLoading = false) }
     }
 
     private fun AppUsage.toRow(): AppUsageRow {
@@ -190,8 +210,11 @@ class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
 
     override fun saveRule(rule: UsageRule) {
         viewModelScope.launch(Dispatchers.IO) {
-            val saved = if (rule.id.isBlank()) rule.copy(id = UsageRule.newId(), createdAt = System.currentTimeMillis()) else rule
+            val isNew = rule.id.isBlank()
+            val saved = if (isNew) rule.copy(id = UsageRule.newId(), createdAt = System.currentTimeMillis()) else rule
             UsageRulesRepository.upsert(saved)
+            // A new rule counts from zero; an edited one is re-checked so a higher cap unblocks now.
+            if (isNew) UsageLimitEngine.resetRule(saved) else UsageLimitEngine.reevaluate(saved)
             applyPolicy()
             refreshLedger()
         }
@@ -202,6 +225,21 @@ class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
             UsageRulesRepository.delete(id)
             applyPolicy()
             refreshLedger()
+        }
+    }
+
+    override fun setEngineChoice(on: Boolean) {
+        UsageLimitEngine.setEngineChoice(on)
+        _state.update { it.copy(engineChoice = on) }
+    }
+
+    override fun resetRule(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            UsageRulesRepository.rules().firstOrNull { it.id == id }?.let {
+                UsageLimitEngine.resetRule(it)
+                applyPolicy()
+                refreshLedger()
+            }
         }
     }
 
@@ -236,5 +274,6 @@ class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
 
     companion object {
         const val UNLABELED = "\u0000other"
+        const val LEDGER_REFRESH_MS = 5_000L
     }
 }

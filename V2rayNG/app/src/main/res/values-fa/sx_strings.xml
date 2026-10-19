@@ -143,7 +143,7 @@
     <string name="sx_usage_chart_empty">هنوز داده‌ای نیست. وصل شوید تا مصرف شما اینجا نمایش داده شود.</string>
     <string name="sx_usage_apps">برنامه‌ها</string>
     <string name="sx_usage_apps_empty">برای این بازه داده‌ای برای برنامه‌ها نیست.</string>
-    <string name="sx_usage_apps_footer">مصرف هر برنامه را خود اندروید گزارش می‌دهد و کل مصرف شبکه برنامه (وای‌فای و موبایل) را شامل می‌شود، نه فقط ترافیک VPN. برای محدود کردن، روی برنامه بزنید.</string>
+    <string name="sx_usage_apps_footer">فقط ترافیکی که هنگام اتصال VPN مصرف شده، از زمان شروع ثبت. اندروید این آمار را با تأخیر گزارش می‌کند، پس تقریبی است؛ شمارش محدودیت‌ها دقیق است. برای محدود کردن، روی برنامه بزنید.</string>
     <string name="sx_usage_access_title">اجازه دسترسی به مصرف</string>
     <string name="sx_usage_access_msg">برای نمایش مصرف هر برنامه، اندروید می‌خواهد یک بار این دسترسی را روشن کنید. SatraNG فقط مجموع مصرف شبکه را می‌خواند.</string>
     <string name="sx_usage_access_open">باز کردن تنظیمات</string>
@@ -236,6 +236,17 @@
     <string name="sx_adv_observatory">رصدخانه (Observatory)</string>
     <string name="sx_adv_more">موارد بیشتر</string>
     <string name="sx_adv_assets">فایل‌های جغرافیایی (geoip / geosite)</string>
+    <string name="sx_limit_reset">صفر کردن مصرف</string>
+    <string name="sx_limit_reset_sub">%1$s در این دوره مصرف شده. از صفر شروع می‌شود.</string>
+    <string name="sx_limit_delete_msg">محدودیت و شمارنده‌اش حذف می‌شود و دیگر چیزی مسدود نیست.</string>
+    <string name="sx_usage_apps_none_yet">هنوز ترافیک VPN برای برنامه‌ها ثبت نشده. وصل شوید؛ ظرف یک دقیقه نمایش داده می‌شود.</string>
+    <string name="sx_engine_sheet_title">فعال کردن محدودیت برنامه‌ها</string>
+    <string name="sx_engine_sheet_why">برای شمارش و مسدود کردن یک برنامه، SatraNG باید بداند هر اتصال را کدام برنامه باز کرده. تونل پیش‌فرض این را نمی‌داند؛ پس SatraNG به موتور تونل Xray که این امکان را دارد جابه‌جا می‌شود.</string>
+    <string name="sx_engine_sheet_restart">VPN یک بار، برای یکی دو ثانیه، دوباره راه‌اندازی می‌شود.</string>
+    <string name="sx_engine_sheet_battery">سرعت در استفادهٔ روزمره تغییری نمی‌کند. دانلودهای خیلی سنگین ممکن است کمی باتری بیشتری مصرف کنند.</string>
+    <string name="sx_engine_sheet_undo">می‌توانید در تنظیمات › پیشرفته برگردید. در آن حالت محدودیت برنامه‌ها متوقف می‌شود ولی محدودیت سایت‌ها کار می‌کند.</string>
+    <string name="sx_engine_sheet_enable">فعال‌سازی و راه‌اندازی دوبارهٔ VPN</string>
+    <string name="sx_engine_sheet_later">فعلاً نه</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">%d روز دیگر منقضی می‌شود</item>
         <item quantity="other">%d روز دیگر منقضی می‌شود</item>

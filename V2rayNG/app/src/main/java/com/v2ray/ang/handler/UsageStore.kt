@@ -64,6 +64,30 @@ object UsageStore {
         kv.encode(hk, kv.decodeLong(hk, 0L) + up.coerceAtLeast(0L) + down.coerceAtLeast(0L))
     }
 
+    /** Per-app bytes seen while the VPN was up (see [VpnAppUsageTracker]); keyed by day and uid. */
+    fun addAppTraffic(nowMs: Long, uid: Int, rx: Long, tx: Long) {
+        if (rx <= 0L && tx <= 0L) return
+        val day = UsagePeriods.dayKey(nowMs)
+        if (rx > 0) kv.encode("a:$day:$uid:r", kv.decodeLong("a:$day:$uid:r", 0L) + rx)
+        if (tx > 0) kv.encode("a:$day:$uid:t", kv.decodeLong("a:$day:$uid:t", 0L) + tx)
+    }
+
+    /** Per-uid VPN-session totals over the given local days. */
+    fun appTraffic(dayKeys: Collection<String>): List<AppUsage> {
+        val days = dayKeys.toHashSet()
+        val rx = HashMap<Int, Long>()
+        val tx = HashMap<Int, Long>()
+        kv.allKeys()?.forEach { k ->
+            if (!k.startsWith("a:")) return@forEach
+            val parts = k.split(':')
+            if (parts.size != 4 || parts[1] !in days) return@forEach
+            val uid = parts[2].toIntOrNull() ?: return@forEach
+            val v = kv.decodeLong(k, 0L)
+            if (parts[3] == "r") rx[uid] = (rx[uid] ?: 0L) + v else tx[uid] = (tx[uid] ?: 0L) + v
+        }
+        return (rx.keys + tx.keys).map { AppUsage(it, null, rx[it] ?: 0L, tx[it] ?: 0L) }
+    }
+
     fun addConnectedSeconds(nowMs: Long, seconds: Long) {
         if (seconds <= 0L) return
         val k = "d:${UsagePeriods.dayKey(nowMs)}:s"
@@ -162,13 +186,21 @@ object UsageStore {
     }
 
     /** Called by the notification action (UI process). The daemon sees the bonus on its next tick. */
+    /** Bumped by the UI when it resets a rule, so a daemon tick that raced with it doesn't undo it. */
+    fun ruleGeneration(id: String): Int = kv.decodeInt("r:$id:gen", 0)
+
+    fun resetRuleRuntime(id: String, rt: RuleRuntime) {
+        kv.encode("r:$id:gen", ruleGeneration(id) + 1)
+        putRuleRuntime(id, rt)
+    }
+
     fun addBonus(id: String, bytes: Long) {
         val k = "r:$id:bonus"
         kv.encode(k, kv.decodeLong(k, 0L) + bytes)
     }
 
     fun clearRule(id: String) {
-        listOf("pk", "used", "blk", "warn", "bonus").forEach { kv.removeValueForKey("r:$id:$it") }
+        listOf("pk", "used", "blk", "warn", "bonus", "gen").forEach { kv.removeValueForKey("r:$id:$it") }
     }
 
     // ---------- housekeeping ----------
@@ -176,14 +208,14 @@ object UsageStore {
     /** Drops ledger keys older than [keepDays]. Cheap; run occasionally from the daemon. */
     fun prune(keepDays: Int = 400, nowMs: Long = System.currentTimeMillis()) {
         val cutoff = UsagePeriods.dayKey(nowMs - keepDays * 86_400_000L)
-        kv.allKeys()?.filter { it.startsWith("d:") || it.startsWith("h:") }?.forEach { k ->
+        kv.allKeys()?.filter { it.startsWith("d:") || it.startsWith("h:") || it.startsWith("a:") }?.forEach { k ->
             val day = k.split(':').getOrNull(1) ?: return@forEach
             if (day < cutoff) kv.removeValueForKey(k)
         }
     }
 
     fun clearLedger() {
-        kv.allKeys()?.filter { it.startsWith("d:") || it.startsWith("h:") }?.forEach { kv.removeValueForKey(it) }
+        kv.allKeys()?.filter { it.startsWith("d:") || it.startsWith("h:") || it.startsWith("a:") }?.forEach { kv.removeValueForKey(it) }
         kv.removeValueForKey("sessions")
     }
 }

@@ -25,10 +25,10 @@ data class AppUsage(
 /**
  * Per-app network totals from Android's own accounting ([NetworkStatsManager]).
  *
- * This is device-wide per-UID usage on Wi-Fi + mobile data, i.e. it includes traffic the app sent
- * while the VPN was off or bypassed. Android attributes tunnelled traffic to the originating app,
- * not to this VPN app. It needs the user to grant "Usage access" once. Numbers are approximate
- * (bucketed by the OS) but are the best per-app breakdown available without root.
+ * These are device-wide per-UID counters on Wi-Fi + mobile data, so on their own they include
+ * traffic sent while the VPN was off or bypassed (Android credits tunnelled traffic to the app that
+ * produced it, not to this VPN app). The Usage screen never shows them directly: the daemon's
+ * [VpnAppUsageTracker] only records their growth while the tunnel is up. Needs "Usage access".
  */
 object AppUsageReader {
 
@@ -47,8 +47,8 @@ object AppUsageReader {
         Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS, Uri.parse("package:${context.packageName}"))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-    /** Per-uid totals in [startMs, endMs), merged over Wi-Fi and mobile, biggest first. */
-    fun query(context: Context, startMs: Long, endMs: Long): List<AppUsage> {
+    /** Raw per-uid totals in [startMs, endMs), merged over Wi-Fi and mobile (no package lookup). */
+    fun queryRaw(context: Context, startMs: Long, endMs: Long): List<AppUsage> {
         if (!hasAccess(context)) return emptyList()
         val nsm = context.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
         val rx = HashMap<Int, Long>()
@@ -70,13 +70,21 @@ object AppUsageReader {
                 runCatching { stats?.close() }
             }
         }
+        return (rx.keys + tx.keys).map { uid -> AppUsage(uid, null, rx[uid] ?: 0L, tx[uid] ?: 0L) }
+    }
+
+    /**
+     * Groups per-uid byte counts into displayable rows: one per app with a package, the rest
+     * (system uids) folded into one row with uid -1. Biggest first, zero rows dropped.
+     */
+    fun toRows(context: Context, usage: List<AppUsage>): List<AppUsage> {
         val pm = context.packageManager
-        val result = (rx.keys + tx.keys).map { uid ->
+        val result = usage.map { u ->
             val pkg = runCatching {
-                val names = pm.getPackagesForUid(uid)
+                val names = pm.getPackagesForUid(u.uid)
                 names?.firstOrNull { pm.getLaunchIntentForPackage(it) != null } ?: names?.firstOrNull()
             }.getOrNull()
-            AppUsage(uid, pkg, rx[uid] ?: 0L, tx[uid] ?: 0L)
+            u.copy(packageName = pkg)
         }
         // Many system uids have no package we can show; fold them into one row (uid -1).
         val (named, anonymous) = result.partition { it.packageName != null }

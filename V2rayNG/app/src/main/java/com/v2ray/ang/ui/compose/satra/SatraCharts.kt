@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -68,12 +70,18 @@ fun SatraBarChart(
     var selected by rememberSaveable(values.size) { mutableIntStateOf(values.lastIndex) }
     val progress = remember { Animatable(0f) }
     val reduce = rememberReduceMotion()
-    LaunchedEffect(values) {
+    // The grow-in plays once per dataset shape (first appearance, or switching 7 ⇄ 30 days).
+    // Live value changes only glide each bar to its new height; nothing restarts from zero.
+    LaunchedEffect(values.size) {
         if (reduce) progress.snapTo(1f) else {
             progress.snapTo(0f)
             progress.animateTo(1f, tween(900))
         }
     }
+    val animated = values.mapIndexed { i, v ->
+        key(i) { animateFloatAsState(v, if (reduce) snap() else SatraMotion.smooth(), label = "barValue").value }
+    }
+    val maxAnimated by animateFloatAsState(max(values.maxOrNull() ?: 0f, 1f), if (reduce) snap() else SatraMotion.smooth(), label = "barMax")
     val selFraction by animateFloatAsState(selected.toFloat(), SatraMotion.soft(), label = "selBar")
     Canvas(
         modifier
@@ -92,7 +100,7 @@ fun SatraBarChart(
         val labelH = 22.dp.toPx()
         val topPad = 26.dp.toPx()
         val chartH = size.height - labelH - topPad
-        val maxV = max(values.max(), 1f)
+        val maxV = max(maxAnimated, 1f)
         val slot = size.width / values.size
         val barW = (slot * 0.56f).coerceAtMost(26.dp.toPx())
         // grid lines
@@ -100,7 +108,8 @@ fun SatraBarChart(
             val y = topPad + chartH * i / 2f
             drawLine(c.separator, Offset(0f, y), Offset(size.width, y), strokeWidth = 0.6.dp.toPx())
         }
-        values.forEachIndexed { i, v ->
+        values.forEachIndexed { i, target ->
+            val v = animated.getOrElse(i) { target }
             val delay = i * 0.35f / values.size
             val p = ((progress.value - delay) / (1f - 0.35f)).coerceIn(0f, 1f)
             val eased = 1f - (1f - p) * (1f - p) * (1f - p)
