@@ -104,8 +104,9 @@ fun SatraApp(
                             Tabs.Home -> {
                                 val week by usageVm.week.collectAsState()
                                 // Mode captured when the connection came up, so a later unapplied change doesn't lie.
-                                val proxyOnly = rememberSaveable(state.isRunning) { state.isRunning && com.v2ray.ang.handler.ProxyEndpoints.isProxyOnlyMode() }
-                                val endpoints = remember(proxyOnly, state.isRunning) {
+                                // Keyed on the session start too: a quick reconnect (mode switch) may never flip isRunning.
+                                val proxyOnly = rememberSaveable(state.isRunning, live.sessionStartMs) { state.isRunning && com.v2ray.ang.handler.ProxyEndpoints.isProxyOnlyMode() }
+                                val endpoints = remember(proxyOnly, state.isRunning, live.sessionStartMs) {
                                     if (proxyOnly) com.v2ray.ang.handler.ProxyEndpoints.current() else emptyList()
                                 }
                                 HomeScreen(
