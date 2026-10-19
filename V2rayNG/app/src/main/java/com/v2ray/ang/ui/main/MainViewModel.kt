@@ -1673,7 +1673,15 @@ class MainViewModel(
         )
     }
 
+    /** The user picked a server by hand: Smart/Auto-connect must not swap it on the next connect. */
+    fun markManualPick() {
+        lastManualPickMs = System.currentTimeMillis()
+    }
+
+    private var lastManualPickMs = 0L
+
     fun prepareConnectGuid(): String? {
+        if (honorManualPick(lastManualPickMs, System.currentTimeMillis())) return uiState.value.selectedGuid
         val groupId = uiState.value.selectedGroupId
         val candidates = if (groupId.isNotBlank()) {
             MmkvManager.decodeServerList(groupId)

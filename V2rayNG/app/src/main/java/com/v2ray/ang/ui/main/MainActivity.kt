@@ -473,6 +473,7 @@ class MainActivity : HelperBaseComponentActivity(), AppNav {
 
     private fun setSelectServer(guid: String) {
         val selected = mainViewModel.uiState.value.selectedGuid
+        mainViewModel.markManualPick()
         if (guid != selected) {
             mainViewModel.updateSelectedGuid(guid)
             LauncherManager.restartService(this)

@@ -2,6 +2,7 @@ package com.v2ray.ang
 
 import com.v2ray.ang.ui.main.MainAction
 import com.v2ray.ang.ui.main.canPingSingle
+import com.v2ray.ang.ui.main.honorManualPick
 import com.v2ray.ang.ui.main.isRowPinging
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -34,4 +35,10 @@ class SinglePingTest {
     }
 
     @Test fun actionCarriesGuid() = assertEquals("g1", MainAction.PingServer("g1").guid)
+
+    @Test fun manualPickIsHonoredForTenMinutes() {
+        assertTrue(honorManualPick(1_000L, 1_000L + 60_000L))
+        assertFalse(honorManualPick(1_000L, 1_000L + 11 * 60_000L))
+        assertFalse(honorManualPick(0L, 5_000L))
+    }
 }

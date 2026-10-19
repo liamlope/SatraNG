@@ -111,3 +111,7 @@ internal fun isRowPinging(guid: String, delayMillis: Long, pinging: Set<String>,
 /** Whether a single-config ping may start now: not while a whole-list test runs, not twice for one config. */
 internal fun canPingSingle(guid: String, pinging: Set<String>, bulkTesting: Boolean): Boolean =
     guid.isNotBlank() && guid !in pinging && !(bulkTesting && pinging.isEmpty())
+
+/** A server picked by hand in the last 10 minutes is used as-is when connecting (no auto-best swap). */
+internal fun honorManualPick(lastPickMs: Long, nowMs: Long, windowMs: Long = 10 * 60_000L): Boolean =
+    lastPickMs > 0L && nowMs - lastPickMs in 0..windowMs
