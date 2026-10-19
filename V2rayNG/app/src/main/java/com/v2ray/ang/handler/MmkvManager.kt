@@ -69,13 +69,13 @@ object MmkvManager {
         ) = Unit
     }
 
-    private val mainStorage by lazy { MMKV.mmkvWithID(ID_MAIN, MMKV.MULTI_PROCESS_MODE) }
-    private val profileFullStorage by lazy { MMKV.mmkvWithID(ID_PROFILE_FULL_CONFIG, MMKV.MULTI_PROCESS_MODE) }
-    private val serverRawStorage by lazy { MMKV.mmkvWithID(ID_SERVER_RAW, MMKV.MULTI_PROCESS_MODE) }
+    private val mainStorage by lazy { MMKV.mmkvWithID(ID_MAIN, MMKV.MULTI_PROCESS_MODE, cryptKey) }
+    private val profileFullStorage by lazy { MMKV.mmkvWithID(ID_PROFILE_FULL_CONFIG, MMKV.MULTI_PROCESS_MODE, cryptKey) }
+    private val serverRawStorage by lazy { MMKV.mmkvWithID(ID_SERVER_RAW, MMKV.MULTI_PROCESS_MODE, cryptKey) }
     private val serverAffStorage by lazy { MMKV.mmkvWithID(ID_SERVER_AFF, MMKV.MULTI_PROCESS_MODE) }
-    private val subStorage by lazy { MMKV.mmkvWithID(ID_SUB, MMKV.MULTI_PROCESS_MODE) }
+    private val subStorage by lazy { MMKV.mmkvWithID(ID_SUB, MMKV.MULTI_PROCESS_MODE, cryptKey) }
     private val assetStorage by lazy { MMKV.mmkvWithID(ID_ASSET, MMKV.MULTI_PROCESS_MODE) }
-    private val settingsStorage by lazy { MMKV.mmkvWithID(ID_SETTING, MMKV.MULTI_PROCESS_MODE) }
+    private val settingsStorage by lazy { MMKV.mmkvWithID(ID_SETTING, MMKV.MULTI_PROCESS_MODE, cryptKey) }
 
     private inline fun <T> withProfileIndexLock(block: () -> T): T {
         return synchronized(mainStorage) {
@@ -147,7 +147,30 @@ object MmkvManager {
             logLevel,
             recoveryHandler
         )
+        // At-rest encryption of configs, subscriptions and settings (credentials). Must run
+        // before any of those stores is opened in this process.
+        cryptKey = try {
+            when (val r = AtRestCryptoAndroid.ensure(context, ENCRYPTED_IDS)) {
+                is AtRestCrypto.Outcome.Encrypted -> {
+                    if (r.migratedNow) Log.i(TAG, "MMKV stores encrypted at rest")
+                    r.key
+                }
+                is AtRestCrypto.Outcome.Plain -> {
+                    Log.w(TAG, "MMKV stores stay plaintext: ${r.reason}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "At-rest crypto setup failed; staying plaintext", e)
+            null
+        }
     }
+
+    /** Crypt key for the sensitive stores (null = plaintext). */
+    @Volatile
+    private var cryptKey: String? = null
+
+    private val ENCRYPTED_IDS by lazy { listOf(ID_MAIN, ID_PROFILE_FULL_CONFIG, ID_SERVER_RAW, ID_SUB, ID_SETTING) }
 
     private fun recoverFromStorageError(mmapID: String, error: String): MMKVRecoverStrategic {
         Log.e(TAG, "MMKV $error failed for $mmapID; attempting data recovery")
