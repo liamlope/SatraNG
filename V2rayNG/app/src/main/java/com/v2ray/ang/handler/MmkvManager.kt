@@ -370,7 +370,9 @@ object MmkvManager {
                 decodeServerList(subscriptionId)
             } else {
                 replacedServers.filter { guid ->
-                    decodeServerConfig(guid)?.configType?.isGroupType() == true
+                    val cfg = decodeServerConfig(guid)
+                    // Group profiles and configs the user added by hand (no subscription id) survive a refresh.
+                    cfg?.configType?.isGroupType() == true || (cfg != null && cfg.subscriptionId.isBlank())
                 }.toMutableList()
             }
             val indexedServers = serverList.toHashSet()

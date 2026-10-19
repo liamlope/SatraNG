@@ -1020,8 +1020,12 @@ class MainViewModel(
                 try {
                     val subsBefore = MmkvManager.decodeSubscriptions().map { it.guid }.toSet()
                     val serversBefore = MmkvManager.decodeAllServerList().toSet()
+                    // Configs added into a remote subscription's group would be wiped by its next refresh;
+                    // store them as manual ones (no subscription id) so refreshes keep them.
+                    val target = uiState.value.selectedGroupId
+                    val targetIsRemote = target.isNotEmpty() && !MmkvManager.decodeSubscription(target)?.url.isNullOrBlank()
                     val (count, countSub) = dataSource.importBatchConfig(
-                        configText, uiState.value.selectedGroupId, true
+                        configText, if (targetIsRemote) "" else target, true
                     )
                     val added = MmkvManager.decodeAllServerList().filter { it !in serversBefore }
                     when {
