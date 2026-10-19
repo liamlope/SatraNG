@@ -36,7 +36,6 @@
     <string name="sx_ping_testing">Testing</string>
     <string name="sx_ping_failed">No reply</string>
     <string name="sx_ping_cd">Test latency of the active server</string>
-    <string name="sx_ping_needs_connection">Connect to test latency through the tunnel</string>
     <string name="sx_live_download">Download</string>
     <string name="sx_live_upload">Upload</string>
     <string name="sx_live_session">This session</string>

@@ -34,7 +34,6 @@ sx_ping_test	Тест
 sx_ping_testing	Проверка
 sx_ping_failed	Нет ответа
 sx_ping_cd	Проверить задержку активного сервера
-sx_ping_needs_connection	Подключитесь, чтобы проверить задержку через туннель
 sx_live_download	Загрузка
 sx_live_upload	Отдача
 sx_live_session	Эта сессия

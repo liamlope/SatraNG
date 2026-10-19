@@ -373,19 +373,13 @@ private fun ServerCard(
             PingButton(
                 ms = row?.testDelayMillis?.takeIf { it != 0L },
                 testing = state.isTesting,
-                enabled = state.isRunning && !state.isTesting,
+                // Connected: measured through the running tunnel. Otherwise a private test core.
+                enabled = row != null && !state.isTesting,
                 onClick = onPing,
                 idleLabel = stringResource(R.string.sx_ping_test),
                 testingLabel = stringResource(R.string.sx_ping_testing),
                 failedLabel = stringResource(R.string.sx_ping_failed),
                 contentDescription = stringResource(R.string.sx_ping_cd),
-            )
-        }
-        if (!state.isRunning) {
-            Text(
-                stringResource(R.string.sx_ping_needs_connection),
-                style = Satra.type.caption, color = c.textTertiary,
-                modifier = Modifier.padding(top = 8.dp, start = 58.dp),
             )
         }
     }

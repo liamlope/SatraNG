@@ -36,7 +36,6 @@
     <string name="sx_ping_testing">Проверка</string>
     <string name="sx_ping_failed">Нет ответа</string>
     <string name="sx_ping_cd">Проверить задержку активного сервера</string>
-    <string name="sx_ping_needs_connection">Подключитесь, чтобы проверить задержку через туннель</string>
     <string name="sx_live_download">Загрузка</string>
     <string name="sx_live_upload">Отдача</string>
     <string name="sx_live_session">Эта сессия</string>

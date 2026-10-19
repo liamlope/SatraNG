@@ -23,7 +23,6 @@ sx_ping_test	Test	تست
 sx_ping_testing	Testing	در حال تست
 sx_ping_failed	No reply	بی‌پاسخ
 sx_ping_cd	Test latency of the active server	تست تأخیر سرور فعال
-sx_ping_needs_connection	Connect to test latency through the tunnel	برای تست تأخیر ابتدا متصل شوید
 sx_live_download	Download	دانلود
 sx_live_upload	Upload	آپلود
 sx_live_session	This session	این نشست

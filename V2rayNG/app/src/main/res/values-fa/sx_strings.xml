@@ -36,7 +36,6 @@
     <string name="sx_ping_testing">در حال تست</string>
     <string name="sx_ping_failed">بی‌پاسخ</string>
     <string name="sx_ping_cd">تست تأخیر سرور فعال</string>
-    <string name="sx_ping_needs_connection">برای تست تأخیر ابتدا متصل شوید</string>
     <string name="sx_live_download">دانلود</string>
     <string name="sx_live_upload">آپلود</string>
     <string name="sx_live_session">این نشست</string>
