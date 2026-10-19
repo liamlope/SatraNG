@@ -23,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
@@ -69,6 +71,7 @@ internal fun SecurityChip(sessionStartMs: Long, modifier: Modifier = Modifier) {
         }
     }
     val r = report
+    val desc = if (r == null) stringResource(R.string.sx_sec_chip_checking) else stringResource(R.string.sx_sec_title) + " " + r.score
     val (fg, bg) = when (r?.let { securityBand(it.score) }) {
         2 -> c.success to c.successSoft
         1 -> c.warning to c.warningSoft
@@ -81,14 +84,15 @@ internal fun SecurityChip(sessionStartMs: Long, modifier: Modifier = Modifier) {
                 .clip(SatraShapes.Pill)
                 .background(bg)
                 .satraClickable(pressedScale = 0.95f) { ctx.startActivity(Intent(ctx, SecurityCheckActivity::class.java)) }
+                .semantics { contentDescription = desc }
                 .padding(horizontal = 12.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (r == null) SatraSpinner(size = 12.dp, color = fg, strokeWidth = 1.6.dp)
             else Icon(if (securityBand(r.score) == 2) SatraIcons.ShieldCheck else SatraIcons.Warning, null, tint = fg, modifier = Modifier.size(14.dp))
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(5.dp))
             Text(
-                if (r == null) stringResource(R.string.sx_sec_chip_checking) else stringResource(R.string.sx_sec_chip_score, r.score),
+                if (r == null) "…" else stringResource(R.string.sx_sec_chip_score, r.score),
                 style = Satra.type.footnote.copy(fontWeight = FontWeight.SemiBold), color = fg,
             )
         }

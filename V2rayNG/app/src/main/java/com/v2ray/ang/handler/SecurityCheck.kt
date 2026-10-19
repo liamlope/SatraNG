@@ -20,7 +20,7 @@ object SecurityCheck {
 
     data class Finding(val item: Item, val status: Status, val detail: String = "")
 
-    data class Report(val connected: Boolean, val findings: List<Finding>, val score: Int, val fixes: List<Fix>)
+    data class Report(val connected: Boolean, val findings: List<Finding>, val score: Int, val fixes: List<Fix>, val facts: Facts? = null)
 
     enum class Fix { Connect, ChooseOtherServer, UseSecureConfig, DisableInsecure, EnableKillSwitch, UseRemoteDns, EnableIpv6Tunnel }
 
@@ -40,6 +40,10 @@ object SecurityCheck {
         val insecure: Boolean,
         val alwaysOn: Boolean?,
         val lockdown: Boolean?,
+        /** uTLS fingerprint as configured (blank = the app default, chrome). */
+        val fingerprint: String? = null,
+        /** Resolver description as reported, e.g. "Netherlands - Cloudflare". */
+        val resolverGeo: String? = null,
     )
 
     private val PLAIN_OK = setOf(EConfigType.WIREGUARD, EConfigType.HYSTERIA2, EConfigType.HYSTERIA, EConfigType.SHADOWSOCKS)
@@ -105,13 +109,27 @@ object SecurityCheck {
         }
         out += Finding(Item.KillSwitch, ks)
 
-        return Report(true, out, score(out), fixes.toList())
+        return Report(true, out, score(out), fixes.toList(), f)
     }
 
     private val weight = mapOf(
         Item.ExitIp to 25, Item.DnsLeak to 25, Item.Encryption to 20,
         Item.Ipv6 to 10, Item.WebRtc to 10, Item.KillSwitch to 10,
     )
+
+    fun maxPoints(item: Item): Int = weight[item] ?: 0
+
+    fun points(f: Finding): Int = when (f.status) {
+        Status.Pass -> maxPoints(f.item)
+        Status.Warn, Status.Unknown -> maxPoints(f.item) / 2
+        Status.Fail -> 0
+    }
+
+    /** Fixes the app can apply itself (settings / this config only); the rest open a place to act. */
+    fun isOneTap(fix: Fix): Boolean = fix == Fix.UseRemoteDns || fix == Fix.DisableInsecure
+
+    /** Order in which [run] reports items done. */
+    val ORDER = listOf(Item.ExitIp, Item.DnsLeak, Item.Ipv6, Item.WebRtc, Item.Encryption, Item.KillSwitch)
 
     /** 0..100. Pass = full points, Warn/Unknown = half, Fail = none. */
     fun score(findings: List<Finding>): Int = findings.sumOf { f ->
@@ -144,7 +162,7 @@ object SecurityCheck {
     }
 
     /** [compareDirect]: also ask once outside the tunnel (manual runs only; reveals the real IP to ip-api.com). */
-    fun run(connected: Boolean, compareDirect: Boolean = true): Report {
+    fun run(connected: Boolean, compareDirect: Boolean = true, onDone: (Item) -> Unit = {}): Report {
         val vpnMode = SettingsManager.isVpnMode()
         val guid = MmkvManager.getSelectServer()
         val profile = guid?.let { MmkvManager.decodeServerConfig(it) }
@@ -166,10 +184,14 @@ object SecurityCheck {
         }
 
         val exit = parseIpCountry(get(AppConfig.IP_API_URL, true) ?: get("http://ip-api.com/json/?fields=countryCode,query", true))
+        onDone(Item.ExitIp)
         val direct = if (compareDirect) parseIpCountry(get("http://ip-api.com/json/?fields=countryCode,query", false)) else null
         // edns.ip-api.com answers with the resolver that looked its random name up.
-        val dns = parseResolver(get("http://${System.nanoTime()}.edns.ip-api.com/json", true))
+        val dnsBody = get("http://${System.nanoTime()}.edns.ip-api.com/json", true)
+        val dns = parseResolver(dnsBody)
+        onDone(Item.DnsLeak)
         val v6 = get("https://api6.ipify.org", true)?.trim()?.takeIf { it.contains(':') }
+        onDone(Item.Ipv6)
         LogUtil.i(AppConfig.TAG, "SecurityCheck: exit=${exit?.second} dns=${dns?.second} v6=${v6 != null}")
         return evaluate(
             Facts(
@@ -182,8 +204,10 @@ object SecurityCheck {
                 insecure = profile?.insecure == true && profile.pinnedCA256.isNullOrEmpty(),
                 alwaysOn = MmkvManager.decodeSettingsString(PREF_ALWAYS_ON)?.toBooleanStrictOrNull(),
                 lockdown = MmkvManager.decodeSettingsString(PREF_LOCKDOWN)?.toBooleanStrictOrNull(),
+                fingerprint = profile?.fingerPrint,
+                resolverGeo = resolverGeo(dnsBody),
             ),
-        )
+        ).also { listOf(Item.WebRtc, Item.Encryption, Item.KillSwitch).forEach(onDone) }
     }
 
     private fun emptyFacts(vpnMode: Boolean) = Facts(false, vpnMode, null, null, null, null, null, false, null, null, null, false, null, null)
@@ -220,6 +244,31 @@ object SecurityCheck {
             null
         }
     }
+
+    internal fun resolverGeo(body: String?): String? = try {
+        JsonParser.parseString(body ?: return null).asJsonObject.getAsJsonObject("dns")?.get("geo")?.asString?.takeIf { it.isNotBlank() }
+    } catch (e: Exception) {
+        null
+    }
+
+    /** One-tap fixes. Returns true when applied (a reconnect makes it take effect). */
+    fun applyFix(fix: Fix): Boolean = try {
+        when (fix) {
+            Fix.UseRemoteDns -> {
+                MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, DOH_DEFAULT); true
+            }
+            Fix.DisableInsecure -> {
+                val guid = MmkvManager.getSelectServer()
+                val p = guid?.let { MmkvManager.decodeServerConfig(it) }
+                if (guid != null && p != null) { p.insecure = false; MmkvManager.encodeServerConfig(guid, p); true } else false
+            }
+            else -> false
+        }
+    } catch (e: Exception) {
+        false
+    }
+
+    const val DOH_DEFAULT = "https://1.1.1.1/dns-query"
 
     internal fun countryNameToCode(name: String): String? =
         java.util.Locale.getISOCountries().firstOrNull { java.util.Locale("", it).getDisplayCountry(java.util.Locale.ENGLISH).equals(name, true) }

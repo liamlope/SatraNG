@@ -222,14 +222,15 @@ class PremiumScreenshotTest {
         lang: String = "en",
         font: Float = 1f,
         heightDp: Int = 891,
+        widthDp: Int = 411,
         inlineSheets: Boolean = false,
         still: Boolean = false,
         content: @Composable () -> Unit,
     ) {
-        val tag = "${name}_${if (dark) "dark" else "light"}_${lang}${if (font != 1f) "_x${(font * 100).toInt()}" else ""}"
+        val tag = "${name}${if (widthDp != 411) "_w$widthDp" else ""}_${if (dark) "dark" else "light"}_${lang}${if (font != 1f) "_x${(font * 100).toInt()}" else ""}"
         val out = java.io.File(System.getProperty("roborazzi.output.dir") ?: "build/shots").apply { mkdirs() }
         java.util.Locale.setDefault(java.util.Locale.forLanguageTag(lang))
-        org.robolectric.RuntimeEnvironment.setQualifiers("w411dp-h${heightDp}dp-xxhdpi")
+        org.robolectric.RuntimeEnvironment.setQualifiers("w${widthDp}dp-h${heightDp}dp-xxhdpi")
         android.provider.Settings.Global.putFloat(
             androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>().contentResolver,
             android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, if (still) 0f else 1f,
@@ -254,7 +255,7 @@ class PremiumScreenshotTest {
                 LocalInlineSheets provides inlineSheets,
             ) {
                 SatraTheme(dark = dark) {
-                    Box(Modifier.requiredSize(411.dp, heightDp.dp)) { SatraBackground { content() } }
+                    Box(Modifier.requiredSize(widthDp.dp, heightDp.dp)) { SatraBackground { content() } }
                 }
             }
         } }
@@ -280,6 +281,12 @@ class PremiumScreenshotTest {
     @Test fun homeIdleFaDark() = shot("home_idle", true, "fa", content = home(baseState.copy(phase = ConnectPhase.Idle), LiveUiState()))
     @Test fun homeConnectedSmall() = shot("home_connected_small", false, heightDp = 640, content = home(baseState.copy(phase = ConnectPhase.Connected, isRunning = true)))
     @Test fun homeIdleSmallFa() = shot("home_idle_small", true, "fa", heightDp = 640, content = home(baseState.copy(phase = ConnectPhase.Idle), LiveUiState()))
+    @Test fun home360ConnectedEn() = shot("home360_connected", true, "en", heightDp = 640, widthDp = 360, content = home(baseState.copy(phase = ConnectPhase.Connected, isRunning = true)))
+    @Test fun home360IdleEn() = shot("home360_idle", false, "en", heightDp = 640, widthDp = 360, content = home(baseState.copy(phase = ConnectPhase.Idle), LiveUiState()))
+    @Test fun home360ConnectedFa() = shot("home360_connected", false, "fa", heightDp = 640, widthDp = 360, content = home(baseState.copy(phase = ConnectPhase.Connected, isRunning = true)))
+    @Test fun home360IdleFa() = shot("home360_idle", true, "fa", heightDp = 640, widthDp = 360, content = home(baseState.copy(phase = ConnectPhase.Idle), LiveUiState()))
+    @Test fun home360ConnectedRu() = shot("home360_connected", true, "ru", heightDp = 640, widthDp = 360, content = home(baseState.copy(phase = ConnectPhase.Connected, isRunning = true)))
+    @Test fun home360IdleRu() = shot("home360_idle", false, "ru", heightDp = 640, widthDp = 360, content = home(baseState.copy(phase = ConnectPhase.Idle), LiveUiState()))
     @Test fun homeConnectedLarge() = shot("home_connected", true, font = 1.4f, content = home(baseState.copy(phase = ConnectPhase.Connected, isRunning = true)))
 
     // ---------- Servers ----------

@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
@@ -132,20 +133,16 @@ fun HomeScreen(
                 )
             }
         } else {
+            var details by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-                val density = LocalDensity.current
-                val fontScale = density.fontScale.coerceAtLeast(1f)
-                // Everything except the orb, measured generously (grows with the font scale).
-                val fixed = (70 + 54 + 112 + 66 + 40) * fontScale + (if (state.quota != null) 96 * fontScale else 0f) +
-                    (if (state.phase == ConnectPhase.Connected) 40 * fontScale else 0f)
-                val orb = (maxHeight.value - fixed).coerceIn(140f, 288f).dp
-                val gap = ((maxHeight.value - fixed - orb.value) / 6f).coerceIn(6f, 18f).dp
-                Column(
-                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
+                val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
+                // Title + chips + server card + summary strip + margins; the orb takes what is left.
+                val fixed = (64 + 40 + 76 + 64 + 36) * fontScale
+                val orb = (maxHeight.value - fixed).coerceIn(112f, 264f).dp
+                Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Spacer(Modifier.weight(1f))
                     OrbSection(state = state, live = live, onToggle = onToggle, orbSize = orb)
-                    Spacer(Modifier.height(gap))
+                    Spacer(Modifier.weight(1f))
                     ServerCard(
                         row = state.selectedRow,
                         state = state,
@@ -154,38 +151,32 @@ fun HomeScreen(
                         onLocate = onLocate,
                         modifier = Modifier.padding(horizontal = SatraSpace.Gutter),
                     )
-                    Spacer(Modifier.height(8.dp))
-                    // Proxy-only mode while connected: show where other apps should point instead of Smart Connect.
-                    androidx.compose.animation.AnimatedContent(
-                        targetState = state.isRunning && proxyEndpoints.isNotEmpty(),
-                        transitionSpec = {
-                            (androidx.compose.animation.fadeIn(tween(220)) togetherWith androidx.compose.animation.fadeOut(tween(160)))
-                                .using(androidx.compose.animation.SizeTransform(clip = false))
-                        },
-                        label = "proxyOrSmart",
-                    ) { showProxy ->
-                        if (showProxy) {
-                            ProxyEndpointCard(
-                                endpoints = proxyEndpoints,
-                                onCopy = onCopy,
-                                modifier = Modifier.padding(horizontal = SatraSpace.Gutter),
-                            )
+                    Spacer(Modifier.height(10.dp))
+                    SummaryStrip(live, state.quota, onClick = { details = true }, modifier = Modifier.padding(horizontal = SatraSpace.Gutter))
+                    Spacer(Modifier.height(12.dp))
+                }
+            }
+            if (details) {
+                com.v2ray.ang.ui.compose.satra.SatraSheet(onDismiss = { details = false }) {
+                    Text(
+                        stringResource(R.string.sx_home_details),
+                        style = Satra.type.title2, color = Satra.colors.textPrimary,
+                        modifier = Modifier.padding(horizontal = 24.dp).padding(bottom = 12.dp),
+                    )
+                    Column(Modifier.padding(horizontal = SatraSpace.Gutter), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (state.isRunning && proxyEndpoints.isNotEmpty()) {
+                            ProxyEndpointCard(endpoints = proxyEndpoints, onCopy = onCopy)
                         } else {
                             com.v2ray.ang.ui.servers.SmartConnectCard(
                                 busy = state.smartConnecting,
-                                onClick = onSmartConnect,
+                                onClick = { details = false; onSmartConnect() },
                                 compact = true,
-                                modifier = Modifier.padding(horizontal = SatraSpace.Gutter),
                             )
                         }
+                        TrafficCard(live, onOpenUsage = { details = false; onOpenUsage() })
+                        state.quota?.let { QuotaCard(it) }
                     }
-                    Spacer(Modifier.height(gap))
-                    TrafficCard(live, onOpenUsage, Modifier.padding(horizontal = SatraSpace.Gutter))
-                    state.quota?.let { quota ->
-                        Spacer(Modifier.height(gap))
-                        QuotaCard(quota, Modifier.padding(horizontal = SatraSpace.Gutter))
-                    }
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(16.dp))
                 }
             }
         }
@@ -480,6 +471,40 @@ private fun TrafficCard(live: LiveUiState, onOpenUsage: () -> Unit, modifier: Mo
         TrafficTableHeader()
         if (live.running) TrafficRow(stringResource(R.string.sx_live_session), live.sessionDown, live.sessionUp)
         TrafficRow(stringResource(R.string.sx_home_today), live.todayDown, live.todayUp)
+    }
+}
+
+/** One calm line: live speeds (or today's total) and the plan left; opens the details sheet. */
+@Composable
+private fun SummaryStrip(live: LiveUiState, quota: QuotaUi?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = Satra.colors
+    SatraCard(modifier.fillMaxWidth(), onClick = onClick, padding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                if (live.running) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("↓ " + formatSpeed(live.downBps), style = Satra.type.numberSmall, color = c.success, maxLines = 1)
+                        Spacer(Modifier.width(12.dp))
+                        Text("↑ " + formatSpeed(live.upBps), style = Satra.type.numberSmall, color = c.info, maxLines = 1)
+                    }
+                } else {
+                    Text(stringResource(R.string.sx_home_today), style = Satra.type.caption, color = c.textSecondary)
+                    Text(formatBytes(live.todayDown + live.todayUp), style = Satra.type.numberSmall, color = c.textPrimary, maxLines = 1)
+                }
+            }
+            if (quota != null) {
+                val left = quota.fraction?.let { 1f - it }
+                val tone = quotaColor(listOfNotNull(left, quota.timeLeftFraction(System.currentTimeMillis())).minOrNull() ?: 1f, c.success, c.warning, c.danger)
+                SatraRing(fraction = left ?: 1f, size = 26.dp, stroke = 3.dp, color = tone) {}
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    if (quota.totalBytes > 0L) formatBytes((quota.totalBytes - quota.usedBytes).coerceAtLeast(0L)) else "∞",
+                    style = Satra.type.numberSmall, color = c.textPrimary, maxLines = 1,
+                )
+                Spacer(Modifier.width(6.dp))
+            }
+            Icon(SatraIcons.ChevronRight, null, tint = c.textTertiary, modifier = Modifier.size(16.dp).then(if (androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl) Modifier.scale(-1f, 1f) else Modifier))
+        }
     }
 }
 

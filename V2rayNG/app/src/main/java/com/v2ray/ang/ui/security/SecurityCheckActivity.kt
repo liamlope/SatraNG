@@ -5,6 +5,10 @@ import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,7 +67,7 @@ class SecurityCheckActivity : BaseComponentActivity() {
     private fun openFix(fix: SecurityCheck.Fix) {
         try {
             when (fix) {
-                SecurityCheck.Fix.EnableKillSwitch -> startActivity(Intent(Settings.ACTION_VPN_SETTINGS))
+                SecurityCheck.Fix.EnableKillSwitch, SecurityCheck.Fix.EnableIpv6Tunnel -> startActivity(Intent(Settings.ACTION_VPN_SETTINGS))
                 else -> finish() // back to the app: connect / choose a server there
             }
         } catch (_: Exception) {
@@ -78,23 +82,48 @@ private fun coreListening(): Boolean = try {
     false
 }
 
+/** Per-row phase in the live checklist. */
+internal enum class RowPhase { Pending, Running, Done }
+
+/** Phase of [item] given what has been measured and revealed so far. Pure; unit-tested. */
+internal fun rowPhase(item: SecurityCheck.Item, measured: Set<SecurityCheck.Item>, revealed: Set<SecurityCheck.Item>, running: Boolean): RowPhase = when {
+    item in revealed -> RowPhase.Done
+    !running -> RowPhase.Pending
+    item == SecurityCheck.ORDER.firstOrNull { it !in measured } -> RowPhase.Running
+    else -> RowPhase.Pending
+}
+
 @Composable
 private fun SecurityCheckScreen(onBack: () -> Unit, onFix: (SecurityCheck.Fix) -> Unit) {
     val c = Satra.colors
-    val scope = rememberCoroutineScope()
     var report by remember { mutableStateOf<SecurityCheck.Report?>(null) }
     var running by remember { mutableStateOf(false) }
     var runId by remember { mutableIntStateOf(0) }
+    var measured by remember { mutableStateOf(emptySet<SecurityCheck.Item>()) }
+    var revealed by remember { mutableStateOf(emptySet<SecurityCheck.Item>()) }
+    var applied by remember { mutableStateOf(emptySet<SecurityCheck.Fix>()) }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(runId) {
-        running = true
-        report = withContext(Dispatchers.IO) { SecurityCheck.run(connected = coreListening()) }
+        running = true; report = null; measured = emptySet(); revealed = emptySet()
+        val r = withContext(Dispatchers.IO) {
+            val up = coreListening()
+            SecurityCheck.run(connected = up) { item -> scope.launch { measured = measured + item } }
+        }
+        report = r
+        // Reveal one by one so the ring builds up with each result.
+        for (item in SecurityCheck.ORDER) {
+            measured = measured + item
+            kotlinx.coroutines.delay(260)
+            revealed = revealed + item
+        }
         running = false
     }
+    val r = report
+    val earned = r?.findings?.filter { it.item in revealed }?.sumOf { SecurityCheck.points(it) } ?: 0
     SatraScrollPage(title = stringResource(R.string.sx_sec_title), onBack = onBack, subtitle = stringResource(R.string.sx_sec_sub)) {
         Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            ScoreRing(report?.score, running, report?.connected != false)
+            ScoreRing(earned, running, r?.connected != false, revealed.size / SecurityCheck.ORDER.size.toFloat())
             Spacer(Modifier.height(10.dp))
-            val r = report
             Text(
                 when {
                     running -> stringResource(R.string.sx_sec_running)
@@ -106,22 +135,36 @@ private fun SecurityCheckScreen(onBack: () -> Unit, onFix: (SecurityCheck.Fix) -
                 style = Satra.type.title2, color = c.textPrimary, textAlign = TextAlign.Center,
             )
         }
-        val r = report
-        if (r != null && !running) {
-            InsetGroup {
-                r.findings.forEach { f -> row { FindingRow(f) } }
+        InsetGroup {
+            SecurityCheck.ORDER.forEach { item ->
+                row {
+                    val f = r?.findings?.firstOrNull { it.item == item }
+                    LiveRow(item, rowPhase(item, measured, revealed, running), f, r?.facts)
+                }
             }
-            if (r.fixes.isNotEmpty()) {
-                Spacer(Modifier.height(18.dp))
-                InsetGroup(header = stringResource(R.string.sx_sec_fixes)) {
-                    r.fixes.forEach { fix ->
-                        row {
-                            SatraRow(
-                                fixTitle(fix), icon = SatraIcons.Warning, iconColor = c.warning,
-                                chevron = fix == SecurityCheck.Fix.EnableKillSwitch,
-                                onClick = if (fix == SecurityCheck.Fix.EnableKillSwitch || fix == SecurityCheck.Fix.Connect) ({ onFix(fix) }) else null,
-                            )
-                        }
+        }
+        if (r != null && !running && r.fixes.isNotEmpty()) {
+            Spacer(Modifier.height(18.dp))
+            InsetGroup(header = stringResource(R.string.sx_sec_fixes)) {
+                r.fixes.forEach { fix ->
+                    row {
+                        val oneTap = SecurityCheck.isOneTap(fix)
+                        val done = fix in applied
+                        SatraRow(
+                            fixTitle(fix),
+                            subtitle = if (done) stringResource(R.string.sx_sec_applied) else null,
+                            icon = if (done) SatraIcons.Check else SatraIcons.Warning,
+                            iconColor = if (done) c.success else c.warning,
+                            chevron = !oneTap && fix != SecurityCheck.Fix.UseSecureConfig,
+                            trailing = if (oneTap && !done) ({
+                                SatraButton(stringResource(R.string.sx_sec_apply), onClick = {
+                                    scope.launch {
+                                        if (withContext(Dispatchers.IO) { SecurityCheck.applyFix(fix) }) applied = applied + fix
+                                    }
+                                }, compact = true)
+                            }) else null,
+                            onClick = if (!oneTap) ({ onFix(fix) }) else null,
+                        )
                     }
                 }
             }
@@ -141,58 +184,160 @@ private fun SecurityCheckScreen(onBack: () -> Unit, onFix: (SecurityCheck.Fix) -
 }
 
 @Composable
-private fun ScoreRing(score: Int?, running: Boolean, connected: Boolean) {
+private fun ScoreRing(score: Int, running: Boolean, connected: Boolean, progress: Float) {
     val c = Satra.colors
-    val anim = remember { Animatable(0f) }
-    LaunchedEffect(score, running) {
-        if (!running && score != null) anim.animateTo(score / 100f, tween(900)) else anim.snapTo(0f)
-    }
+    val anim by androidx.compose.animation.core.animateFloatAsState(score / 100f, tween(380), label = "ring")
+    val track by androidx.compose.animation.core.animateFloatAsState(progress, tween(380), label = "track")
     val color = when {
-        score == null || !connected -> c.textTertiary
+        !connected -> c.textTertiary
+        running -> c.accent
         score >= 85 -> c.success
         score >= 60 -> c.warning
         else -> c.danger
     }
+    val tone by androidx.compose.animation.animateColorAsState(color, tween(400), label = "ringTone")
     Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(150.dp)) {
             val w = 12.dp.toPx()
-            drawArc(color.copy(alpha = 0.16f), 0f, 360f, false, style = Stroke(w))
-            drawArc(color, -90f, 360f * anim.value, false, style = Stroke(w, cap = StrokeCap.Round))
+            drawArc(tone.copy(alpha = 0.12f), 0f, 360f, false, style = Stroke(w))
+            // Checked share (faint), then points earned (solid) on top.
+            drawArc(tone.copy(alpha = 0.28f), -90f, 360f * track, false, style = Stroke(w, cap = StrokeCap.Round))
+            drawArc(tone, -90f, 360f * anim, false, style = Stroke(w, cap = StrokeCap.Round))
         }
-        if (running) SatraSpinner(size = 28.dp, color = c.accent, strokeWidth = 3.dp)
-        else Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(if (connected && score != null) "${(anim.value * 100).toInt()}" else "—", style = Satra.type.largeTitle.copy(fontWeight = FontWeight.Bold), color = color)
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Text(if (connected) "${(anim * 100).toInt()}" else "—", style = Satra.type.largeTitle.copy(fontWeight = FontWeight.Bold), color = tone)
             Text(stringResource(R.string.sx_sec_score), style = Satra.type.footnote, color = c.textSecondary)
         }
     }
 }
 
 @Composable
-private fun FindingRow(f: SecurityCheck.Finding) {
+private fun LiveRow(item: SecurityCheck.Item, phase: RowPhase, f: SecurityCheck.Finding?, facts: SecurityCheck.Facts?) {
     val c = Satra.colors
-    val (tint, label) = when (f.status) {
-        SecurityCheck.Status.Pass -> c.success to stringResource(R.string.sx_sec_pass)
-        SecurityCheck.Status.Warn -> c.warning to stringResource(R.string.sx_sec_warn)
-        SecurityCheck.Status.Fail -> c.danger to stringResource(R.string.sx_sec_fail)
-        SecurityCheck.Status.Unknown -> c.textTertiary to stringResource(R.string.sx_sec_unknown)
+    var open by remember { mutableStateOf(false) }
+    val status = if (phase == RowPhase.Done) f?.status else null
+    val tint = when (status) {
+        SecurityCheck.Status.Pass -> c.success
+        SecurityCheck.Status.Warn -> c.warning
+        SecurityCheck.Status.Fail -> c.danger
+        SecurityCheck.Status.Unknown -> c.textTertiary
+        null -> if (phase == RowPhase.Running) c.accent else c.textTertiary
     }
-    val (title, icon) = when (f.item) {
-        SecurityCheck.Item.ExitIp -> stringResource(R.string.sx_sec_exit) to SatraIcons.Globe
-        SecurityCheck.Item.DnsLeak -> stringResource(R.string.sx_sec_dns) to SatraIcons.Shield
-        SecurityCheck.Item.Ipv6 -> stringResource(R.string.sx_sec_ipv6) to SatraIcons.Globe
-        SecurityCheck.Item.WebRtc -> stringResource(R.string.sx_sec_webrtc) to SatraIcons.Shield
-        SecurityCheck.Item.Encryption -> stringResource(R.string.sx_sec_tls) to SatraIcons.Lock
-        SecurityCheck.Item.KillSwitch -> stringResource(R.string.sx_sec_killswitch) to SatraIcons.Lock
+    val (title, icon) = itemTitle(item)
+    Column(Modifier.fillMaxWidth().animateContentSize(tween(220))) {
+        SatraRow(
+            title,
+            subtitle = when {
+                phase == RowPhase.Running -> stringResource(R.string.sx_sec_live_step, title)
+                status != null && f != null -> stringResource(R.string.sx_sec_points, SecurityCheck.points(f), SecurityCheck.maxPoints(item))
+                else -> null
+            },
+            icon = icon, iconColor = tint,
+            onClick = if (phase == RowPhase.Done) ({ open = !open }) else null,
+            trailing = {
+                androidx.compose.animation.AnimatedContent(status to phase, label = "st") { (st, ph) ->
+                    when {
+                        ph == RowPhase.Running -> SatraSpinner(size = 18.dp, color = c.accent, strokeWidth = 2.dp)
+                        st == null -> Box(Modifier.size(10.dp).clip(CircleShape).background(c.fillStrong))
+                        else -> Icon(
+                            when (st) {
+                                SecurityCheck.Status.Pass -> SatraIcons.Check
+                                else -> SatraIcons.Warning
+                            },
+                            statusLabel(st), tint = tint, modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            },
+        )
+        if (open && f != null) DetailBlock(item, f, facts)
     }
-    SatraRow(
-        title, subtitle = f.detail.ifBlank { null }, icon = icon, iconColor = tint,
-        trailing = {
-            Icon(
-                if (f.status == SecurityCheck.Status.Pass) SatraIcons.Check else SatraIcons.Warning,
-                label, tint = tint, modifier = Modifier.size(20.dp),
-            )
+}
+
+@Composable
+private fun DetailBlock(item: SecurityCheck.Item, f: SecurityCheck.Finding, facts: SecurityCheck.Facts?) {
+    val c = Satra.colors
+    val none = stringResource(R.string.sx_sec_r_none)
+    val on = stringResource(R.string.sx_sec_on); val off = stringResource(R.string.sx_sec_off)
+    fun yn(b: Boolean?) = when (b) { true -> on; false -> off; null -> "?" }
+    val vpn = facts?.vpnMode != false
+    val checked = stringResource(
+        when (item) {
+            SecurityCheck.Item.ExitIp -> R.string.sx_sec_d_exit
+            SecurityCheck.Item.DnsLeak -> R.string.sx_sec_d_dns
+            SecurityCheck.Item.Ipv6 -> R.string.sx_sec_d_ipv6
+            SecurityCheck.Item.WebRtc -> R.string.sx_sec_d_webrtc
+            SecurityCheck.Item.Encryption -> R.string.sx_sec_d_tls
+            SecurityCheck.Item.KillSwitch -> R.string.sx_sec_d_ks
         },
     )
+    val result = when (item) {
+        SecurityCheck.Item.ExitIp -> facts?.exitIp?.let { stringResource(R.string.sx_sec_r_exit, "\u2066$it\u2069", facts.exitCountry ?: "?") } ?: none
+        SecurityCheck.Item.DnsLeak -> facts?.resolverIp?.let {
+            stringResource(R.string.sx_sec_r_dns, "\u2066$it\u2069", facts.resolverGeo ?: facts.resolverCountry ?: "?", facts.exitCountry ?: "?")
+        } ?: none
+        SecurityCheck.Item.Ipv6 -> facts?.ipv6Exit?.let { stringResource(R.string.sx_sec_r_ipv6, "\u2066$it\u2069") } ?: stringResource(R.string.sx_sec_r_ipv6_none)
+        SecurityCheck.Item.WebRtc -> stringResource(if (vpn) R.string.sx_sec_r_webrtc else R.string.sx_sec_r_webrtc_proxy)
+        SecurityCheck.Item.Encryption -> stringResource(
+            R.string.sx_sec_r_tls,
+            facts?.configType?.name ?: "?",
+            facts?.security?.ifBlank { null }?.uppercase() ?: stringResource(R.string.sx_sec_none),
+            facts?.fingerprint?.ifBlank { null } ?: stringResource(R.string.sx_sec_fp_default),
+            yn(facts?.insecure),
+        )
+        SecurityCheck.Item.KillSwitch -> stringResource(R.string.sx_sec_r_ks, yn(facts?.alwaysOn), yn(facts?.lockdown))
+    }
+    val why = stringResource(whyRes(item, f.status, vpn))
+    Column(Modifier.fillMaxWidth().padding(start = 60.dp, end = 16.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        DetailLine(stringResource(R.string.sx_sec_checked), checked)
+        DetailLine(stringResource(R.string.sx_sec_result), result)
+        DetailLine(stringResource(R.string.sx_sec_why), why)
+        Text(
+            stringResource(R.string.sx_sec_points, SecurityCheck.points(f), SecurityCheck.maxPoints(item)),
+            style = Satra.type.caption.copy(fontWeight = FontWeight.SemiBold), color = c.accent,
+        )
+    }
+}
+
+@Composable
+private fun DetailLine(label: String, text: String) {
+    val c = Satra.colors
+    Column {
+        Text(label, style = Satra.type.caption, color = c.textTertiary)
+        Text(text, style = Satra.type.footnote, color = c.textPrimary)
+    }
+}
+
+internal fun whyRes(item: SecurityCheck.Item, st: SecurityCheck.Status, vpn: Boolean): Int {
+    if (st == SecurityCheck.Status.Unknown) return R.string.sx_sec_y_unknown
+    val pass = st == SecurityCheck.Status.Pass
+    return when (item) {
+        SecurityCheck.Item.ExitIp -> when (st) { SecurityCheck.Status.Pass -> R.string.sx_sec_y_exit_pass; SecurityCheck.Status.Warn -> R.string.sx_sec_y_exit_warn; else -> R.string.sx_sec_y_exit_fail }
+        SecurityCheck.Item.DnsLeak -> when (st) { SecurityCheck.Status.Pass -> R.string.sx_sec_y_dns_pass; SecurityCheck.Status.Warn -> R.string.sx_sec_y_dns_warn; else -> R.string.sx_sec_y_dns_fail }
+        SecurityCheck.Item.Ipv6, SecurityCheck.Item.WebRtc -> if (!vpn) R.string.sx_sec_y_proxy else if (pass) R.string.sx_sec_y_ipv6_pass else R.string.sx_sec_y_unknown
+        SecurityCheck.Item.Encryption -> when (st) { SecurityCheck.Status.Pass -> R.string.sx_sec_y_tls_pass; SecurityCheck.Status.Warn -> R.string.sx_sec_y_tls_warn; else -> R.string.sx_sec_y_tls_fail }
+        SecurityCheck.Item.KillSwitch -> if (!vpn) R.string.sx_sec_y_proxy else if (pass) R.string.sx_sec_y_ks_pass else R.string.sx_sec_y_ks_warn
+    }
+}
+
+@Composable
+private fun statusLabel(st: SecurityCheck.Status) = stringResource(
+    when (st) {
+        SecurityCheck.Status.Pass -> R.string.sx_sec_pass
+        SecurityCheck.Status.Warn -> R.string.sx_sec_warn
+        SecurityCheck.Status.Fail -> R.string.sx_sec_fail
+        SecurityCheck.Status.Unknown -> R.string.sx_sec_unknown
+    },
+)
+
+@Composable
+private fun itemTitle(item: SecurityCheck.Item) = when (item) {
+    SecurityCheck.Item.ExitIp -> stringResource(R.string.sx_sec_exit) to SatraIcons.Globe
+    SecurityCheck.Item.DnsLeak -> stringResource(R.string.sx_sec_dns) to SatraIcons.Shield
+    SecurityCheck.Item.Ipv6 -> stringResource(R.string.sx_sec_ipv6) to SatraIcons.Globe
+    SecurityCheck.Item.WebRtc -> stringResource(R.string.sx_sec_webrtc) to SatraIcons.Shield
+    SecurityCheck.Item.Encryption -> stringResource(R.string.sx_sec_tls) to SatraIcons.Lock
+    SecurityCheck.Item.KillSwitch -> stringResource(R.string.sx_sec_killswitch) to SatraIcons.Lock
 }
 
 @Composable
