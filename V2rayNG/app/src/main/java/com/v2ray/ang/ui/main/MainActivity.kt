@@ -4,11 +4,13 @@ import android.content.Intent
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AngApplication
 import com.v2ray.ang.AppConfig
@@ -91,6 +93,10 @@ class MainActivity : HelperBaseComponentActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splash = installSplashScreen()
+        // Keep the full brand splash visible ~0.5s (single splash; no Compose overlay).
+        val keepUntil = SystemClock.elapsedRealtime() + 500L
+        splash.setKeepOnScreenCondition { SystemClock.elapsedRealtime() < keepUntil }
         super.onCreate(savedInstanceState)
         mainViewModel.onAction(MainAction.Initialize)
 

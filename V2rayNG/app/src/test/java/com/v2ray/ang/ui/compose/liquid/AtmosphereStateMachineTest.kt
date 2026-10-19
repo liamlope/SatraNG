@@ -23,6 +23,10 @@ class AtmosphereStateMachineTest {
             ConnectionAtmosphereState.Idle,
             AtmosphereStateMachine.fromConnection(isRunning = false, connecting = false, failed = false),
         )
+        assertEquals(
+            ConnectionAtmosphereState.Connecting,
+            AtmosphereStateMachine.fromConnection(isRunning = true, connecting = true, failed = false),
+        )
     }
 
     @Test

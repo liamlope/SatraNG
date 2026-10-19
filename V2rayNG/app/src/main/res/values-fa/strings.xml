@@ -17,12 +17,20 @@
     <string name="satra_capsule_connected">متصل</string>
     <string name="satra_capsule_failed">اتصال ناموفق</string>
     <string name="satra_capsule_ready">آماده</string>
+    <string name="satra_capsule_slide_on">بکش به راست برای وصل</string>
+    <string name="satra_capsule_slide_off">بکش به چپ برای قطع</string>
     <string name="satra_capsule_a11y">کنترل VPN: %1$s</string>
     <string name="satra_home_empty_hint">لینک ساب را از کلیپ‌بورد جای‌گذاری کنید</string>
-    <string name="satra_home_headline_ready">اتصال را شروع کنید</string>
+    <string name="satra_home_headline_ready">محافظت‌نشده</string>
     <string name="satra_home_headline_connected">شما محافظت می‌شوید</string>
-    <string name="satra_home_headline_connecting">در حال امن‌سازی مسیر…</string>
-    <string name="satra_home_headline_failed">اتصال برقرار نشد</string>
+    <string name="satra_home_headline_connecting">در حال امن‌سازی…</string>
+    <string name="satra_home_headline_failed">محافظت‌نشده</string>
+
+    <string name="satra_home_quota_time">زمان باقی‌مانده</string>
+    <string name="satra_home_quota_data">حجم باقی‌مانده</string>
+    <string name="satra_home_quota_days_of">%1$d / %2$d روز</string>
+    <string name="satra_home_quota_data_of">%1$s / %2$s</string>
+
     <string name="satra_home_region_fallback">لوکیشن را انتخاب کنید</string>
     <string name="satra_home_traffic_used">مصرف %1$s</string>
     <string name="satra_home_traffic_left">باقی‌مانده %1$s</string>
@@ -698,4 +706,39 @@
 <string name="satra_home_add_config">افزودن کانفیگ</string>
     <string name="satra_home_add_config_sub">از کلیپ‌بورد — لینک اشتراک یا آدرس نود</string>
 
+    <string name="satra_home_quick_config">کانفیگ سریع</string>
+    <string name="satra_home_support">پشتیبانی</string>
+    <string name="satra_settings_connection_sub">حالت، هسته، مالتی‌پلکس</string>
+    <string name="satra_settings_privacy_title">حریم خصوصی</string>
+    <string name="satra_settings_privacy_sub">DNS، اسنیفینگ، قطع اضطراری</string>
+    <string name="satra_settings_per_app_sub">شامل / حذف اپ‌ها</string>
+    <string name="satra_settings_routing_sub">قوانین و استراتژی دامنه</string>
+    <string name="satra_settings_backup_sub">خروجی و بازیابی</string>
+    <string name="satra_settings_about_sub">نسخه و مجوزها</string>
+    <string name="satra_configs_add">افزودن</string>
+    <string name="satra_configs_test">تست</string>
+    <string name="satra_configs_actions_fab">عملیات کانفیگ</string>
+    <string name="satra_sub_update_all">به‌روزرسانی همه</string>
+    <string name="satra_configs_ungrouped">بدون گروه</string>
+    <string name="satra_usage_title">مصرف</string>
+    <string name="satra_usage_daily">مصرف روزانه</string>
+    <string name="satra_usage_peak_hours">ساعات اوج</string>
+    <string name="satra_usage_top_apps">اپ‌های پرمصرف</string>
+    <string name="satra_usage_empty">هنوز داده‌ای نیست</string>
+    <string name="satra_usage_hour_label">%1$d:00</string>
+    <string name="satra_usage_permission_hint">برای دیدن ترافیک هر اپ از طریق VPN، دسترسی Usage را بدهید.</string>
+    <string name="satra_usage_grant_permission">باز کردن دسترسی Usage</string>
+    <string name="satra_limit_channel">محدودیت اپ</string>
+    <string name="satra_limit_notif_title">محدودیت اپ رسید</string>
+    <string name="satra_limit_notif_volume">%1$s به سقف حجم رسید و از VPN خارج شد.</string>
+    <string name="satra_limit_notif_time">%1$s به سقف زمان رسید و از VPN خارج شد.</string>
+    <string name="satra_limit_action_plus_30mb">+۳۰ مگ</string>
+    <string name="satra_limit_action_plus_10min">+۱۰ دقیقه</string>
+    <string name="satra_limit_action_clear">حذف محدودیت</string>
+    <string name="satra_limit_action_pause_24h">رد کردن ۲۴س</string>
+    <string name="satra_limit_set_100mb">سقف ۱۰۰ مگ</string>
+    <string name="satra_limit_set_30min">سقف ۳۰ دقیقه</string>
+    <string name="satra_limit_status">سقف %1$s / %2$s دقیقه · مصرف %3$s / %4$s دقیقه</string>
+    <string name="satra_home_ping_all">تست پینگ</string>
+    <string name="satra_sub_update_one">به‌روزرسانی</string>
 </resources>

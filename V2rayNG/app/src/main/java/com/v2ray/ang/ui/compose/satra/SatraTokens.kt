@@ -20,6 +20,8 @@ object SatraTokens {
     val Ink = SatraColors.Ink
     val InkSoft = SatraColors.InkSoft
     val Amber = SatraColors.Amber
+    val AmberSoft = SatraColors.AmberSoft
+    val AmberDeep = SatraColors.AmberDeep
     val Danger = SatraColors.Danger
     val Success = SatraColors.GreenDeep
     val DividerOnGlass = Color.White.copy(alpha = 0.15f)

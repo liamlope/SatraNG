@@ -1,37 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Satra monogram: orange disc, bold white S, green rim accent -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Soft disc -->
     <path
-        android:fillColor="#222DD4A8"
-        android:pathData="M54,54m-36,0a36,36 0,1 1,72 0a36,36 0,1 1,-72 0" />
-    <!-- Outer signal arc -->
+        android:fillColor="#33FF5E00"
+        android:pathData="M54,54m-50,0a50,50 0,1 1,100 0a50,50 0,1 1,-100 0" />
+    <path
+        android:fillColor="#FF5E00"
+        android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0" />
+    <path
+        android:fillColor="#FF8A3D"
+        android:fillAlpha="0.4"
+        android:pathData="M40,34m-16,0a16,16 0,1 1,32 0a16,16 0,1 1,-32 0" />
+    <!-- white ring -->
     <path
         android:fillColor="#00000000"
-        android:strokeWidth="4.5"
-        android:strokeColor="#2DD4A8"
-        android:strokeLineCap="round"
-        android:pathData="M28,64 C32,40 42,28 54,28 C66,28 76,40 80,64" />
-    <!-- Mid signal arc -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeWidth="4.5"
-        android:strokeColor="#7EEADF"
-        android:strokeLineCap="round"
-        android:pathData="M36,62 C39,46 46,38 54,38 C62,38 69,46 72,62" />
-    <!-- S letter mark -->
+        android:strokeWidth="3.5"
+        android:strokeColor="#FFFFFF"
+        android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0" />
+    <!-- green accent -->
     <path
         android:fillColor="#00000000"
         android:strokeWidth="5"
-        android:strokeColor="#F5A524"
+        android:strokeColor="#34C759"
+        android:strokeLineCap="round"
+        android:pathData="M80,66 A30,30 0 0 1 68,84" />
+    <!-- Bold white S as thick stroke -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeWidth="10"
+        android:strokeColor="#FFFFFF"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M64,48 C64,42 60,40 54,40 C48,40 44,42 44,47 C44,52 48,53 54,54 C60,55 64,57 64,62 C64,68 59,70 54,70 C48,70 44,67 44,62" />
-    <!-- Core node -->
-    <path
-        android:fillColor="#0B1B2B"
-        android:pathData="M54,54m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+        android:pathData="M72,40 C72,32 64,28 54,28 C44,28 36,33 36,41 C36,49 43,52 54,55 C65,58 72,62 72,70 C72,79 64,84 54,84 C43,84 35,78 35,69" />
 </vector>

@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.satra.SatraMotionSpec
-import com.v2ray.ang.ui.compose.satra.SatraTokens
 import com.v2ray.ang.ui.compose.satra.rememberReduceMotion
 
 enum class ConnectionAtmosphereState {
@@ -77,8 +76,9 @@ object AtmosphereStateMachine {
         failed: Boolean,
     ): ConnectionAtmosphereState = when {
         failed -> ConnectionAtmosphereState.Failed
-        isRunning -> ConnectionAtmosphereState.Connected
+        // Hold Connecting while ceremony runs even if VPN already reported up.
         connecting -> ConnectionAtmosphereState.Connecting
+        isRunning -> ConnectionAtmosphereState.Connected
         else -> ConnectionAtmosphereState.Idle
     }
 

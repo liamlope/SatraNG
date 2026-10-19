@@ -43,6 +43,8 @@ object NotificationManager {
      * Starts the speed notification.
      * @param currentConfig The current profile configuration.
      */
+    fun isSpeedNotificationRunning(): Boolean = speedNotificationJob != null
+
     fun startSpeedNotification() {
         if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED) != true) return
         if (speedNotificationJob != null || CoreServiceManager.isRunning() == false) return
@@ -257,7 +259,7 @@ object NotificationManager {
         var directUplink = 0L
         var directDownlink = 0L
 
-        CoreServiceManager.queryAllOutboundTrafficStats().forEach { stat ->
+        HybridUsageTracker.consumeOutboundStats().forEach { stat ->
             when {
                 stat.tag == AppConfig.TAG_DIRECT -> {
                     when (stat.direction) {

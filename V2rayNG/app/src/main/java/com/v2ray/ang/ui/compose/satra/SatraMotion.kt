@@ -23,7 +23,8 @@ object SatraMotionSpec {
     const val PulseMs = 1600
     const val ThemeCrossfadeMs = 420
     const val ShortMs = 180
-    const val CeremonyMs = 900
+    /** Minimum Connecting ceremony so the orange shield anim is always visible (~0.8s). */
+    const val CeremonyMs = 800
     const val CapsuleMorphMs = 320
     const val FlagRevealMs = 280
     const val UsageRingMs = 600

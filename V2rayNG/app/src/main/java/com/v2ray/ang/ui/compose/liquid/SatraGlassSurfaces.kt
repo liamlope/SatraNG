@@ -29,31 +29,11 @@ import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.satra.SatraMotionSpec
 import com.v2ray.ang.ui.compose.satra.SatraTokens
 import com.v2ray.ang.ui.compose.satra.rememberReduceMotion
-import dev.liquidglass.compose.GlassShape
-import dev.liquidglass.compose.GlassStyle
-import dev.liquidglass.compose.liquidGlass
 
-@Composable
-fun satraChromeStyle(
-    corner: Dp = SatraTokens.RadiusLg,
-    interactive: Boolean = false,
-    connectedTint: Boolean = false,
-    capsule: Boolean = false,
-): GlassStyle {
-    val dark = LocalDarkTheme.current
-    val tint = when {
-        connectedTint -> SatraTokens.Green.copy(alpha = if (dark) 0.14f else 0.12f)
-        dark -> Color(0x99141418)
-        else -> Color(0xB3FFFFFF)
-    }
-    return GlassStyle.Regular.copy(
-        shape = if (capsule) GlassShape.Capsule else GlassShape.RoundedRectangle(corner),
-        tint = tint,
-        isInteractive = interactive,
-        chromaticAberration = 0.25f,
-    )
-}
-
+/**
+ * Simple chrome surface (no liquid glass). Soft fill + hairline border matching the
+ * preview shell cards.
+ */
 @Composable
 fun SatraGlassSurface(
     modifier: Modifier = Modifier,
@@ -61,53 +41,53 @@ fun SatraGlassSurface(
     capsule: Boolean = false,
     onClick: (() -> Unit)? = null,
     connectedTint: Boolean = false,
+    showBorder: Boolean = true,
     contentAlignment: Alignment = Alignment.Center,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val state = LocalSatraGlassState.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val reduce = rememberReduceMotion()
     val scale by animateFloatAsState(
         targetValue = if (pressed && !reduce) 0.98f else 1f,
         animationSpec = SatraMotionSpec.pressGel,
-        label = "glassPress",
+        label = "chromePress",
     )
     val clickMod = if (onClick != null) {
         Modifier.clickable(
             interactionSource = interaction,
-            indication = ripple(color = SatraTokens.Teal.copy(alpha = 0.35f)),
+            indication = ripple(color = SatraTokens.Amber.copy(alpha = 0.28f)),
             onClick = onClick,
         )
-    } else Modifier
+    } else {
+        Modifier
+    }
 
     val clipShape = if (capsule) {
         RoundedCornerShape(SatraTokens.RadiusCapsule)
     } else {
         RoundedCornerShape(corner)
     }
-
-    val glassMod = if (state != null) {
-        Modifier.liquidGlass(
-            state,
-            satraChromeStyle(
-                corner = corner,
-                interactive = onClick != null,
-                connectedTint = connectedTint,
-                capsule = capsule,
-            ),
-        )
-    } else {
-        val dark = LocalDarkTheme.current
-        val fill = if (dark) Color(0xCC16161A) else Color(0xE6FFFFFF)
-        val border = if (dark) Color.White.copy(0.12f) else Color.Black.copy(0.06f)
-        Modifier.clip(clipShape).background(fill, clipShape).border(1.dp, border, clipShape)
+    val dark = LocalDarkTheme.current
+    val fill = when {
+        connectedTint -> SatraTokens.TealDeep.copy(alpha = if (dark) 0.18f else 0.12f)
+        dark -> Color.White.copy(alpha = 0.06f)
+        else -> Color.Black.copy(alpha = 0.04f)
     }
+    val border = when {
+        connectedTint -> SatraTokens.TealDeep.copy(alpha = 0.45f)
+        dark -> Color.White.copy(alpha = 0.10f)
+        else -> Color.Black.copy(alpha = 0.06f)
+    }
+    val chrome = Modifier
+        .clip(clipShape)
+        .background(fill, clipShape)
+        .then(if (showBorder) Modifier.border(1.dp, border, clipShape) else Modifier)
 
     Box(
         modifier
             .scale(scale)
-            .then(glassMod)
+            .then(chrome)
             .then(clickMod),
         contentAlignment = contentAlignment,
         content = content,

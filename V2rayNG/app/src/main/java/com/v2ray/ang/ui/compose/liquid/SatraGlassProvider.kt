@@ -7,44 +7,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import com.v2ray.ang.ui.compose.satra.isReduceMotionEnabled
-import dev.liquidglass.compose.LocalLiquidGlassTier
-import dev.liquidglass.compose.LiquidGlassProviderState
-import dev.liquidglass.compose.liquidGlassProvider
-import dev.liquidglass.compose.rememberLiquidGlassProviderState
-import dev.liquidglass.core.GlassRenderTier
-
-val LocalSatraGlassState = compositionLocalOf<LiquidGlassProviderState?> { null }
 
 /**
- * Root glass backdrop provider. Place once behind chrome; children use [LocalSatraGlassState].
+ * Formerly backed liquid-glass captures. Glass effect is removed — this is a plain
+ * full-size container so existing call sites keep compiling without refraction.
  */
+val LocalSatraGlassState = compositionLocalOf<Any?> { null }
+
 @Composable
 fun SatraGlassProvider(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val state = rememberLiquidGlassProviderState()
-    val tier = rememberSatraGlassTier()
-    val context = LocalContext.current
-    if (context.isReduceMotionEnabled()) {
-        state.requestedTier = GlassRenderTier.SCRIM
-    } else {
-        state.requestedTier = null
-    }
-    CompositionLocalProvider(
-        LocalSatraGlassState provides state,
-        LocalLiquidGlassTier provides tier.toAbdullajon(),
-    ) {
-        Box(
-            modifier
-                .fillMaxSize()
-                .liquidGlassProvider(state),
-            content = content,
-        )
+    CompositionLocalProvider(LocalSatraGlassState provides null) {
+        Box(modifier.fillMaxSize(), content = content)
     }
 }
 
 @Composable
-fun rememberSatraGlassStateOrNull(): LiquidGlassProviderState? = LocalSatraGlassState.current
+fun rememberSatraGlassStateOrNull(): Any? = LocalSatraGlassState.current

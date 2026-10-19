@@ -98,28 +98,22 @@ object CoreConfigManager {
 
         val json = JsonUtil.parseString(raw)?.takeIf { it.isJsonObject }?.asJsonObject ?: return result
 
-        // Inject or remove traffic statistics configuration based on user preference
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED) == true) {
-            if (!json.has("stats")) {
-                json.add("stats", JsonObject())
-            }
-            if (!json.has("policy")) {
-                val policyObj = JsonObject()
-                val systemObj = JsonObject()
-                systemObj.addProperty("statsOutboundUplink", true)
-                systemObj.addProperty("statsOutboundDownlink", true)
-                policyObj.add("system", systemObj)
-                json.add("policy", policyObj)
-            }
+        // Always keep outbound stats for hybrid quota local-delta (and optional speed notif).
+        if (!json.has("stats")) {
+            json.add("stats", JsonObject())
+        }
+        if (!json.has("policy")) {
+            val policyObj = JsonObject()
+            val systemObj = JsonObject()
+            systemObj.addProperty("statsOutboundUplink", true)
+            systemObj.addProperty("statsOutboundDownlink", true)
+            policyObj.add("system", systemObj)
+            json.add("policy", policyObj)
         } else {
-            json.remove("stats")
-            // Keep user-defined policy levels, only strip the stats-related system block
-            json.get("policy")?.takeIf { it.isJsonObject }?.asJsonObject?.let { policy ->
-                policy.remove("system")
-                if (policy.entrySet().isEmpty()) {
-                    json.remove("policy")
-                }
-            }
+            val policy = json.getAsJsonObject("policy")
+            val system = policy.getAsJsonObject("system") ?: JsonObject().also { policy.add("system", it) }
+            system.addProperty("statsOutboundUplink", true)
+            system.addProperty("statsOutboundDownlink", true)
         }
 
         if (!needTun()) {
@@ -729,9 +723,16 @@ object CoreConfigManager {
      * Remove speed-test runtime sections when the feature is disabled.
      */
     private fun applySpeedDisabled(v2rayConfig: V2rayConfig) {
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED) != true) {
-            v2rayConfig.stats = null
-            v2rayConfig.policy?.system = null
+        // Keep stats for hybrid local-delta even when the speed notification preference is off.
+        if (v2rayConfig.stats == null) {
+            v2rayConfig.stats = emptyMap<String, Any>()
+        }
+        val policy = v2rayConfig.policy
+        if (policy != null && policy.system == null) {
+            policy.system = mapOf(
+                "statsOutboundUplink" to true,
+                "statsOutboundDownlink" to true,
+            )
         }
     }
 

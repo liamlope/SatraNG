@@ -557,33 +557,29 @@ class MainViewModel(
     }
 
     private fun importConfigViaSub() {
-        val subId = uiState.value.selectedGroupId
         launchLoading {
             withContext(ioDispatcher) {
                 try {
-                    val result = if (subId.isEmpty()) {
-                        dataSource.updateConfigViaSubAll()
-                    } else {
-                        val item = dataSource.getSubscriptionItem(subId) ?: return@withContext
-                        dataSource.updateConfigViaSub(SubscriptionCache(subId, item))
-                    }
+                    // Always refresh every enabled subscription so Home quota cards
+                    // (usage/expiry headers) update even when the selected tab is empty/"All".
+                    val result = dataSource.updateConfigViaSubAll()
                     when {
                         result.successCount + result.failureCount + result.skipCount == 0 ->
                             toast(R.string.title_update_subscription_no_subscription)
 
-                        result.successCount > 0 && result.failureCount + result.skipCount == 0 ->
+                        result.successCount > 0 && result.failureCount == 0 ->
                             toast(
                                 getQuantityString(
                                     R.plurals.title_update_config_count,
-                                    result.configCount,
-                                    result.configCount,
+                                    result.configCount.coerceAtLeast(result.successCount),
+                                    result.configCount.coerceAtLeast(result.successCount),
                                 )
                             )
 
                         else ->
                             toast(dataSource.getString(R.string.title_update_subscription_result, result.configCount, result.successCount, result.failureCount, result.skipCount))
                     }
-                    if (result.configCount > 0) {
+                    if (result.successCount > 0 || result.configCount > 0) {
                         setupGroupTab(forceRefresh = true)
                         refreshSelectedGuid()
                     }
@@ -854,28 +850,40 @@ class MainViewModel(
     fun testAllRealPing(onlyTcp: Boolean = false) {
         cancelAllPing()
         val groupId = uiState.value.selectedGroupId
-        val servers = currentServers()
+        val selectedServers = currentServers()
+        val crossGroup = selectedServers.isEmpty()
+        val servers = if (crossGroup) {
+            // Home pull-to-refresh / empty selected group: ping every loaded group.
+            uiState.value.groups.flatMap { group ->
+                mutableServerGroupState(group.id).value.servers
+            }
+        } else {
+            selectedServers
+        }
         if (servers.isEmpty()) {
             return
         }
         val serverGuids = servers.map { it.guid }
-        mutableServerGroupState(groupId).update { current ->
-            current.copy(
-                servers = current.servers.map { server ->
-                    if (server.testDelayMillis == 0L) server
-                    else server.copy(testDelayMillis = 0L)
-                },
-                rows = current.rows.map { row ->
-                    if (row.testDelayMillis == 0L) row
-                    else row.copy(testDelayMillis = 0L)
-                }
-            )
+        if (!crossGroup) {
+            mutableServerGroupState(groupId).update { current ->
+                current.copy(
+                    servers = current.servers.map { server ->
+                        if (server.testDelayMillis == 0L) server
+                        else server.copy(testDelayMillis = 0L)
+                    },
+                    rows = current.rows.map { row ->
+                        if (row.testDelayMillis == 0L) row
+                        else row.copy(testDelayMillis = 0L)
+                    }
+                )
+            }
         }
         val request = testRequests.beginBulk(groupId)
         val message = TestServiceMessage(
             key = AppConfig.MSG_MEASURE_CONFIG_START,
-            subscriptionId = groupId,
-            serverGuids = if (keywordFilter.isNotEmpty()) serverGuids else emptyList(),
+            subscriptionId = if (crossGroup) "" else groupId,
+            // Explicit guids when filtering or when spanning every group.
+            serverGuids = if (keywordFilter.isNotEmpty() || crossGroup) serverGuids else emptyList(),
             onlyTcp = onlyTcp
         )
         _uiState.update {

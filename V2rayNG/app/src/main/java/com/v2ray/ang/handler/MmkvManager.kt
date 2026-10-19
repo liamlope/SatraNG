@@ -699,10 +699,29 @@ object MmkvManager {
      * @param subItem The subscription item.
      */
     fun encodeSubscription(guid: String, subItem: SubscriptionItem) {
-        val key = guid.ifBlank { Utils.getUuid() }
+        val existing = decodeSubsList().map { id ->
+            val item = decodeSubscription(id)
+            SubscriptionIdentity.ExistingSub(id, item?.remarks.orEmpty(), item?.url.orEmpty())
+        }
+        val resolved = SubscriptionIdentity.resolveNewId(guid, existing)
+        val key = resolved ?: guid.ifBlank { Utils.getUuid() }
         subStorage.encode(key, JsonUtil.toJson(subItem))
 
         val subsList = decodeSubsList()
+        // First real sub claiming Default: drop leftover empty placeholders.
+        if (guid.isBlank() && resolved != null) {
+            val cleaned = subsList.filter { id ->
+                id == key || !SubscriptionIdentity.isPlaceholder(
+                    existing.find { it.id == id }
+                        ?: SubscriptionIdentity.ExistingSub(id, "", ""),
+                )
+            }.toMutableList()
+            if (!cleaned.contains(key)) cleaned.add(0, key)
+            if (cleaned != subsList) {
+                encodeSubsList(cleaned)
+                return
+            }
+        }
         if (!subsList.contains(key)) {
             subsList.add(key)
             encodeSubsList(subsList)

@@ -581,12 +581,20 @@
     <string name="satra_capsule_connected">Connected</string>
     <string name="satra_capsule_failed">Connection failed</string>
     <string name="satra_capsule_ready">Ready</string>
+    <string name="satra_capsule_slide_on">Slide to connect</string>
+    <string name="satra_capsule_slide_off">Slide to disconnect</string>
     <string name="satra_capsule_a11y">VPN power: %1$s</string>
     <string name="satra_home_empty_hint">Paste a subscription link from clipboard</string>
-    <string name="satra_home_headline_ready">Start your connection</string>
+    <string name="satra_home_headline_ready">Not protected</string>
     <string name="satra_home_headline_connected">You are protected</string>
-    <string name="satra_home_headline_connecting">Securing your path…</string>
-    <string name="satra_home_headline_failed">Could not connect</string>
+    <string name="satra_home_headline_connecting">Securing…</string>
+    <string name="satra_home_headline_failed">Not protected</string>
+
+    <string name="satra_home_quota_time">Time left</string>
+    <string name="satra_home_quota_data">Data left</string>
+    <string name="satra_home_quota_days_of">%1$d / %2$d days</string>
+    <string name="satra_home_quota_data_of">%1$s / %2$s</string>
+
     <string name="satra_home_region_fallback">Choose a location</string>
     <string name="satra_home_traffic_used">Used %1$s</string>
     <string name="satra_home_traffic_left">Left %1$s</string>
@@ -702,4 +710,39 @@
 <string name="satra_home_add_config">Add config</string>
     <string name="satra_home_add_config_sub">Paste from clipboard — subscription link or node URL</string>
 
+    <string name="satra_home_quick_config">Быстрый конфиг</string>
+    <string name="satra_home_support">Поддержка</string>
+    <string name="satra_settings_connection_sub">Режим, ядро, мультиплекс</string>
+    <string name="satra_settings_privacy_title">Конфиденциальность</string>
+    <string name="satra_settings_privacy_sub">DNS, sniffing, kill-switch</string>
+    <string name="satra_settings_per_app_sub">Включить / исключить приложения</string>
+    <string name="satra_settings_routing_sub">Правила и стратегия доменов</string>
+    <string name="satra_settings_backup_sub">Экспорт и восстановление</string>
+    <string name="satra_settings_about_sub">Версия и лицензии</string>
+    <string name="satra_configs_add">Добавить</string>
+    <string name="satra_configs_test">Тест</string>
+    <string name="satra_configs_actions_fab">Действия конфигов</string>
+    <string name="satra_sub_update_all">Обновить все</string>
+    <string name="satra_configs_ungrouped">Без группы</string>
+    <string name="satra_usage_title">Использование</string>
+    <string name="satra_usage_daily">За день</string>
+    <string name="satra_usage_peak_hours">Часы пик</string>
+    <string name="satra_usage_top_apps">Топ приложений</string>
+    <string name="satra_usage_empty">Пока нет данных</string>
+    <string name="satra_usage_hour_label">%1$d:00</string>
+    <string name="satra_usage_permission_hint">Разрешите доступ к статистике использования, чтобы видеть трафик приложений через VPN.</string>
+    <string name="satra_usage_grant_permission">Открыть доступ</string>
+    <string name="satra_limit_channel">Лимиты приложений</string>
+    <string name="satra_limit_notif_title">Лимит приложения</string>
+    <string name="satra_limit_notif_volume">%1$s достигло лимита данных и исключено из VPN.</string>
+    <string name="satra_limit_notif_time">%1$s достигло лимита времени и исключено из VPN.</string>
+    <string name="satra_limit_action_plus_30mb">+30 МБ</string>
+    <string name="satra_limit_action_plus_10min">+10 мин</string>
+    <string name="satra_limit_action_clear">Снять лимит</string>
+    <string name="satra_limit_action_pause_24h">Пропуск 24ч</string>
+    <string name="satra_limit_set_100mb">Лимит 100 МБ</string>
+    <string name="satra_limit_set_30min">Лимит 30 мин</string>
+    <string name="satra_limit_status">Лимит %1$s / %2$s мин · использовано %3$s / %4$s мин</string>
+    <string name="satra_home_ping_all">Проверить ping</string>
+    <string name="satra_sub_update_one">Обновить</string>
 </resources>

@@ -575,12 +575,20 @@
     <string name="satra_capsule_connected">Connected</string>
     <string name="satra_capsule_failed">Connection failed</string>
     <string name="satra_capsule_ready">Ready</string>
+    <string name="satra_capsule_slide_on">Slide to connect</string>
+    <string name="satra_capsule_slide_off">Slide to disconnect</string>
     <string name="satra_capsule_a11y">VPN power: %1$s</string>
     <string name="satra_home_empty_hint">Paste a subscription link from clipboard</string>
-    <string name="satra_home_headline_ready">Start your connection</string>
+    <string name="satra_home_headline_ready">Not protected</string>
     <string name="satra_home_headline_connected">You are protected</string>
-    <string name="satra_home_headline_connecting">Securing your path…</string>
-    <string name="satra_home_headline_failed">Could not connect</string>
+    <string name="satra_home_headline_connecting">Securing…</string>
+    <string name="satra_home_headline_failed">Not protected</string>
+
+    <string name="satra_home_quota_time">Time left</string>
+    <string name="satra_home_quota_data">Data left</string>
+    <string name="satra_home_quota_days_of">%1$d / %2$d days</string>
+    <string name="satra_home_quota_data_of">%1$s / %2$s</string>
+
     <string name="satra_home_region_fallback">Choose a location</string>
     <string name="satra_home_traffic_used">Used %1$s</string>
     <string name="satra_home_traffic_left">Left %1$s</string>
@@ -696,4 +704,39 @@
 <string name="satra_home_add_config">Add config</string>
     <string name="satra_home_add_config_sub">Paste from clipboard — subscription link or node URL</string>
 
+    <string name="satra_home_quick_config">快速設定</string>
+    <string name="satra_home_support">支援</string>
+    <string name="satra_settings_connection_sub">模式、核心、多工</string>
+    <string name="satra_settings_privacy_title">隱私</string>
+    <string name="satra_settings_privacy_sub">DNS、嗅探、緊急中斷</string>
+    <string name="satra_settings_per_app_sub">包含 / 排除應用程式</string>
+    <string name="satra_settings_routing_sub">規則與網域策略</string>
+    <string name="satra_settings_backup_sub">匯出與還原</string>
+    <string name="satra_settings_about_sub">版本與授權</string>
+    <string name="satra_configs_add">新增</string>
+    <string name="satra_configs_test">測試</string>
+    <string name="satra_configs_actions_fab">設定操作</string>
+    <string name="satra_sub_update_all">全部更新</string>
+    <string name="satra_configs_ungrouped">未分組</string>
+    <string name="satra_usage_title">用量</string>
+    <string name="satra_usage_daily">每日用量</string>
+    <string name="satra_usage_peak_hours">尖峰時段</string>
+    <string name="satra_usage_top_apps">應用排行</string>
+    <string name="satra_usage_empty">尚無資料</string>
+    <string name="satra_usage_hour_label">%1$d:00</string>
+    <string name="satra_usage_permission_hint">請授予使用情況存取權限以查看各應用經 VPN 的流量。</string>
+    <string name="satra_usage_grant_permission">開啟使用情況存取</string>
+    <string name="satra_limit_channel">應用限額</string>
+    <string name="satra_limit_notif_title">應用達到限額</string>
+    <string name="satra_limit_notif_volume">%1$s 已達流量限額並已退出 VPN。</string>
+    <string name="satra_limit_notif_time">%1$s 已達時間限額並已退出 VPN。</string>
+    <string name="satra_limit_action_plus_30mb">+30 MB</string>
+    <string name="satra_limit_action_plus_10min">+10 分钟</string>
+    <string name="satra_limit_action_clear">清除限額</string>
+    <string name="satra_limit_action_pause_24h">略過 24 小時</string>
+    <string name="satra_limit_set_100mb">限額 100 MB</string>
+    <string name="satra_limit_set_30min">限額 30 分鐘</string>
+    <string name="satra_limit_status">限額 %1$s / %2$s 分鐘 · 已用 %3$s / %4$s 分鐘</string>
+    <string name="satra_home_ping_all">測試延遲</string>
+    <string name="satra_sub_update_one">更新</string>
 </resources>

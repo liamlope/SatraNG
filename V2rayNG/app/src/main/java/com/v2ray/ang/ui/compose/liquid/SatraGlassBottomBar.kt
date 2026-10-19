@@ -57,7 +57,7 @@ fun SatraGlassBottomBar(
     SatraGlassSurface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(start = 16.dp, top = 2.dp, end = 16.dp, bottom = 8.dp)
             .height(72.dp),
         capsule = true,
         contentAlignment = Alignment.Center,
@@ -81,7 +81,7 @@ fun SatraGlassBottomBar(
                     .fillMaxHeight()
                     .padding(horizontal = 4.dp, vertical = 2.dp)
                     .clip(RoundedCornerShape(SatraTokens.RadiusCapsule))
-                    .background(SatraTokens.Purple.copy(alpha = 0.22f)),
+                    .background(SatraTokens.Amber.copy(alpha = 0.22f)),
             )
             Row(
                 Modifier.fillMaxSize(),
@@ -112,7 +112,7 @@ private fun RowScope.GlassNavItem(
     onClick: () -> Unit,
 ) {
     val tint by animateColorAsState(
-        if (selected) SatraTokens.PurpleDeep else MaterialTheme.colorScheme.onSurfaceVariant,
+        if (selected) SatraTokens.AmberDeep else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = SatraMotionSpec.short(),
         label = "navTint",
     )

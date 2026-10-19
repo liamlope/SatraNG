@@ -578,12 +578,20 @@
     <string name="satra_capsule_connected">Connected</string>
     <string name="satra_capsule_failed">Connection failed</string>
     <string name="satra_capsule_ready">Ready</string>
+    <string name="satra_capsule_slide_on">Slide to connect</string>
+    <string name="satra_capsule_slide_off">Slide to disconnect</string>
     <string name="satra_capsule_a11y">VPN power: %1$s</string>
     <string name="satra_home_empty_hint">Paste a subscription link from clipboard</string>
-    <string name="satra_home_headline_ready">Start your connection</string>
+    <string name="satra_home_headline_ready">Not protected</string>
     <string name="satra_home_headline_connected">You are protected</string>
-    <string name="satra_home_headline_connecting">Securing your path…</string>
-    <string name="satra_home_headline_failed">Could not connect</string>
+    <string name="satra_home_headline_connecting">Securing…</string>
+    <string name="satra_home_headline_failed">Not protected</string>
+
+    <string name="satra_home_quota_time">Time left</string>
+    <string name="satra_home_quota_data">Data left</string>
+    <string name="satra_home_quota_days_of">%1$d / %2$d days</string>
+    <string name="satra_home_quota_data_of">%1$s / %2$s</string>
+
     <string name="satra_home_region_fallback">Choose a location</string>
     <string name="satra_home_traffic_used">Used %1$s</string>
     <string name="satra_home_traffic_left">Left %1$s</string>
@@ -699,4 +707,39 @@
 <string name="satra_home_add_config">Add config</string>
     <string name="satra_home_add_config_sub">Paste from clipboard — subscription link or node URL</string>
 
+    <string name="satra_home_quick_config">Sürətli konfiq</string>
+    <string name="satra_home_support">Dəstək</string>
+    <string name="satra_settings_connection_sub">Rejim, nüvə, multipleks</string>
+    <string name="satra_settings_privacy_title">Məxfilik</string>
+    <string name="satra_settings_privacy_sub">DNS, sniffing, kill-switch</string>
+    <string name="satra_settings_per_app_sub">Tətbiqləri daxil / çıxar</string>
+    <string name="satra_settings_routing_sub">Qaydalar və domen strategiyası</string>
+    <string name="satra_settings_backup_sub">İxrac və bərpa</string>
+    <string name="satra_settings_about_sub">Versiya və lisenziyalar</string>
+    <string name="satra_configs_add">Əlavə et</string>
+    <string name="satra_configs_test">Test</string>
+    <string name="satra_configs_actions_fab">Konfiq əməliyyatları</string>
+    <string name="satra_sub_update_all">Hamısını yenilə</string>
+    <string name="satra_configs_ungrouped">Ungrouped</string>
+    <string name="satra_usage_title">Usage</string>
+    <string name="satra_usage_daily">Daily usage</string>
+    <string name="satra_usage_peak_hours">Peak hours</string>
+    <string name="satra_usage_top_apps">Top apps</string>
+    <string name="satra_usage_empty">No data yet</string>
+    <string name="satra_usage_hour_label">%1$d:00</string>
+    <string name="satra_usage_permission_hint">Grant usage access to see per-app traffic through the VPN.</string>
+    <string name="satra_usage_grant_permission">Open usage access</string>
+    <string name="satra_limit_channel">App limits</string>
+    <string name="satra_limit_notif_title">App limit reached</string>
+    <string name="satra_limit_notif_volume">%1$s hit its data limit and left the VPN.</string>
+    <string name="satra_limit_notif_time">%1$s hit its time limit and left the VPN.</string>
+    <string name="satra_limit_action_plus_30mb">+30 MB</string>
+    <string name="satra_limit_action_plus_10min">+10 min</string>
+    <string name="satra_limit_action_clear">Clear limit</string>
+    <string name="satra_limit_action_pause_24h">Skip 24h</string>
+    <string name="satra_limit_set_100mb">Limit 100 MB</string>
+    <string name="satra_limit_set_30min">Limit 30 min</string>
+    <string name="satra_limit_status">Limit %1$s / %2$s min · used %3$s / %4$s min</string>
+    <string name="satra_home_ping_all">Ping testi</string>
+    <string name="satra_sub_update_one">Yenilə</string>
 </resources>

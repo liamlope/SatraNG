@@ -134,31 +134,55 @@ fun SatraStatusChip(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun SatraPingBadge(delayMs: Long, modifier: Modifier = Modifier) {
+fun SatraPingBadge(
+    delayMs: Long,
+    modifier: Modifier = Modifier,
+    /**
+     * Kept for call-site compatibility. Measured [delayMs] always wins so
+     * pull-to-refresh / Test can show ms even while VPN is off.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    vpnConnected: Boolean = true,
+) {
+    // Show red dash only when there is no successful measurement yet.
+    val unmeasured = delayMs <= 0L
     val color by animateColorAsState(
         when {
-            delayMs <= 0L -> MaterialTheme.colorScheme.onSurfaceVariant
+            unmeasured -> SatraColors.Danger
             delayMs < 150L -> SatraColors.GreenDeep
-            delayMs <= 250L -> SatraColors.Amber
+            delayMs < 250L -> SatraColors.Amber
             else -> SatraColors.Danger
         },
         label = "pingColor",
     )
-    val label = when {
-        delayMs <= 0L -> "—"
-        delayMs >= 10_000L -> "timeout"
-        else -> "${delayMs}ms"
+    if (unmeasured) {
+        Box(
+            modifier = modifier
+                .clip(RoundedCornerShape(999.dp))
+                .background(SatraColors.Danger.copy(alpha = 0.18f))
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                Modifier
+                    .size(width = 14.dp, height = 2.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(SatraColors.Danger),
+            )
+        }
+    } else {
+        val label = if (delayMs >= 10_000L) "timeout" else "${delayMs}ms"
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = FontWeight.SemiBold,
+            modifier = modifier
+                .clip(RoundedCornerShape(999.dp))
+                .background(color.copy(alpha = 0.18f))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+        )
     }
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelMedium,
-        color = color,
-        fontWeight = FontWeight.SemiBold,
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(color.copy(alpha = 0.12f))
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-    )
 }
 
 @Composable

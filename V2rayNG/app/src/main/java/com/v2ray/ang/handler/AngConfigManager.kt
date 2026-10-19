@@ -529,17 +529,21 @@ object AngConfigManager {
             }
 
             val count = parseConfigViaSub(configText, it.guid, false)
+            // Always persist userinfo/usage so Home quota cards refresh on pull even if
+            // the config body did not change (count can still be > 0 from replacement).
+            it.subscription.lastUpdated = System.currentTimeMillis()
+            MmkvManager.encodeSubscription(it.guid, it.subscription)
+            HybridUsageTracker.onRemoteSync(it.guid, it.subscription)
             if (count > 0) {
-                it.subscription.lastUpdated = System.currentTimeMillis()
-                MmkvManager.encodeSubscription(it.guid, it.subscription)
                 LogUtil.i(AppConfig.TAG, "Subscription updated: ${it.subscription.remarks}, $count configs")
                 return SubscriptionUpdateResult(
                     configCount = count,
                     successCount = 1
                 )
             } else {
-                // Got response but no valid configs parsed
-                return SubscriptionUpdateResult(failureCount = 1)
+                // Body had no new configs, but quota/expiry headers were saved above.
+                LogUtil.i(AppConfig.TAG, "Subscription userinfo refreshed: ${it.subscription.remarks}")
+                return SubscriptionUpdateResult(successCount = 1)
             }
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to update config via subscription", e)

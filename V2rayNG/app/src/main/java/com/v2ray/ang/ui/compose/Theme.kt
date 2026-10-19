@@ -44,28 +44,31 @@ object SatraColors {
     val Mist = Color(0xFFF7F7F8)
     val MistDeep = Color(0xFFEBEBEF)
 
-    /** Blue — primary actions / idle chrome (name Teal kept for call-sites). */
-    val Teal = Color(0xFF4FA3FF)
-    val TealDeep = Color(0xFF2B7FE8)
-    val TealSoft = Color(0xFFA8D0FF)
+    /** Sky blue — secondary chrome / links (name Teal kept for call-sites). */
+    val Teal = Color(0xFF5AC8FA)
+    val TealDeep = Color(0xFF32ADE6)
+    val TealSoft = Color(0xFFB8E7FF)
 
     /** Green — connected / success. */
-    val Green = Color(0xFF2ECC8A)
-    val GreenDeep = Color(0xFF1FA971)
-    val GreenSoft = Color(0xFF8AEFC0)
+    val Green = Color(0xFF34C759)
+    val GreenDeep = Color(0xFF248A3D)
+    val GreenSoft = Color(0xFF8AEFB0)
 
-    /** Orange — connecting / warning. */
-    val Amber = Color(0xFFF0A94A)
-    val AmberSoft = Color(0xFFFFD78A)
+    /**
+     * Brand orange from aks/Orange.webp (#FF5E00) — vivid accent on black chrome.
+     */
+    val Amber = Color(0xFFFF5E00)
+    val AmberSoft = Color(0xFFFF8A3D)
+    val AmberDeep = Color(0xFFD44A00)
 
     /** Red — failed / danger. */
-    val Danger = Color(0xFFFF5A5F)
+    val Danger = Color(0xFFFF3B30)
 
-    /** Purple — distinctive Satra brand accent (mixed into pure dark / soft light). */
-    val Purple = Color(0xFFA56BFF)
-    val PurpleDeep = Color(0xFF7B3DF0)
-    val PurpleSoft = Color(0xFFD6C4FF)
-    val PurpleMist = Color(0xFF2A1848)
+    /** Legacy purple aliases → soft orange so older call-sites follow the new brand. */
+    val Purple = Amber
+    val PurpleDeep = AmberDeep
+    val PurpleSoft = AmberSoft
+    val PurpleMist = Color(0xFF2A1A10)
 
     val TextDark = Color(0xFF111114)
     val TextMutedDark = Color(0xFF6B6B76)
@@ -74,13 +77,13 @@ object SatraColors {
 }
 
 private val LightColor = lightColorScheme(
-    primary = SatraColors.PurpleDeep,
+    primary = SatraColors.AmberDeep,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFEDE4FF),
-    onPrimaryContainer = Color(0xFF2A1258),
+    primaryContainer = Color(0xFFFFE8D6),
+    onPrimaryContainer = Color(0xFF3A2208),
     secondary = SatraColors.TealDeep,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFD6E8FF),
+    secondaryContainer = Color(0xFFD6F0FF),
     onSecondaryContainer = Color(0xFF0A2A4A),
     tertiary = SatraColors.Amber,
     onTertiary = SatraColors.Ink,
@@ -90,63 +93,63 @@ private val LightColor = lightColorScheme(
     errorContainer = Color(0xFFFFDAD6),
     onError = Color.White,
     onErrorContainer = Color(0xFF410002),
-    // Soft light mixed with brand purple — still reads as light, not purple-washed UI.
-    background = Color(0xFFFFFBFF),
+    // Clean light — white page, orange only on accent controls.
+    background = Color(0xFFFFFFFF),
     onBackground = SatraColors.TextDark,
     surface = Color(0xFFFFFFFF),
     onSurface = SatraColors.TextDark,
-    surfaceVariant = Color(0xFFF0EAF8),
+    surfaceVariant = Color(0xFFF2F2F4),
     onSurfaceVariant = SatraColors.TextMutedDark,
     outline = Color(0xFFCFCFD6),
-    outlineVariant = Color(0xFFE8E2F0),
+    outlineVariant = Color(0xFFE8E8EC),
     inverseSurface = SatraColors.InkSoft,
     inverseOnSurface = SatraColors.TextLight,
-    inversePrimary = SatraColors.PurpleSoft,
+    inversePrimary = SatraColors.AmberSoft,
     scrim = Color(0xFF000000),
-    surfaceTint = SatraColors.Purple,
+    surfaceTint = Color.Transparent,
     surfaceContainerLowest = Color.White,
-    surfaceContainerLow = Color(0xFFF8F5FC),
-    surfaceContainer = Color(0xFFF1ECF8),
-    surfaceContainerHigh = Color(0xFFE9E3F2),
-    surfaceContainerHighest = Color(0xFFE0DAEB),
+    surfaceContainerLow = Color(0xFFFAFAFA),
+    surfaceContainer = Color(0xFFF4F4F5),
+    surfaceContainerHigh = Color(0xFFEEEEF0),
+    surfaceContainerHighest = Color(0xFFE6E6E8),
 )
 
 private val DarkColor = darkColorScheme(
-    primary = SatraColors.PurpleSoft,
+    primary = SatraColors.AmberSoft,
     onPrimary = SatraColors.Ink,
     primaryContainer = SatraColors.PurpleMist,
-    onPrimaryContainer = SatraColors.PurpleSoft,
+    onPrimaryContainer = SatraColors.AmberSoft,
     secondary = SatraColors.Teal,
     onSecondary = SatraColors.Ink,
-    secondaryContainer = Color(0xFF16324A),
+    secondaryContainer = Color(0xFF0E2A3A),
     onSecondaryContainer = SatraColors.TealSoft,
     tertiary = SatraColors.AmberSoft,
     onTertiary = SatraColors.Ink,
-    tertiaryContainer = Color(0xFF5A3A08),
+    tertiaryContainer = Color(0xFF3A2810),
     onTertiaryContainer = SatraColors.AmberSoft,
     error = Color(0xFFFFB4AB),
     errorContainer = Color(0xFF93000A),
     onError = Color(0xFF690005),
     onErrorContainer = Color(0xFFFFDAD6),
-    // Pure dark with a quiet purple undertone — not a purple screen.
+    // Pure dark — black page, orange only on accent controls.
     background = Color(0xFF000000),
     onBackground = SatraColors.TextLight,
-    surface = Color(0xFF08060C),
+    surface = Color(0xFF000000),
     onSurface = SatraColors.TextLight,
-    surfaceVariant = Color(0xFF1A1624),
+    surfaceVariant = Color(0xFF1C1C1E),
     onSurfaceVariant = SatraColors.TextMutedLight,
-    outline = Color(0xFF3A3A44),
-    outlineVariant = Color(0xFF222228),
+    outline = Color(0xFF3A3A3C),
+    outlineVariant = Color(0xFF2C2C2E),
     inverseSurface = SatraColors.Mist,
     inverseOnSurface = SatraColors.InkSoft,
-    inversePrimary = SatraColors.PurpleDeep,
+    inversePrimary = SatraColors.AmberDeep,
     scrim = Color(0xFF000000),
-    surfaceTint = SatraColors.Purple,
+    surfaceTint = Color.Transparent,
     surfaceContainerLowest = Color(0xFF000000),
-    surfaceContainerLow = Color(0xFF0A0810),
-    surfaceContainer = Color(0xFF121018),
-    surfaceContainerHigh = Color(0xFF1A1622),
-    surfaceContainerHighest = Color(0xFF24202C),
+    surfaceContainerLow = Color(0xFF0A0A0A),
+    surfaceContainer = Color(0xFF121212),
+    surfaceContainerHigh = Color(0xFF1C1C1E),
+    surfaceContainerHighest = Color(0xFF2C2C2E),
 )
 
 val colorPing = SatraColors.TealDeep
