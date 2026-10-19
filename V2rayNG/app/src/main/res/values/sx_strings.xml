@@ -7,8 +7,6 @@
     <string name="sx_notif_warn_body">%1$s of %2$s used %3$s.</string>
     <string name="sx_notif_global_title">Data limit reached</string>
     <string name="sx_notif_global_body">You used your %1$s limit for %2$s, so the VPN was turned off.</string>
-    <string name="sx_notif_action_plus_100">+100 MB</string>
-    <string name="sx_notif_action_plus_500">+500 MB</string>
     <string name="sx_period_today">today</string>
     <string name="sx_period_this_week">this week</string>
     <string name="sx_period_this_month">this month</string>
@@ -265,6 +263,9 @@
     <string name="sx_smart_connect_sub">Tests your servers and connects to the quickest, most stable one.</string>
     <string name="sx_smart_finding">Finding the fastest server…</string>
     <string name="sx_smart_chosen">Connecting to %1$s · %2$d ms</string>
+    <string name="sx_topup_mb">+%1$s MB</string>
+    <string name="sx_topup_gb">+%1$s GB</string>
+    <string name="sx_notif_topup_hint">Tap an amount to allow more right away.</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Expires in %d day</item>
         <item quantity="other">Expires in %d days</item>

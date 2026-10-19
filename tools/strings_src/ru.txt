@@ -5,8 +5,6 @@ sx_notif_warn_title	«%1$s» почти достиг лимита
 sx_notif_warn_body	Использовано %1$s из %2$s (%3$s).
 sx_notif_global_title	Лимит трафика достигнут
 sx_notif_global_body	Вы израсходовали лимит %1$s на %2$s, поэтому VPN отключён.
-sx_notif_action_plus_100	+100 МБ
-sx_notif_action_plus_500	+500 МБ
 sx_period_today	сегодня
 sx_period_this_week	на этой неделе
 sx_period_this_month	в этом месяце
@@ -263,3 +261,6 @@ sx_smart_connect	Подключиться к самому быстрому
 sx_smart_connect_sub	Проверяет серверы и подключается к самому быстрому и стабильному.
 sx_smart_finding	Ищем самый быстрый сервер…
 sx_smart_chosen	Подключаемся к %1$s · %2$d мс
+sx_topup_mb	+%1$s МБ
+sx_topup_gb	+%1$s ГБ
+sx_notif_topup_hint	Нажмите на объём, чтобы сразу разрешить больше.

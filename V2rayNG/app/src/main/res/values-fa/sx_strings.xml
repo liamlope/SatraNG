@@ -7,8 +7,6 @@
     <string name="sx_notif_warn_body">%1$s از %2$s %3$s مصرف شده است.</string>
     <string name="sx_notif_global_title">سقف حجم تمام شد</string>
     <string name="sx_notif_global_body">سقف %1$s شما برای %2$s پر شد و VPN خاموش شد.</string>
-    <string name="sx_notif_action_plus_100">+۱۰۰ مگابایت</string>
-    <string name="sx_notif_action_plus_500">+۵۰۰ مگابایت</string>
     <string name="sx_period_today">امروز</string>
     <string name="sx_period_this_week">این هفته</string>
     <string name="sx_period_this_month">این ماه</string>
@@ -265,6 +263,9 @@
     <string name="sx_smart_connect_sub">سرورها را می‌سنجد و به سریع‌ترین و پایدارترین وصل می‌شود.</string>
     <string name="sx_smart_finding">در حال یافتن سریع‌ترین سرور…</string>
     <string name="sx_smart_chosen">اتصال به %1$s · %2$d میلی‌ثانیه</string>
+    <string name="sx_topup_mb">+%1$s مگابایت</string>
+    <string name="sx_topup_gb">+%1$s گیگابایت</string>
+    <string name="sx_notif_topup_hint">برای اجازهٔ حجم بیشتر، همین حالا روی یک مقدار بزنید.</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">%d روز دیگر منقضی می‌شود</item>
         <item quantity="other">%d روز دیگر منقضی می‌شود</item>

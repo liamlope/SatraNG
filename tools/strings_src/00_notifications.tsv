@@ -5,8 +5,6 @@ sx_notif_warn_title	%1$s is almost at its limit	%1$s نزدیک سقف خود ا
 sx_notif_warn_body	%1$s of %2$s used %3$s.	%1$s از %2$s %3$s مصرف شده است.
 sx_notif_global_title	Data limit reached	سقف حجم تمام شد
 sx_notif_global_body	You used your %1$s limit for %2$s, so the VPN was turned off.	سقف %1$s شما برای %2$s پر شد و VPN خاموش شد.
-sx_notif_action_plus_100	+100 MB	+۱۰۰ مگابایت
-sx_notif_action_plus_500	+500 MB	+۵۰۰ مگابایت
 sx_period_today	today	امروز
 sx_period_this_week	this week	این هفته
 sx_period_this_month	this month	این ماه

@@ -196,6 +196,8 @@ object UsageStore {
 
     fun addBonus(id: String, bytes: Long) {
         val k = "r:$id:bonus"
+        // Bump the generation first so a daemon tick computed from the old bonus is dropped.
+        kv.encode("r:$id:gen", ruleGeneration(id) + 1)
         kv.encode(k, kv.decodeLong(k, 0L) + bytes)
     }
 

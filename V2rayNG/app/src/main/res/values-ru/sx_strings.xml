@@ -7,8 +7,6 @@
     <string name="sx_notif_warn_body">Использовано %1$s из %2$s (%3$s).</string>
     <string name="sx_notif_global_title">Лимит трафика достигнут</string>
     <string name="sx_notif_global_body">Вы израсходовали лимит %1$s на %2$s, поэтому VPN отключён.</string>
-    <string name="sx_notif_action_plus_100">+100 МБ</string>
-    <string name="sx_notif_action_plus_500">+500 МБ</string>
     <string name="sx_period_today">сегодня</string>
     <string name="sx_period_this_week">на этой неделе</string>
     <string name="sx_period_this_month">в этом месяце</string>
@@ -265,6 +263,9 @@
     <string name="sx_smart_connect_sub">Проверяет серверы и подключается к самому быстрому и стабильному.</string>
     <string name="sx_smart_finding">Ищем самый быстрый сервер…</string>
     <string name="sx_smart_chosen">Подключаемся к %1$s · %2$d мс</string>
+    <string name="sx_topup_mb">+%1$s МБ</string>
+    <string name="sx_topup_gb">+%1$s ГБ</string>
+    <string name="sx_notif_topup_hint">Нажмите на объём, чтобы сразу разрешить больше.</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Истекает через %d день</item>
         <item quantity="few">Истекает через %d дня</item>

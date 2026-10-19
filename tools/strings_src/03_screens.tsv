@@ -214,3 +214,6 @@ sx_smart_connect	Connect to the fastest	اتصال به سریع‌ترین
 sx_smart_connect_sub	Tests your servers and connects to the quickest, most stable one.	سرورها را می‌سنجد و به سریع‌ترین و پایدارترین وصل می‌شود.
 sx_smart_finding	Finding the fastest server…	در حال یافتن سریع‌ترین سرور…
 sx_smart_chosen	Connecting to %1$s · %2$d ms	اتصال به %1$s · %2$d میلی‌ثانیه
+sx_topup_mb	+%1$s MB	+%1$s مگابایت
+sx_topup_gb	+%1$s GB	+%1$s گیگابایت
+sx_notif_topup_hint	Tap an amount to allow more right away.	برای اجازهٔ حجم بیشتر، همین حالا روی یک مقدار بزنید.
