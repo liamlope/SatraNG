@@ -94,6 +94,7 @@ fun MoreContent(
     fun navRow(title: String, subtitle: String?, icon: ImageVector, color: Color, keywords: String = "", onClick: () -> Unit) =
         spec(title, subtitle, keywords) { row { SatraRow(title, subtitle = subtitle, icon = icon, iconColor = color, chevron = true, onClick = onClick) } }
 
+    val secCtx = androidx.compose.ui.platform.LocalContext.current
     val sections = buildList {
         add(
             Section(
@@ -118,6 +119,10 @@ fun MoreContent(
                             )
                         }
                     },
+                    navRow(
+                        stringResource(R.string.sx_set_security_check), stringResource(R.string.sx_set_security_check_sub),
+                        SatraIcons.ShieldCheck, c.success, "security leak dns ipv6 webrtc check test",
+                    ) { secCtx.startActivity(android.content.Intent(secCtx, com.v2ray.ang.ui.security.SecurityCheckActivity::class.java)) },
                     spec(stringResource(R.string.sx_set_mode), stringResource(R.string.sx_set_mode_sub), "vpn proxy mode") {
                         row {
                             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {

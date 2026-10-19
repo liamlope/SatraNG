@@ -182,6 +182,11 @@ class CoreVpnService : VpnService(), ServiceControl {
         try {
             mInterface = builder.establish()!!
             isRunning = true
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // For the Security Check's kill-switch status (only the VPN service can ask).
+                MmkvManager.encodeSettings(com.v2ray.ang.handler.SecurityCheck.PREF_ALWAYS_ON, isAlwaysOn.toString())
+                MmkvManager.encodeSettings(com.v2ray.ang.handler.SecurityCheck.PREF_LOCKDOWN, isLockdownEnabled.toString())
+            }
             return true
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to establish VPN interface", e)
