@@ -458,7 +458,7 @@ private fun QuotaCard(quota: QuotaUi, modifier: Modifier = Modifier) {
                     },
                 ) {
                     Text(
-                        String.format(Locale.getDefault(), "%d%%", (fraction * 100).toInt()),
+                        String.format(com.v2ray.ang.ui.compose.satra.currentLocale(), "%d%%", (fraction * 100).toInt()),
                         style = Satra.type.caption.copy(fontWeight = FontWeight.Bold), color = c.textPrimary,
                     )
                 }

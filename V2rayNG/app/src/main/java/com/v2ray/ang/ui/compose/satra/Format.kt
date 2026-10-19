@@ -28,3 +28,7 @@ fun formatHoursMinutes(totalSeconds: Long, hourUnit: String, minuteUnit: String)
         else -> String.format(Locale.getDefault(), "%d %s", m, minuteUnit)
     }
 }
+
+/** Current UI locale, observable so composables update when the language changes. */
+@androidx.compose.runtime.Composable
+fun currentLocale(): java.util.Locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]

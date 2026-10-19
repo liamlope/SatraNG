@@ -241,7 +241,7 @@ fun InsetGroup(
     Column(modifier.padding(horizontal = 16.dp)) {
         if (header != null) {
             Text(
-                header.uppercase(java.util.Locale.getDefault()),
+                header.uppercase(currentLocale()),
                 style = Satra.type.footnote.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
                 color = Satra.colors.textSecondary,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 7.dp, top = 6.dp)

@@ -300,8 +300,9 @@ private fun MiniStat(label: String, value: String, modifier: Modifier) {
 
 @Composable
 private fun dayLabels(state: UsageUiState): List<String> {
-    val weekday = remember { SimpleDateFormat("EEE", Locale.getDefault()) }
-    val dayNum = remember { SimpleDateFormat("d", Locale.getDefault()) }
+    val locale = com.v2ray.ang.ui.compose.satra.currentLocale()
+    val weekday = remember(locale) { SimpleDateFormat("EEE", locale) }
+    val dayNum = remember(locale) { SimpleDateFormat("d", locale) }
     return state.days.map { d ->
         val date = Date(d.startMs)
         if (state.rangeDays <= 7) weekday.format(date) else dayNum.format(date)
@@ -405,8 +406,9 @@ private fun periodNoun(period: LimitPeriod): String = stringResource(
 @Composable
 private fun formatReset(ms: Long): String {
     val ctx = LocalContext.current
-    val pattern = DateFormat.getBestDateTimePattern(Locale.getDefault(), if (DateFormat.is24HourFormat(ctx)) "MMMd Hm" else "MMMd jm")
-    return SimpleDateFormat(pattern, Locale.getDefault()).format(Date(ms))
+    val locale = com.v2ray.ang.ui.compose.satra.currentLocale()
+    val pattern = DateFormat.getBestDateTimePattern(locale, if (DateFormat.is24HourFormat(ctx)) "MMMd Hm" else "MMMd jm")
+    return SimpleDateFormat(pattern, locale).format(Date(ms))
 }
 
 @Composable
