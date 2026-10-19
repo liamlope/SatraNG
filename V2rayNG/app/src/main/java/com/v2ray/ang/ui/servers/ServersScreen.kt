@@ -83,7 +83,7 @@ private enum class ConfirmKind { RemoveAll, RemoveDuplicates, RemoveInvalid }
 fun ServersScreen(vm: MainViewModel, nav: AppNav) {
     val state by vm.uiState.collectAsState()
     val group by vm.serverGroupState(state.selectedGroupId).collectAsState()
-    val rows = remember(group.rows, state.hiddenGuids) { group.rows.filter { it.guid !in state.hiddenGuids } }
+    val rows = remember(group.rows, state.hiddenGuids) { group.rows.filter { it.guid !in state.hiddenGuids }.distinctBy { it.guid } }
     ServersContent(state = state, rows = rows, nav = nav, onAction = vm::onAction)
 }
 
