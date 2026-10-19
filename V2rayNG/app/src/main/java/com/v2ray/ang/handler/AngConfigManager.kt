@@ -183,7 +183,11 @@ object AngConfigManager {
      * Imports text shared into the app (share sheet, deep link, QR shortcut). Always appends:
      * replacing here would wipe the user's existing configs in the default group.
      */
-    fun importShared(text: String?): Pair<Int, Int> = importBatchConfig(text, "", append = true)
+    fun importShared(text: String?): Pair<Int, Int> =
+        importBatchConfig(text, "", append = true).also { (count, countSub) ->
+            // Imported from outside the main screen: tell the lists to reload (they cache per group).
+            if (count + countSub > 0) SettingsChangeManager.makeSetupGroupTab()
+        }
 
     fun importBatchConfig(server: String?, subid: String, append: Boolean): Pair<Int, Int> {
         return try {
