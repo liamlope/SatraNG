@@ -64,7 +64,7 @@ class WidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.layout_switch, click)
             views.setInt(R.id.layout_background, "setBackgroundResource",
                 if (running) R.drawable.widget_bg_on else R.drawable.widget_bg_off)
-            views.setInt(R.id.image_switch, "setImageResource", if (running) R.drawable.ic_widget_power_on else R.drawable.ic_widget_power_off)
+            views.setInt(R.id.image_switch, "setImageResource", if (running) R.drawable.ic_satra_logo_full_green else R.drawable.ic_satra_logo_full_orange)
             val state = context.getString(
                 when {
                     pending && running -> R.string.sx_toggle_connecting
