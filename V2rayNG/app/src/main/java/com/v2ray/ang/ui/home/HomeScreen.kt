@@ -115,7 +115,7 @@ fun HomeScreen(
 ) {
     val hasServers = state.groups.isNotEmpty() && state.selectedGuid != null
     Column(modifier.fillMaxSize()) {
-        HomeTopBar(onAdd = onAdd, importing = state.importing)
+        HomeTopBar(onAdd = onAdd, importing = state.importing, connected = state.isRunning)
         if (!hasServers) {
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
@@ -220,7 +220,7 @@ internal fun AddSheet(onAdd: (AddMethod) -> Unit, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun HomeTopBar(onAdd: (AddMethod) -> Unit, importing: Boolean) {
+private fun HomeTopBar(onAdd: (AddMethod) -> Unit, importing: Boolean, connected: Boolean) {
     val c = Satra.colors
     Row(
         Modifier
@@ -230,11 +230,8 @@ private fun HomeTopBar(onAdd: (AddMethod) -> Unit, importing: Boolean) {
             .padding(start = SatraSpace.Gutter, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier.size(24.dp).clip(RoundedCornerShapeSmall).background(Brush.linearGradient(listOf(c.accent, com.v2ray.ang.ui.compose.satra.SatraBrand.OrangeLight))),
-            contentAlignment = Alignment.Center,
-        ) { Icon(SatraIcons.Shield, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(14.dp)) }
-        Spacer(Modifier.width(8.dp))
+        com.v2ray.ang.ui.compose.satra.SatraLogo(connected = connected, size = 28.dp)
+        Spacer(Modifier.width(10.dp))
         Text(
             stringResource(R.string.app_name),
             style = Satra.type.headline.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.2).sp),
