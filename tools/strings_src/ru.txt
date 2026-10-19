@@ -301,3 +301,16 @@ sx_routing_apply	Применить
 sx_routing_tag_direct	Напрямую
 sx_routing_tag_proxy	VPN
 sx_routing_tag_block	Блок
+sx_logs_title	Журнал
+sx_logs_empty_title	Записей нет
+sx_logs_empty_msg	Обновите, чтобы прочитать свежий журнал приложения и ядра. Удерживайте строку, чтобы скопировать её.
+sx_logs_copied	Строка скопирована
+sx_logs_clear	Очистить журнал
+sx_apps_none_found_msg	Нет приложений, подходящих под запрос.
+sx_tasker_title	Действие Tasker
+sx_tasker_pick	Конфигурация
+sx_tasker_default	Текущий выбор
+sx_chain_title	Цепочка прокси
+sx_chain_footer	Трафик идёт через эти конфигурации по порядку. Удерживайте номер, чтобы изменить порядок.
+sx_assets_files	Файлы
+sx_assets_footer	Geo-файлы определяют, какие сайты открываются напрямую. Загрузка обновляет их из источника выше.

@@ -243,7 +243,7 @@ fun PerAppProxyScreen(
 }
 
 @Composable
-private fun SplitAppRow(app: AppInfo, checked: Boolean, onToggle: () -> Unit) {
+internal fun SplitAppRow(app: AppInfo, checked: Boolean, onToggle: () -> Unit) {
     val c = Satra.colors
     Row(
         Modifier
