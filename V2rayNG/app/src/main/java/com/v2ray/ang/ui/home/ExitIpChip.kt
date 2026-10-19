@@ -87,13 +87,14 @@ internal fun ExitIpChip(sessionStartMs: Long) {
             attempt++
         }
     }
+    val copiedMsg = stringResource(R.string.sx_exit_ip_copied)
     val e = exit
     val copy = {
         if (e != null) {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             cm.setPrimaryClip(ClipData.newPlainText("IP", e.first))
-            Toast.makeText(ctx, ctx.getString(R.string.sx_exit_ip_copied), Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, copiedMsg, Toast.LENGTH_SHORT).show()
         }
     }
     Row(
