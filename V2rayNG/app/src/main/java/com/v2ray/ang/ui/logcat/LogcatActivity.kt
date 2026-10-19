@@ -193,6 +193,9 @@ fun LogcatScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
+                containerColor = com.v2ray.ang.ui.compose.satra.Satra.colors.accent,
+                contentColor = com.v2ray.ang.ui.compose.satra.Satra.colors.onAccent,
+                shape = androidx.compose.foundation.shape.CircleShape,
                 onClick = { viewModel.loadLogcat() },
                 modifier = Modifier.navigationBarsPadding()
             ) {

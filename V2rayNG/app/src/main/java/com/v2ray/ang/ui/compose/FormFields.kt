@@ -27,6 +27,11 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.v2ray.ang.ui.compose.satra.Satra
+import com.v2ray.ang.ui.compose.satra.SatraShapes
+import com.v2ray.ang.ui.compose.satra.SatraSpace
+import com.v2ray.ang.ui.compose.satra.SatraTextField
+import androidx.compose.ui.draw.alpha
 
 @Composable
 fun FormTextField(
@@ -44,29 +49,19 @@ fun FormTextField(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = SatraSpace.Gutter, vertical = 4.dp)
+            .alpha(if (enabled) 1f else 0.5f)
     ) {
-        OutlinedTextField(
+        SatraTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { Text(label) },
-            placeholder = placeholder?.let { { Text(it) } },
+            label = label,
+            placeholder = placeholder,
+            supporting = supportingText,
             isError = isError,
-            supportingText = supportingText?.let { { Text(it) } },
             singleLine = false,
-            maxLines = maxLines,
-            enabled = enabled,
+            readOnly = !enabled,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                cursorColor = MaterialTheme.colorScheme.secondary,
-                selectionColors = TextSelectionColors(
-                    handleColor = MaterialTheme.colorScheme.secondary,
-                    backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
-                )
-            ),
-            modifier = Modifier.fillMaxWidth()
         )
     }
 }
@@ -100,7 +95,7 @@ fun FormDropdownField(
         },
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = SatraSpace.Gutter, vertical = 4.dp)
     ) {
         OutlinedTextField(
             value = value,
@@ -111,15 +106,8 @@ fun FormDropdownField(
             placeholder = { if (placeholder != null) Text(placeholder) },
             supportingText = supportingText?.let { { Text(it) } },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                cursorColor = MaterialTheme.colorScheme.secondary,
-                selectionColors = TextSelectionColors(
-                    handleColor = MaterialTheme.colorScheme.secondary,
-                    backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
-                )
-            ),
+            colors = satraFieldColors(),
+            shape = SatraShapes.Medium,
             modifier = Modifier
                 .menuAnchor(
                     type = if (editable) ExposedDropdownMenuAnchorType.PrimaryEditable
@@ -152,3 +140,21 @@ fun FormDropdownField(
         }
     }
 }
+
+@Composable
+internal fun satraFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedContainerColor = Satra.colors.fill,
+    unfocusedContainerColor = Satra.colors.fill,
+    disabledContainerColor = Satra.colors.fill.copy(alpha = 0.5f),
+    errorContainerColor = Satra.colors.fill,
+    focusedBorderColor = Satra.colors.accent,
+    unfocusedBorderColor = Color.Transparent,
+    errorBorderColor = Satra.colors.danger,
+    focusedLabelColor = Satra.colors.accent,
+    unfocusedLabelColor = Satra.colors.textSecondary,
+    cursorColor = Satra.colors.accent,
+    selectionColors = TextSelectionColors(
+        handleColor = Satra.colors.accent,
+        backgroundColor = Satra.colors.accent.copy(alpha = 0.35f),
+    ),
+)

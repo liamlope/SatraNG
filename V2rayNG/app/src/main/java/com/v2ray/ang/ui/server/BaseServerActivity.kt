@@ -338,7 +338,12 @@ abstract class BaseServerActivity : BaseComponentActivity() {
                         }
                     },
                     enabled = !state.isFetchingCert,
-                    modifier = Modifier.padding(start = 16.dp)
+                    shape = com.v2ray.ang.ui.compose.satra.SatraShapes.Pill,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = com.v2ray.ang.ui.compose.satra.Satra.colors.accent,
+                        contentColor = com.v2ray.ang.ui.compose.satra.Satra.colors.onAccent,
+                    ),
+                    modifier = Modifier.padding(start = com.v2ray.ang.ui.compose.satra.SatraSpace.Gutter)
                 ) {
                     Text(stringResource(R.string.pinned_ca256_action_fetch))
                 }

@@ -196,8 +196,11 @@ fun PerAppProxyScreen(
                 .padding(innerPadding)
         ) {
             Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surface
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = com.v2ray.ang.ui.compose.satra.SatraSpace.Gutter, vertical = 4.dp),
+                color = com.v2ray.ang.ui.compose.satra.Satra.colors.surface,
+                shape = com.v2ray.ang.ui.compose.satra.SatraShapes.Large
             ) {
                 Row(
                     modifier = Modifier
@@ -216,14 +219,9 @@ fun PerAppProxyScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Switch(
+                        com.v2ray.ang.ui.compose.satra.SatraSwitch(
                             checked = perAppProxyEnabled,
-                            modifier = Modifier.scale(0.65f),
                             onCheckedChange = onPerAppProxyChanged,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                                checkedTrackColor = MaterialTheme.colorScheme.secondary
-                            )
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -237,14 +235,9 @@ fun PerAppProxyScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Switch(
+                        com.v2ray.ang.ui.compose.satra.SatraSwitch(
                             checked = bypassApps,
-                            modifier = Modifier.scale(0.65f),
                             onCheckedChange = onBypassAppsChanged,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                                checkedTrackColor = MaterialTheme.colorScheme.secondary
-                            )
                         )
                     }
                     IconButton(onClick = onInfoClick) {
@@ -256,7 +249,7 @@ fun PerAppProxyScreen(
                     }
                 }
             }
-            AppDivider()
+            Spacer(Modifier.padding(top = 6.dp))
 
             LazyColumn(
                 state = listState,

@@ -101,11 +101,11 @@ fun AboutScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .clip(RoundedCornerShape(24.dp))
+                    .padding(horizontal = com.v2ray.ang.ui.compose.satra.SatraSpace.Gutter, vertical = 8.dp)
+                    .clip(RoundedCornerShape(28.dp))
                     .background(
                         Brush.linearGradient(
-                            listOf(SatraColors.InkSoft, SatraColors.AmberDeep, Color(0xFF0A4F40))
+                            listOf(com.v2ray.ang.ui.compose.satra.SatraBrand.OrangeLight, com.v2ray.ang.ui.compose.satra.SatraBrand.OrangeDeep)
                         )
                     )
                     .padding(24.dp)
@@ -137,7 +137,7 @@ fun AboutScreen(
                     Text(
                         text = stringResource(R.string.satra_brand_tagline),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = SatraColors.TealSoft
+                        color = Color.White.copy(alpha = 0.88f)
                     )
                 }
             }
@@ -201,7 +201,8 @@ fun AboutScreen(
                     Text(stringResource(R.string.action_ok))
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = com.v2ray.ang.ui.compose.satra.Satra.colors.surfaceRaised,
+            shape = com.v2ray.ang.ui.compose.satra.SatraShapes.XLarge,
             modifier = Modifier.padding(bottom = 60.dp)
         )
     }

@@ -48,6 +48,10 @@ import com.v2ray.ang.ui.usage.UsageUiState
 import org.junit.Rule
 import org.junit.Test
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -339,4 +343,35 @@ class PremiumScreenshotTest {
     @Test fun sheetServerActionsFaLight() = shot("sheet_server_actions", false, "fa", heightDp = 800, inlineSheets = true, still = true) {
         ServerActionsSheet(rows[0], NoNav, {}, {})
     }
+
+    // ---------- Legacy page kit (advanced settings, editors, per-app, about …) ----------
+
+    @Composable
+    private fun LegacyKit() {
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+            com.v2ray.ang.ui.compose.AppTopBar(title = androidx.compose.ui.res.stringResource(com.v2ray.ang.R.string.title_core_settings), onBackClick = {}, isLoading = true)
+            androidx.compose.foundation.layout.Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                com.v2ray.ang.ui.compose.PreferenceGroupHeader("Sniffing")
+                var a by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+                var b by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                com.v2ray.ang.ui.compose.SettingsSwitchItem(title = "Enable sniffing", summary = "Detect the destination domain from traffic", checked = a, onCheckedChange = { a = it })
+                com.v2ray.ang.ui.compose.SettingsSwitchItem(title = "Route only", summary = "Use the sniffed domain only for routing", checked = b, onCheckedChange = { b = it })
+                com.v2ray.ang.ui.compose.SettingsSwitchItem(title = "Disabled option", summary = "Not available in this mode", checked = false, onCheckedChange = {}, enabled = false)
+                com.v2ray.ang.ui.compose.PreferenceGroupHeader("DNS")
+                com.v2ray.ang.ui.compose.SettingsEditItem(title = "Remote DNS", value = "https://dns.google/dns-query", onValueChanged = {})
+                com.v2ray.ang.ui.compose.SettingsListItem(title = "Log level", entries = listOf("warning", "info", "debug"), values = listOf("w", "i", "d"), selectedValue = "w", onSelected = {})
+                com.v2ray.ang.ui.compose.SettingsMenuItem(title = "Routing rules", subtitle = "Direct, proxy and block lists", onClick = {})
+                com.v2ray.ang.ui.compose.PreferenceGroupHeader("Fields")
+                com.v2ray.ang.ui.compose.FormTextField(label = "Remarks", value = "Frankfurt", onValueChange = {})
+                com.v2ray.ang.ui.compose.FormTextField(label = "Address", value = "", onValueChange = {}, placeholder = "example.com", isError = true, supportingText = "Required")
+                com.v2ray.ang.ui.compose.PreferenceGroupHeader("Apps")
+                com.v2ray.ang.ui.compose.AppListItem("Telegram", "org.telegram.messenger", null, true, {})
+                com.v2ray.ang.ui.compose.AppListItem("Browser", "com.android.chrome", null, false, {})
+            }
+        }
+    }
+
+    @Test fun legacyKitDark() = shot("legacy_kit", true, heightDp = 1100) { LegacyKit() }
+    @Test fun legacyKitLightFa() = shot("legacy_kit", false, "fa", heightDp = 1100) { LegacyKit() }
+    @Test fun legacyKitLargeEn() = shot("legacy_kit", true, font = 1.4f, heightDp = 1500) { LegacyKit() }
 }

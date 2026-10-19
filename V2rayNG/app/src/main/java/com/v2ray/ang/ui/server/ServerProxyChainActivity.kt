@@ -249,6 +249,9 @@ fun ProxyChainScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
+                containerColor = com.v2ray.ang.ui.compose.satra.Satra.colors.accent,
+                contentColor = com.v2ray.ang.ui.compose.satra.Satra.colors.onAccent,
+                shape = androidx.compose.foundation.shape.CircleShape,
                 onClick = {
                     members = members + ""
                     memberKeys = memberKeys + UUID.randomUUID().toString()
