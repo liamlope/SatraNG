@@ -113,6 +113,12 @@ fun HomeScreen(
     onDismissAddSheet: () -> Unit = {},
     proxyEndpoints: List<com.v2ray.ang.handler.ProxyEndpoint> = emptyList(),
     onCopy: (String) -> Unit = {},
+    smartRoutingOn: Boolean = true,
+    smartRegion: SmartRegion = SmartRegion.Iran,
+    smartTip: Boolean = false,
+    onSmartRouting: (Boolean) -> Unit = {},
+    onRoutingInfo: () -> Unit = {},
+    onDismissSmartTip: () -> Unit = {},
 ) {
     val hasServers = state.groups.isNotEmpty() && state.selectedGuid != null
     Column(modifier.fillMaxSize()) {
@@ -137,7 +143,7 @@ fun HomeScreen(
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
                 val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
                 // Title + chips + server card + summary strip + margins; the orb takes what is left.
-                val fixed = (64 + 40 + 76 + 64 + 36) * fontScale
+                val fixed = (64 + 40 + 76 + 64 + 36 + 62 + (if (smartTip) 46 else 0)) * fontScale
                 val orb = (maxHeight.value - fixed).coerceIn(112f, 264f).dp
                 Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(Modifier.weight(1f))
@@ -151,7 +157,13 @@ fun HomeScreen(
                         onLocate = onLocate,
                         modifier = Modifier.padding(horizontal = SatraSpace.Gutter),
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(8.dp))
+                    SmartRoutingRow(
+                        on = smartRoutingOn, region = smartRegion, showTip = smartTip,
+                        onToggle = onSmartRouting, onInfo = onRoutingInfo, onDismissTip = onDismissSmartTip,
+                        modifier = Modifier.padding(horizontal = SatraSpace.Gutter),
+                    )
+                    Spacer(Modifier.height(8.dp))
                     SummaryStrip(live, state.quota, onClick = { details = true }, modifier = Modifier.padding(horizontal = SatraSpace.Gutter))
                     Spacer(Modifier.height(12.dp))
                 }

@@ -109,7 +109,28 @@ fun SatraApp(
                                 val endpoints = remember(proxyOnly, state.isRunning, live.sessionStartMs) {
                                     if (proxyOnly) com.v2ray.ang.handler.ProxyEndpoints.current() else emptyList()
                                 }
+                                var smartOn by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.v2ray.ang.handler.RoutingPolicy.smartOn()) }
+                                var smartTip by androidx.compose.runtime.remember {
+                                    androidx.compose.runtime.mutableStateOf(!com.v2ray.ang.handler.MmkvManager.decodeSettingsBool(com.v2ray.ang.handler.RoutingPolicy.PREF_TIP_SEEN, false))
+                                }
+                                val russia = androidx.compose.runtime.remember { com.v2ray.ang.handler.RoutingPolicy.isRussia(com.v2ray.ang.handler.MmkvManager.decodeRoutingRulesets()) }
+                                val tipSeen = {
+                                    smartTip = false
+                                    com.v2ray.ang.handler.MmkvManager.encodeSettings(com.v2ray.ang.handler.RoutingPolicy.PREF_TIP_SEEN, true)
+                                    Unit
+                                }
                                 HomeScreen(
+                                    smartRoutingOn = smartOn,
+                                    smartRegion = if (russia) com.v2ray.ang.ui.home.SmartRegion.Russia else com.v2ray.ang.ui.home.SmartRegion.Iran,
+                                    smartTip = smartTip,
+                                    onSmartRouting = { on ->
+                                        smartOn = on; tipSeen()
+                                        com.v2ray.ang.handler.RoutingPolicy.setSmart(on)
+                                        com.v2ray.ang.handler.SettingsChangeManager.makeRestartService()
+                                        nav.reconnectForModeChange()
+                                    },
+                                    onRoutingInfo = { tipSeen(); nav.navigate(MainDestination.Routing) },
+                                    onDismissSmartTip = tipSeen,
                                     proxyEndpoints = endpoints,
                                     onCopy = { nav.copy(it) },
                                     state = state, live = live, week = week,

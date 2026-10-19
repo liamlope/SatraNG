@@ -495,4 +495,24 @@
     <string name="sx_sec_applied">Применено. Переподключитесь.</string>
     <string name="sx_sec_live_step">Проверка: %1$s…</string>
     <string name="sx_sec_info_only">Только информация · без баллов</string>
+    <string name="sx_smart_routing_ir">Умная маршрутизация (Иран)</string>
+    <string name="sx_smart_routing_ru">Умная маршрутизация (Россия)</string>
+    <string name="sx_smart_routing_ir_note">Иранские банки и сайты открываются напрямую — VPN выключать не нужно.</string>
+    <string name="sx_smart_routing_ru_note">Российские банки и сайты открываются напрямую — VPN выключать не нужно.</string>
+    <string name="sx_smart_routing_off">Выкл: весь трафик идёт через VPN.</string>
+    <string name="sx_smart_routing_info">Настройки маршрутизации</string>
+    <string name="sx_smart_routing_tip">Новое: умная маршрутизация сохраняет доступ к местным банкам при включённом VPN.</string>
+    <string name="sx_rx_title">Исключения</string>
+    <string name="sx_rx_note">Всегда важнее умной маршрутизации.</string>
+    <string name="sx_rx_vpn_sites">Всегда через VPN — сайты</string>
+    <string name="sx_rx_vpn_sites_hint">Добавить сайт</string>
+    <string name="sx_rx_vpn_apps">Всегда через VPN — приложения</string>
+    <string name="sx_rx_vpn_apps_hint">Добавить пакет приложения</string>
+    <string name="sx_rx_direct_sites">Всегда напрямую — сайты</string>
+    <string name="sx_rx_direct_sites_hint">Добавить сайт</string>
+    <string name="sx_rx_bad_domain">Введите сайт, например example.ru</string>
+    <string name="sx_rx_bad_app">Введите пакет, например org.telegram.messenger</string>
+    <string name="sx_rx_not_installed">Это приложение не установлено</string>
+    <string name="sx_rx_dup">Уже в списке</string>
+    <string name="sx_rx_remove">Удалить %1$s</string>
 </resources>

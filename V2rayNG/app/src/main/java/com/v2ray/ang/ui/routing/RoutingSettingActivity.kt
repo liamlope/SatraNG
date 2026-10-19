@@ -286,6 +286,7 @@ fun RoutingSettingScreen(
                 }
             }
         }
+        item(key = "exceptions") { RoutingExceptionsSection() }
         item(key = "rules_h") {
             Text(
                 stringResource(R.string.sx_routing_rules).uppercase(currentLocale()),

@@ -471,4 +471,24 @@
     <string name="sx_sec_applied">اعمال شد. برای استفاده دوباره وصل شوید.</string>
     <string name="sx_sec_live_step">در حال بررسی %1$s…</string>
     <string name="sx_sec_info_only">فقط اطلاعات · بدون امتیاز</string>
+    <string name="sx_smart_routing_ir">مسیریابی هوشمند (ایران)</string>
+    <string name="sx_smart_routing_ru">مسیریابی هوشمند (روسیه)</string>
+    <string name="sx_smart_routing_ir_note">برنامه‌ها و سایت‌های بانکی ایران مستقیم باز می‌شوند و لازم نیست VPN را خاموش کنید.</string>
+    <string name="sx_smart_routing_ru_note">برنامه‌ها و سایت‌های بانکی روسیه مستقیم باز می‌شوند و لازم نیست VPN را خاموش کنید.</string>
+    <string name="sx_smart_routing_off">خاموش: همه‌چیز از VPN عبور می‌کند.</string>
+    <string name="sx_smart_routing_info">تنظیمات مسیریابی</string>
+    <string name="sx_smart_routing_tip">جدید: مسیریابی هوشمند سایت‌های بانکی داخلی را در حالت اتصال هم باز نگه می‌دارد.</string>
+    <string name="sx_rx_title">استثناها</string>
+    <string name="sx_rx_note">این‌ها همیشه بر مسیریابی هوشمند مقدم‌اند.</string>
+    <string name="sx_rx_vpn_sites">همیشه از VPN — سایت‌ها</string>
+    <string name="sx_rx_vpn_sites_hint">افزودن سایت</string>
+    <string name="sx_rx_vpn_apps">همیشه از VPN — برنامه‌ها</string>
+    <string name="sx_rx_vpn_apps_hint">افزودن نام بستهٔ برنامه</string>
+    <string name="sx_rx_direct_sites">همیشه مستقیم — سایت‌ها</string>
+    <string name="sx_rx_direct_sites_hint">افزودن سایت</string>
+    <string name="sx_rx_bad_domain">سایتی مثل example.ir وارد کنید</string>
+    <string name="sx_rx_bad_app">نام بسته‌ای مثل org.telegram.messenger وارد کنید</string>
+    <string name="sx_rx_not_installed">این برنامه نصب نیست</string>
+    <string name="sx_rx_dup">از قبل در فهرست هست</string>
+    <string name="sx_rx_remove">حذف %1$s</string>
 </resources>

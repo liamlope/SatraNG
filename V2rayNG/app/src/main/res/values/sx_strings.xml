@@ -471,4 +471,24 @@
     <string name="sx_sec_applied">Applied. Reconnect to use it.</string>
     <string name="sx_sec_live_step">Checking %1$s…</string>
     <string name="sx_sec_info_only">Info only · not scored</string>
+    <string name="sx_smart_routing_ir">Smart routing (Iran)</string>
+    <string name="sx_smart_routing_ru">Smart routing (Russia)</string>
+    <string name="sx_smart_routing_ir_note">Iranian banking apps and sites open directly, so you don’t need to turn off the VPN.</string>
+    <string name="sx_smart_routing_ru_note">Russian banking apps and sites open directly, so you don’t need to turn off the VPN.</string>
+    <string name="sx_smart_routing_off">Off: everything goes through the VPN.</string>
+    <string name="sx_smart_routing_info">Routing settings</string>
+    <string name="sx_smart_routing_tip">New: smart routing keeps local banking sites working while you stay connected.</string>
+    <string name="sx_rx_title">Exceptions</string>
+    <string name="sx_rx_note">These always win over smart routing.</string>
+    <string name="sx_rx_vpn_sites">Always through the VPN — sites</string>
+    <string name="sx_rx_vpn_sites_hint">Add a site</string>
+    <string name="sx_rx_vpn_apps">Always through the VPN — apps</string>
+    <string name="sx_rx_vpn_apps_hint">Add an app package</string>
+    <string name="sx_rx_direct_sites">Always direct — sites</string>
+    <string name="sx_rx_direct_sites_hint">Add a site</string>
+    <string name="sx_rx_bad_domain">Enter a site like example.ir</string>
+    <string name="sx_rx_bad_app">Enter a package like org.telegram.messenger</string>
+    <string name="sx_rx_not_installed">That app isn’t installed</string>
+    <string name="sx_rx_dup">Already in the list</string>
+    <string name="sx_rx_remove">Remove %1$s</string>
 </resources>

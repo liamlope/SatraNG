@@ -85,6 +85,10 @@ object RoutingPolicy {
     fun remove(key: String, value: String) = save(key, list(key) - value)
     fun values(key: String) = list(key)
 
+    /** Iran unless the stored preset is the Russian one. */
+    fun isRussia(stored: List<RulesetItem>?): Boolean =
+        stored.orEmpty().any { r -> r.ip.orEmpty().any { it == "geoip:ru" } || r.domain.orEmpty().any { it == "domain:ru" || it == "geosite:category-ru" } }
+
     fun current(stored: List<RulesetItem>?): List<RulesetItem> =
         effective(stored.orEmpty(), smartOn(), exceptions(), SettingsManager.canUseProcessRouting())
 }

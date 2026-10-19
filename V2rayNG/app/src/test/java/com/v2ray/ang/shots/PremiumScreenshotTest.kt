@@ -287,6 +287,12 @@ class PremiumScreenshotTest {
     @Test fun home360IdleFa() = shot("home360_idle", true, "fa", heightDp = 640, widthDp = 360, content = home(baseState.copy(phase = ConnectPhase.Idle), LiveUiState()))
     @Test fun home360ConnectedRu() = shot("home360_connected", true, "ru", heightDp = 640, widthDp = 360, content = home(baseState.copy(phase = ConnectPhase.Connected, isRunning = true)))
     @Test fun home360IdleRu() = shot("home360_idle", false, "ru", heightDp = 640, widthDp = 360, content = home(baseState.copy(phase = ConnectPhase.Idle), LiveUiState()))
+    @Test fun home360TipEn() = shot("home360_tip", true, "en", heightDp = 640, widthDp = 360) {
+        HomeScreen(baseState.copy(phase = ConnectPhase.Idle), LiveUiState(), week, {}, {}, {}, {}, { _: AddMethod -> }, smartTip = true)
+    }
+    @Test fun home360SmartOffFa() = shot("home360_smartoff", false, "fa", heightDp = 640, widthDp = 360) {
+        HomeScreen(baseState.copy(phase = ConnectPhase.Connected, isRunning = true), live, week, {}, {}, {}, {}, { _: AddMethod -> }, smartRoutingOn = false)
+    }
     @Test fun homeConnectedLarge() = shot("home_connected", true, font = 1.4f, content = home(baseState.copy(phase = ConnectPhase.Connected, isRunning = true)))
 
     // ---------- Servers ----------
