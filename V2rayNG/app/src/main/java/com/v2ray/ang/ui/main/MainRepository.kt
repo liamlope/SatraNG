@@ -236,6 +236,7 @@ class MainRepository(
 
     override fun syncSubscriptions() {
         SubscriptionUpdater.sync(app)
+        runCatching { SubscriptionUpdater.refreshOnLaunch(app) }
     }
 
     override fun initAssets() {

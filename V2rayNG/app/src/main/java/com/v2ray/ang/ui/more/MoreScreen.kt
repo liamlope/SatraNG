@@ -92,6 +92,9 @@ fun MoreContent(s: MoreUiState, nav: AppNav, vm: MoreActions) {
                     spec(stringResource(R.string.sx_set_quick), stringResource(R.string.sx_set_quick_sub), "open start launch") {
                         row { SatraSwitchRow(stringResource(R.string.sx_set_quick), s.quickConnect, vm::setQuickConnect, subtitle = stringResource(R.string.sx_set_quick_sub), icon = SatraIcons.Play, iconColor = c.success) }
                     },
+                    spec(stringResource(R.string.sx_set_sub_on_open), stringResource(R.string.sx_set_sub_on_open_sub), "subscription update refresh launch open") {
+                        row { SatraSwitchRow(stringResource(R.string.sx_set_sub_on_open), s.subUpdateOnOpen, vm::setSubUpdateOnOpen, subtitle = stringResource(R.string.sx_set_sub_on_open_sub), icon = SatraIcons.Refresh, iconColor = c.info) }
+                    },
                     spec(stringResource(R.string.sx_set_killswitch), stringResource(R.string.sx_set_killswitch_sub), "always-on lockdown block kill") {
                         row {
                             SatraRow(

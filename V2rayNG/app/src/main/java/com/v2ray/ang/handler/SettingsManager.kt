@@ -42,6 +42,7 @@ object SettingsManager {
         migrateLegacyLocalPorts()
         seedSatraTunnelDefaults()
         migrateToXrayEngine()
+        migrateSubscriptionAutoUpdate()
         //ensureDefaultSubscription()
         initRoutingRulesets(context)
         migrateServerListToSubscriptions()
@@ -569,6 +570,25 @@ object SettingsManager {
      * category limits work without any extra step. Runs at app start, before any tunnel is built
      * by this process; a tunnel that is already up picks it up on its next (re)connect.
      */
+    /**
+     * One time: subscriptions still on the old untouched defaults (auto-update off, 24 h) start
+     * refreshing in the background every 15 minutes. Anything the user changed is left alone.
+     */
+    private fun migrateSubscriptionAutoUpdate() {
+        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SATRA_SUB_AUTO_MIGRATED, false)) return
+        runCatching {
+            MmkvManager.decodeSubscriptions().forEach { cache ->
+                val sub = cache.subscription
+                if (sub.url.isNotBlank() && !sub.autoUpdate && sub.updateInterval == 1440L) {
+                    sub.autoUpdate = true
+                    sub.updateInterval = AppConfig.DEFAULT_SUB_INTERVAL_MINUTES
+                    MmkvManager.encodeSubscription(cache.guid, sub)
+                }
+            }
+        }.onFailure { LogUtil.e(AppConfig.TAG, "Subscription auto-update migration failed", it) }
+        MmkvManager.encodeSettings(AppConfig.PREF_SATRA_SUB_AUTO_MIGRATED, true)
+    }
+
     private fun migrateToXrayEngine() {
         if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SATRA_ENGINE_XRAY_MIGRATED, false)) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

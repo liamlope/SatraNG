@@ -203,6 +203,11 @@ object AppConfig {
     const val DEFAULT_MUX_XUDP_CONCURRENCY = "8"
     const val PREF_SATRA_LOCAL_PORTS_MIGRATED = "pref_satra_local_ports_migrated_v1"
     const val PREF_SATRA_ENGINE_XRAY_MIGRATED = "pref_satra_engine_xray_migrated_v1"
+    /** Refresh auto-updating subscriptions each time the app is opened (cold start). Default on. */
+    const val PREF_SATRA_SUB_UPDATE_ON_OPEN = "pref_satra_sub_update_on_open"
+    const val PREF_SATRA_SUB_AUTO_MIGRATED = "pref_satra_sub_auto_migrated_v1"
+    /** Default background refresh interval for subscriptions, minutes (WorkManager minimum). */
+    const val DEFAULT_SUB_INTERVAL_MINUTES = 15L
     const val PREF_SATRA_TUNNEL_DEFAULTS_SEEDED = "pref_satra_tunnel_defaults_seeded_v1"
 
     /** Message constants for communication. */

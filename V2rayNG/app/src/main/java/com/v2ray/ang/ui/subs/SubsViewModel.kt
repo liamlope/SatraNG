@@ -63,7 +63,7 @@ interface SubsActions {
     fun updateOne(guid: String)
     fun setEnabled(guid: String, enabled: Boolean)
     fun delete(guid: String)
-    fun save(guid: String?, name: String, url: String, autoUpdate: Boolean, intervalHours: Int, enabled: Boolean): SubsMessage?
+    fun save(guid: String?, name: String, url: String, autoUpdate: Boolean, intervalMinutes: Int, enabled: Boolean): SubsMessage?
     fun showQr(row: SubRow)
     fun dismissQr()
     fun messageShown()
@@ -149,14 +149,14 @@ class SubsViewModel(app: Application) : AndroidViewModel(app), SubsActions {
 
     /**
      * Creates or edits a subscription. Returns a validation message, or null when saved.
-     * [intervalHours] is only used when [autoUpdate] is on.
+     * [intervalMinutes] is only used when [autoUpdate] is on.
      */
     override fun save(
         guid: String?,
         name: String,
         url: String,
         autoUpdate: Boolean,
-        intervalHours: Int,
+        intervalMinutes: Int,
         enabled: Boolean,
     ): SubsMessage? {
         val cleanName = name.trim()
@@ -168,14 +168,14 @@ class SubsViewModel(app: Application) : AndroidViewModel(app), SubsActions {
             if (!Utils.isValidUrl(cleanUrl)) return SubsMessage.InvalidUrl
             if (!Utils.isValidSubUrl(cleanUrl) && !allowInsecure) return SubsMessage.InvalidUrl
         }
-        val minutes = intervalHours.toLong() * 60L
+        val minutes = intervalMinutes.toLong()
         if (autoUpdate && minutes < AppConfig.SUBSCRIPTION_MIN_INTERVAL_MINUTES) return SubsMessage.InvalidInterval
         val id = guid ?: Utils.getUuid()
         val item = (existing ?: SubscriptionItem()).copy(
             remarks = cleanName,
             url = cleanUrl,
             autoUpdate = autoUpdate,
-            updateInterval = if (autoUpdate) minutes else (existing?.updateInterval ?: 1440L),
+            updateInterval = if (autoUpdate) minutes else (existing?.updateInterval ?: AppConfig.DEFAULT_SUB_INTERVAL_MINUTES),
             enabled = enabled,
         )
         viewModelScope.launch(Dispatchers.IO) {

@@ -42,3 +42,7 @@ sx_split_selected|one|Выбрано: %d
 sx_split_selected|few|Выбрано: %d
 sx_split_selected|many|Выбрано: %d
 sx_split_selected|other|Выбрано: %d
+sx_minutes|one|%d минута
+sx_minutes|few|%d минуты
+sx_minutes|many|%d минут
+sx_minutes|other|%d минуты

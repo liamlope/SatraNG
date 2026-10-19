@@ -321,6 +321,8 @@
     <string name="sx_server_used">%1$s used</string>
     <string name="sx_coach_pull_ping">Pull down to ping every config</string>
     <string name="sx_dismiss">Dismiss</string>
+    <string name="sx_set_sub_on_open">Update subscriptions on open</string>
+    <string name="sx_set_sub_on_open_sub">Also refreshes in the background at each subscription\'s interval</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Expires in %d day</item>
         <item quantity="other">Expires in %d days</item>
@@ -364,5 +366,9 @@
     <plurals name="sx_split_selected">
         <item quantity="one">%d selected</item>
         <item quantity="other">%d selected</item>
+    </plurals>
+    <plurals name="sx_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
     </plurals>
 </resources>

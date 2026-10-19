@@ -21,6 +21,7 @@ data class MoreUiState(
     val smartConnect: Boolean = true,
     val quickConnect: Boolean = false,
     val showAdvanced: Boolean = false,
+    val subUpdateOnOpen: Boolean = true,
 )
 
 /** State + writes for the Settings tab; keeps MMKV out of the composables. */
@@ -32,6 +33,7 @@ interface MoreActions {
     fun setSmartConnect(on: Boolean)
     fun setQuickConnect(on: Boolean)
     fun setShowAdvanced(on: Boolean)
+    fun setSubUpdateOnOpen(on: Boolean) = Unit
 }
 
 class MoreViewModel(app: Application) : AndroidViewModel(app), MoreActions {
@@ -46,6 +48,7 @@ class MoreViewModel(app: Application) : AndroidViewModel(app), MoreActions {
         smartConnect = MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_CONNECT, true),
         quickConnect = MmkvManager.decodeSettingsBool(AppConfig.PREF_QUICK_CONNECT, false),
         showAdvanced = MmkvManager.decodeSettingsBool(AppConfig.PREF_SHOW_ADVANCED, false),
+        subUpdateOnOpen = MmkvManager.decodeSettingsBool(AppConfig.PREF_SATRA_SUB_UPDATE_ON_OPEN, true),
     )
 
     fun refresh() { _state.value = read() }
@@ -70,6 +73,11 @@ class MoreViewModel(app: Application) : AndroidViewModel(app), MoreActions {
         MmkvManager.encodeSettings(AppConfig.PREF_SPEED_ENABLED, on)
         SettingsChangeManager.notifySettingChanged(AppConfig.PREF_SPEED_ENABLED)
         _state.update { it.copy(speedNotification = on) }
+    }
+
+    override fun setSubUpdateOnOpen(on: Boolean) {
+        MmkvManager.encodeSettings(AppConfig.PREF_SATRA_SUB_UPDATE_ON_OPEN, on)
+        _state.update { it.copy(subUpdateOnOpen = on) }
     }
 
     override fun setSmartConnect(on: Boolean) {

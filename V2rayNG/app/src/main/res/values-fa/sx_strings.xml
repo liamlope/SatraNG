@@ -321,6 +321,8 @@
     <string name="sx_server_used">%1$s مصرف</string>
     <string name="sx_coach_pull_ping">برای پینگ همه کانفیگ‌ها، صفحه را به پایین بکشید</string>
     <string name="sx_dismiss">بستن</string>
+    <string name="sx_set_sub_on_open">به‌روزرسانی اشتراک‌ها هنگام باز کردن</string>
+    <string name="sx_set_sub_on_open_sub">در پس‌زمینه هم طبق بازه هر اشتراک تازه می‌شوند</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">%d روز دیگر منقضی می‌شود</item>
         <item quantity="other">%d روز دیگر منقضی می‌شود</item>
@@ -364,5 +366,9 @@
     <plurals name="sx_split_selected">
         <item quantity="one">%d انتخاب‌شده</item>
         <item quantity="other">%d انتخاب‌شده</item>
+    </plurals>
+    <plurals name="sx_minutes">
+        <item quantity="one">%d دقیقه</item>
+        <item quantity="other">%d دقیقه</item>
     </plurals>
 </resources>

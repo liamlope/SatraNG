@@ -273,3 +273,5 @@ sx_chain_hop	Hop %1$d	گام %1$d
 sx_server_used	%1$s used	%1$s مصرف
 sx_coach_pull_ping	Pull down to ping every config	برای پینگ همه کانفیگ‌ها، صفحه را به پایین بکشید
 sx_dismiss	Dismiss	بستن
+sx_set_sub_on_open	Update subscriptions on open	به‌روزرسانی اشتراک‌ها هنگام باز کردن
+sx_set_sub_on_open_sub	Also refreshes in the background at each subscription's interval	در پس‌زمینه هم طبق بازه هر اشتراک تازه می‌شوند

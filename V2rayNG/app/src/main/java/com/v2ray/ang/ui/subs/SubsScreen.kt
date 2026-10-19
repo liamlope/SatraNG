@@ -315,7 +315,15 @@ private fun ExpiryBadge(expireSec: Long) {
 
 // ───────────────────────────── Edit sheet ─────────────────────────────
 
-private val intervalChoices = listOf(1, 6, 12, 24, 72)
+/** Refresh choices, minutes. */
+private val intervalChoices = listOf(15, 60, 360, 720, 1440)
+
+@Composable
+private fun intervalLabel(m: Int): String = when {
+    m % 1440 == 0 -> pluralStringResource(R.plurals.sx_days, m / 1440, m / 1440)
+    m % 60 == 0 -> pluralStringResource(R.plurals.sx_hours, m / 60, m / 60)
+    else -> pluralStringResource(R.plurals.sx_minutes, m, m)
+}
 
 @Composable
 internal fun EditSheet(
@@ -333,7 +341,8 @@ internal fun EditSheet(
     var name by remember { mutableStateOf(item?.remarks ?: initialName) }
     var url by remember { mutableStateOf(item?.url ?: initialUrl) }
     var auto by remember { mutableStateOf(item?.autoUpdate ?: true) }
-    var hours by remember { mutableStateOf(((item?.updateInterval ?: 1440L) / 60L).toInt().coerceAtLeast(1)) }
+    var minutes by remember { mutableStateOf((item?.updateInterval ?: com.v2ray.ang.AppConfig.DEFAULT_SUB_INTERVAL_MINUTES).toInt().coerceAtLeast(15)) }
+    val choices = remember(minutes) { (intervalChoices + minutes).distinct().sorted() }
     var enabled by remember { mutableStateOf(item?.enabled ?: true) }
     var error by remember { mutableStateOf<SubsMessage?>(null) }
 
@@ -386,10 +395,10 @@ internal fun EditSheet(
                         Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 24.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        intervalChoices.forEach { h ->
+                        choices.forEach { m ->
                             SatraChip(
-                                if (h < 24) pluralStringResource(R.plurals.sx_hours, h, h) else pluralStringResource(R.plurals.sx_days, h / 24, h / 24),
-                                selected = hours == h, onClick = { hours = h },
+                                intervalLabel(m),
+                                selected = minutes == m, onClick = { minutes = m },
                             )
                         }
                     }
@@ -400,7 +409,7 @@ internal fun EditSheet(
                 SatraButton(
                     stringResource(R.string.sx_save),
                     {
-                        val err = vm.save(sub?.guid, name, url, auto, hours, enabled)
+                        val err = vm.save(sub?.guid, name, url, auto, minutes, enabled)
                         if (err == null) { haptics.confirm(); onDismiss() } else { error = err; haptics.reject() }
                     },
                     modifier = Modifier.weight(1f),

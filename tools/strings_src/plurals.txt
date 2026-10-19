@@ -20,3 +20,5 @@ sx_cat_apps|one|%d app|%d برنامه
 sx_cat_apps|other|%d apps|%d برنامه
 sx_split_selected|one|%d selected|%d انتخاب‌شده
 sx_split_selected|other|%d selected|%d انتخاب‌شده
+sx_minutes|one|%d minute|%d دقیقه
+sx_minutes|other|%d minutes|%d دقیقه

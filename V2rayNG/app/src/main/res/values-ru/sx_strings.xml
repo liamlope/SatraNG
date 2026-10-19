@@ -321,6 +321,8 @@
     <string name="sx_server_used">%1$s израсходовано</string>
     <string name="sx_coach_pull_ping">Потяните вниз, чтобы проверить пинг всех конфигураций</string>
     <string name="sx_dismiss">Закрыть</string>
+    <string name="sx_set_sub_on_open">Обновлять подписки при запуске</string>
+    <string name="sx_set_sub_on_open_sub">Также обновляются в фоне с интервалом каждой подписки</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Истекает через %d день</item>
         <item quantity="few">Истекает через %d дня</item>
@@ -386,5 +388,11 @@
         <item quantity="few">Выбрано: %d</item>
         <item quantity="many">Выбрано: %d</item>
         <item quantity="other">Выбрано: %d</item>
+    </plurals>
+    <plurals name="sx_minutes">
+        <item quantity="one">%d минута</item>
+        <item quantity="few">%d минуты</item>
+        <item quantity="many">%d минут</item>
+        <item quantity="other">%d минуты</item>
     </plurals>
 </resources>

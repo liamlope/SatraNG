@@ -36,12 +36,8 @@ object SubscriptionUserinfoParser {
             subscription.profileWebPageUrl = it
             if (subscription.supportUrl.isNullOrBlank()) subscription.supportUrl = it
         }
-        normalized["profile-update-interval"]?.toLongOrNull()?.let {
-            subscription.profileUpdateInterval = it
-            if (it > 0) {
-                subscription.updateInterval = it * 60 // hours -> minutes
-            }
-        }
+        // The provider's hint is kept for reference only: the refresh interval is the user's choice.
+        normalized["profile-update-interval"]?.toLongOrNull()?.let { subscription.profileUpdateInterval = it }
     }
 
     private fun parseUserinfo(raw: String): Map<String, Long> {
