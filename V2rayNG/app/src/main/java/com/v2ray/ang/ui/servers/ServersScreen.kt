@@ -1,5 +1,7 @@
 package com.v2ray.ang.ui.servers
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -84,8 +86,18 @@ fun ServersScreen(vm: MainViewModel, nav: AppNav) {
     val state by vm.uiState.collectAsState()
     val group by vm.serverGroupState(state.selectedGroupId).collectAsState()
     val rows = remember(group.rows, state.hiddenGuids) { group.rows.filter { it.guid !in state.hiddenGuids }.distinctBy { it.guid } }
-    ServersContent(state = state, rows = rows, nav = nav, onAction = vm::onAction)
+    var pullHint by remember { mutableStateOf(!com.v2ray.ang.handler.MmkvManager.decodeSettingsBool(PULL_HINT_KEY, false)) }
+    ServersContent(
+        state = state, rows = rows, nav = nav, onAction = vm::onAction,
+        pullHint = pullHint,
+        onPullHintSeen = {
+            pullHint = false
+            com.v2ray.ang.handler.MmkvManager.encodeSettings(PULL_HINT_KEY, true)
+        },
+    )
 }
+
+private const val PULL_HINT_KEY = "pref_satra_coach_pull_ping_v1"
 
 /** Stateless body of the Servers tab (also rendered by the screenshot tests). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -96,6 +108,8 @@ fun ServersContent(
     nav: AppNav,
     onAction: (MainAction) -> Unit,
     initialQuery: String = "",
+    pullHint: Boolean = false,
+    onPullHintSeen: () -> Unit = {},
 ) {
     var query by rememberSaveable { mutableStateOf(initialQuery) }
     var menu by remember { mutableStateOf(false) }
@@ -110,7 +124,7 @@ fun ServersContent(
 
     PullToRefreshBox(
         isRefreshing = state.isTesting,
-        onRefresh = { onAction(MainAction.TestRealAllServers) },
+        onRefresh = { if (pullHint) onPullHintSeen(); onAction(MainAction.TestRealAllServers) },
     ) {
         SatraLargeTitleScaffold(
             title = stringResource(R.string.sx_servers_title),
@@ -174,6 +188,11 @@ fun ServersContent(
                             )
                         }
                     }
+                }
+            }
+            if (pullHint && rows.size >= 2 && query.isBlank()) {
+                item(key = "pull_hint") {
+                    PullToPingHint(onDismiss = onPullHintSeen, modifier = Modifier.animateItem().padding(horizontal = SatraSpace.Gutter).padding(bottom = 10.dp))
                 }
             }
             if (rows.isNotEmpty() && query.isBlank()) {
@@ -350,6 +369,40 @@ private fun ServerItem(
             )
             SatraIconButton(SatraIcons.More, stringResource(R.string.sx_more_options), onMore, tint = c.textSecondary, size = 20.dp, modifier = Modifier.width(36.dp))
         }
+    }
+}
+
+/** One-time coach mark: a gently bobbing arrow that teaches pull-down-to-ping. */
+@Composable
+private fun PullToPingHint(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    val c = Satra.colors
+    val reduce = com.v2ray.ang.ui.compose.satra.rememberReduceMotion()
+    val bob = if (reduce) 0f else {
+        val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "pullHint")
+        t.animateFloat(
+            0f, 1f,
+            androidx.compose.animation.core.infiniteRepeatable(
+                androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                androidx.compose.animation.core.RepeatMode.Reverse,
+            ),
+            label = "bob",
+        ).value
+    }
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(SatraShapes.Large)
+            .background(c.infoSoft)
+            .padding(start = 14.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            SatraIcons.ArrowDown, null, tint = c.info,
+            modifier = Modifier.size(20.dp).graphicsLayer { translationY = (bob - 0.5f) * 10.dp.toPx() },
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(stringResource(R.string.sx_coach_pull_ping), style = Satra.type.subhead, color = c.textPrimary, modifier = Modifier.weight(1f))
+        SatraIconButton(SatraIcons.Close, stringResource(R.string.sx_dismiss), onDismiss, tint = c.textSecondary, size = 18.dp)
     }
 }
 

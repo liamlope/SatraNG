@@ -271,3 +271,5 @@ sx_assets_footer	Geo files decide which sites go direct. Download refreshes them
 sx_chain_name	Name	نام
 sx_chain_hop	Hop %1$d	گام %1$d
 sx_server_used	%1$s used	%1$s مصرف
+sx_coach_pull_ping	Pull down to ping every config	برای پینگ همه کانفیگ‌ها، صفحه را به پایین بکشید
+sx_dismiss	Dismiss	بستن

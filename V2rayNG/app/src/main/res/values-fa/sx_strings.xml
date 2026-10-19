@@ -319,6 +319,8 @@
     <string name="sx_chain_name">نام</string>
     <string name="sx_chain_hop">گام %1$d</string>
     <string name="sx_server_used">%1$s مصرف</string>
+    <string name="sx_coach_pull_ping">برای پینگ همه کانفیگ‌ها، صفحه را به پایین بکشید</string>
+    <string name="sx_dismiss">بستن</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">%d روز دیگر منقضی می‌شود</item>
         <item quantity="other">%d روز دیگر منقضی می‌شود</item>

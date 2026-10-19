@@ -317,3 +317,5 @@ sx_assets_footer	Geo-файлы определяют, какие сайты от
 sx_chain_name	Название
 sx_chain_hop	Шаг %1$d
 sx_server_used	%1$s израсходовано
+sx_coach_pull_ping	Потяните вниз, чтобы проверить пинг всех конфигураций
+sx_dismiss	Закрыть
