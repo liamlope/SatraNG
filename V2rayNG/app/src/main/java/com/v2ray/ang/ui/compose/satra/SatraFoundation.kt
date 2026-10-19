@@ -1,5 +1,6 @@
 package com.v2ray.ang.ui.compose.satra
 
+import kotlinx.coroutines.launch
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
@@ -649,6 +650,67 @@ fun SatraIconButton(
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(size))
+    }
+}
+
+/**
+ * Favourite toggle: hollow star → filled amber star with a springy pop and a little turn.
+ * Respects reduced motion (instant change). 48dp touch target, small visual.
+ */
+@Composable
+fun FavoriteStar(
+    favorite: Boolean,
+    onToggle: () -> Unit,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    size: Dp = 20.dp,
+) {
+    val c = Satra.colors
+    val reduce = rememberReduceMotion()
+    val haptics = rememberSatraHaptics()
+    val source = remember { MutableInteractionSource() }
+    val pop = remember { androidx.compose.animation.core.Animatable(1f) }
+    val turn = remember { androidx.compose.animation.core.Animatable(0f) }
+    var armed by remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(favorite) {
+        if (!armed) { armed = true; return@LaunchedEffect }
+        if (reduce) return@LaunchedEffect
+        if (favorite) {
+            kotlinx.coroutines.coroutineScope {
+                launch {
+                    pop.snapTo(0.6f)
+                    pop.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.35f, stiffness = 500f))
+                }
+                launch {
+                    turn.snapTo(-40f)
+                    turn.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 300f))
+                }
+            }
+        } else {
+            pop.snapTo(0.85f)
+            pop.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 700f))
+        }
+    }
+    val tint by animateColorAsState(if (favorite) c.warning else c.textTertiary, tween(if (reduce) 0 else 180), label = "starTint")
+    Box(
+        modifier
+            .size(SatraSpace.MinTouch)
+            .pressScale(source, 0.85f)
+            .clip(CircleShape)
+            .selectable(
+                selected = favorite, role = Role.Checkbox,
+                interactionSource = source, indication = null,
+                onClick = { if (favorite) haptics.tap() else haptics.confirm(); onToggle() },
+            )
+            .semantics { this.contentDescription = contentDescription },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            if (favorite) SatraIcons.StarFilled else SatraIcons.Star, contentDescription = null, tint = tint,
+            modifier = Modifier
+                .size(size)
+                .graphicsLayer { scaleX = pop.value; scaleY = pop.value; rotationZ = turn.value },
+        )
     }
 }
 

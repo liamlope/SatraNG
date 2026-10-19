@@ -401,4 +401,59 @@ class PremiumScreenshotTest {
     @Test fun legacyKitDark() = shot("legacy_kit", true, heightDp = 1100) { LegacyKit() }
     @Test fun legacyKitLightFa() = shot("legacy_kit", false, "fa", heightDp = 1100) { LegacyKit() }
     @Test fun legacyKitLargeEn() = shot("legacy_kit", true, font = 1.4f, heightDp = 1500) { LegacyKit() }
+
+    // ---------- pushed pages (page system) ----------
+
+    private val sampleLogs = com.v2ray.ang.ui.logcat.createLogcatEntries(listOf(
+        "10-19 12:01:02.123 I/GoLog( 1234): [Info] Xray 26.3.1 started",
+        "10-19 12:01:02.456 W/GoLog( 1234): [Warning] failed to resolve dns.google: i/o timeout",
+        "10-19 12:01:03.001 E/AndroidRuntime( 999): FATAL EXCEPTION: main",
+        "10-19 12:01:03.001 E/AndroidRuntime( 999): FATAL EXCEPTION: main",
+        "10-19 12:01:04.777 D/com.satra.ng( 1234): tunnel up via [tun >> proxy]",
+    ))
+    @Test fun pageLogsDark() = shot("page_logs", true, still = true) {
+        com.v2ray.ang.ui.logcat.LogcatContent(sampleLogs, false, "", {}, {}, {}, {}, {}, {}, {})
+    }
+    @Test fun pageLogsEmptyFaLight() = shot("page_logs_empty", false, "fa", still = true) {
+        com.v2ray.ang.ui.logcat.LogcatContent(emptyList(), false, "", {}, {}, {}, {}, {}, {}, {})
+    }
+    private val pageApps = listOf(
+        com.v2ray.ang.dto.AppInfo("Telegram", "org.telegram.messenger", false, 0),
+        com.v2ray.ang.dto.AppInfo("Instagram", "com.instagram.android", false, 0),
+        com.v2ray.ang.dto.AppInfo("A very long application name that has to truncate", "com.example.long.name.app", false, 0),
+    )
+    @Test fun pageAppPickerDark() = shot("page_app_picker", true, still = true) {
+        com.v2ray.ang.ui.apppicker.AppPickerScreen("Apps", pageApps, false, setOf("org.telegram.messenger"), {}, {}, {}, {}, {})
+    }
+    @Test fun pageAppPickerFaLargeLight() = shot("page_app_picker", false, "fa", font = 1.3f, still = true) {
+        com.v2ray.ang.ui.apppicker.AppPickerScreen("برنامه‌ها", pageApps, false, emptySet(), {}, {}, {}, {}, {})
+    }
+    @Test fun pageTaskerDark() = shot("page_tasker", true, still = true) {
+        com.v2ray.ang.ui.shortcut.TaskerScreen(
+            listOf(com.v2ray.ang.ui.shortcut.TaskerItem("Current selection", "d"), com.v2ray.ang.ui.shortcut.TaskerItem("Frankfurt", "a"), com.v2ray.ang.ui.shortcut.TaskerItem("Tokyo", "b")),
+            androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) },
+            androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(1) }, {}, {})
+    }
+    @Test fun pageChainDark() = shot("page_chain", true, still = true) {
+        com.v2ray.ang.ui.server.ProxyChainScreen("g", false, "Two hops", listOf("Frankfurt", "Tokyo"), listOf("Frankfurt", "Tokyo"), {}, { _, _ -> true }, {})
+    }
+    @Test fun pageChainFaLight() = shot("page_chain", false, "fa", still = true) {
+        com.v2ray.ang.ui.server.ProxyChainScreen("", false, "", listOf(""), listOf("Frankfurt"), {}, { _, _ -> true }, {})
+    }
+    @Test fun pageAssetsDark() = shot("page_assets", true, still = true) {
+        com.v2ray.ang.ui.userasset.UserAssetScreen(
+            com.v2ray.ang.ui.userasset.UserAssetUiState(
+                listOf(
+                    com.v2ray.ang.dto.entities.AssetUrlCache("1", com.v2ray.ang.dto.entities.AssetUrlItem("geosite.dat", "https://x", locked = true)),
+                    com.v2ray.ang.dto.entities.AssetUrlCache("2", com.v2ray.ang.dto.entities.AssetUrlItem("iran.dat", "https://github.com/x/iran.dat")),
+                    com.v2ray.ang.dto.entities.AssetUrlCache("3", com.v2ray.ang.dto.entities.AssetUrlItem("missing.dat", "file")),
+                ),
+                mapOf("1" to com.v2ray.ang.ui.userasset.AssetFileMetadata(5_400_000, 1_760_000_000_000), "2" to com.v2ray.ang.ui.userasset.AssetFileMetadata(820_000, 1_760_000_000_000)),
+            ),
+            false, "Loyalsoldier", listOf("Loyalsoldier", "Chocolate4U"), {}, {}, {}, {}, {}, {}, {}, { _, _ -> },
+        )
+    }
+    @Test fun pageTranslatorsLight() = shot("page_translators", false, still = true) {
+        com.v2ray.ang.ui.TranslatorsScreen {}
+    }
 }

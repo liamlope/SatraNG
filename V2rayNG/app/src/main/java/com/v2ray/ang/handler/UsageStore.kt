@@ -64,6 +64,15 @@ object UsageStore {
         kv.encode(hk, kv.decodeLong(hk, 0L) + up.coerceAtLeast(0L) + down.coerceAtLeast(0L))
     }
 
+    /** Bytes that went through the proxy while [guid] was the active config (all time, approximate). */
+    fun addServerTraffic(guid: String, bytes: Long) {
+        if (guid.isBlank() || bytes <= 0L) return
+        val k = "s:$guid"
+        kv.encode(k, kv.decodeLong(k, 0L) + bytes)
+    }
+
+    fun serverTraffic(guid: String): Long = if (guid.isBlank()) 0L else kv.decodeLong("s:$guid", 0L)
+
     /** Per-app bytes seen while the VPN was up (see [VpnAppUsageTracker]); keyed by day and uid. */
     fun addAppTraffic(nowMs: Long, uid: Int, rx: Long, tx: Long) {
         if (rx <= 0L && tx <= 0L) return
@@ -217,7 +226,7 @@ object UsageStore {
     }
 
     fun clearLedger() {
-        kv.allKeys()?.filter { it.startsWith("d:") || it.startsWith("h:") || it.startsWith("a:") }?.forEach { kv.removeValueForKey(it) }
+        kv.allKeys()?.filter { it.startsWith("d:") || it.startsWith("h:") || it.startsWith("a:") || it.startsWith("s:") }?.forEach { kv.removeValueForKey(it) }
         kv.removeValueForKey("sessions")
     }
 }

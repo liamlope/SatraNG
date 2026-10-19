@@ -71,7 +71,10 @@ fun FormTextField(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * A choice field. Read-only: tapping opens a sheet with the options. Editable: free text with a
+ * chevron that opens the same sheet. [inset] adds the page gutter (off when placed inside a row).
+ */
 @Composable
 fun FormDropdownField(
     label: String,
@@ -83,32 +86,41 @@ fun FormDropdownField(
     enabled: Boolean = true,
     placeholder: String? = null,
     supportingText: String? = null,
+    inset: Boolean = true,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
-    if (!editable) {
-        // Read-only choice: a filled field that opens a bottom sheet list (no Material dropdown).
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = SatraSpace.Gutter, vertical = 4.dp)
-                .alpha(if (enabled) 1f else 0.5f),
-        ) {
-            SatraTextField(
-                value = value,
-                onValueChange = {},
-                label = label,
-                placeholder = placeholder,
-                supporting = supportingText,
-                readOnly = true,
-                trailing = {
-                    androidx.compose.material3.Icon(
-                        com.v2ray.ang.ui.compose.satra.SatraIcons.ChevronDown, null,
-                        tint = Satra.colors.textTertiary,
-                        modifier = Modifier.padding(end = 4.dp),
-                    )
-                },
+    val chevron: @Composable () -> Unit = {
+        if (editable) {
+            com.v2ray.ang.ui.compose.satra.SatraIconButton(
+                com.v2ray.ang.ui.compose.satra.SatraIcons.ChevronDown, label,
+                { if (enabled && options.isNotEmpty()) expanded = true },
+                tint = Satra.colors.textTertiary, size = 20.dp,
             )
-            // Transparent tap target over the field.
+        } else {
+            androidx.compose.material3.Icon(
+                com.v2ray.ang.ui.compose.satra.SatraIcons.ChevronDown, null,
+                tint = Satra.colors.textTertiary,
+                modifier = Modifier.padding(end = 4.dp),
+            )
+        }
+    }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (inset) Modifier.padding(horizontal = SatraSpace.Gutter, vertical = 4.dp) else Modifier)
+            .alpha(if (enabled) 1f else 0.5f),
+    ) {
+        SatraTextField(
+            value = value,
+            onValueChange = { if (editable && enabled) onValueChange(it) },
+            label = label,
+            placeholder = placeholder,
+            supporting = supportingText,
+            readOnly = !editable || !enabled,
+            trailing = chevron,
+        )
+        if (!editable) {
+            // Transparent tap target over the read-only field.
             Box(
                 Modifier
                     .matchParentSize()
@@ -118,92 +130,32 @@ fun FormDropdownField(
                     ),
             )
         }
-        if (expanded) {
-            com.v2ray.ang.ui.compose.satra.SatraSheet(onDismiss = { expanded = false }) {
-                com.v2ray.ang.ui.compose.satra.SheetTitle(label)
-                androidx.compose.foundation.layout.Column(
-                    Modifier
-                        .padding(horizontal = SatraSpace.Gutter)
-                        .clip(SatraShapes.Large)
-                        .background(Satra.colors.surface)
-                        .androidx_verticalScroll(),
-                ) {
-                    options.forEachIndexed { i, option ->
-                        com.v2ray.ang.ui.compose.satra.SatraRow(
-                            title = option,
-                            trailing = if (option == value) ({
-                                androidx.compose.material3.Icon(
-                                    com.v2ray.ang.ui.compose.satra.SatraIcons.Check, null,
-                                    tint = Satra.colors.accent,
-                                )
-                            }) else null,
-                            onClick = { onValueChange(option); expanded = false },
-                        )
-                        if (i < options.lastIndex) com.v2ray.ang.ui.compose.satra.GroupSeparator()
-                    }
-                }
-                androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 16.dp))
-            }
-        }
-        return
     }
-    val menuScrollState = rememberScrollState()
-    val focusManager = LocalFocusManager.current
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { newExpanded ->
-            if (!enabled) return@ExposedDropdownMenuBox
-            if (!editable && newExpanded) {
-                keyboardController?.hide()
-            }
-            expanded = newExpanded
-        },
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = SatraSpace.Gutter, vertical = 4.dp)
-    ) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = { if (editable) onValueChange(it) },
-            readOnly = !editable,
-            enabled = enabled,
-            label = { Text(label) },
-            placeholder = { if (placeholder != null) Text(placeholder) },
-            supportingText = supportingText?.let { { Text(it) } },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            colors = satraFieldColors(),
-            shape = SatraShapes.Medium,
-            modifier = Modifier
-                .menuAnchor(
-                    type = if (editable) ExposedDropdownMenuAnchorType.PrimaryEditable
-                    else ExposedDropdownMenuAnchorType.PrimaryNotEditable
-                )
-                .fillMaxWidth()
-                .onFocusChanged { focusState ->
-                    if (!editable && focusState.isFocused) {
-                        keyboardController?.hide()
-                    }
+    if (expanded) {
+        com.v2ray.ang.ui.compose.satra.SatraSheet(onDismiss = { expanded = false }) {
+            com.v2ray.ang.ui.compose.satra.SheetTitle(label)
+            androidx.compose.foundation.layout.Column(
+                Modifier
+                    .padding(horizontal = SatraSpace.Gutter)
+                    .clip(SatraShapes.Large)
+                    .background(Satra.colors.surface)
+                    .androidx_verticalScroll(),
+            ) {
+                options.forEachIndexed { i, option ->
+                    com.v2ray.ang.ui.compose.satra.SatraRow(
+                        title = option,
+                        trailing = if (option == value) ({
+                            androidx.compose.material3.Icon(
+                                com.v2ray.ang.ui.compose.satra.SatraIcons.Check, null,
+                                tint = Satra.colors.accent,
+                            )
+                        }) else null,
+                        onClick = { onValueChange(option); expanded = false },
+                    )
+                    if (i < options.lastIndex) com.v2ray.ang.ui.compose.satra.GroupSeparator()
                 }
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.verticalScrollbar(menuScrollState),
-            scrollState = menuScrollState,
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option) },
-                    onClick = {
-                        onValueChange(option)
-                        expanded = false
-                        focusManager.clearFocus()
-                    }
-                )
             }
+            androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 16.dp))
         }
     }
 }

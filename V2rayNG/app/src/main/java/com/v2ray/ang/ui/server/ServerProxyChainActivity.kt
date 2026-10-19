@@ -241,14 +241,12 @@ fun ProxyChainScreen(
         },
     ) {
         item(key = "remarks_field") {
-            Box(Modifier.padding(horizontal = com.v2ray.ang.ui.compose.satra.SatraSpace.Gutter)) {
-                FormTextField(
-                    label = stringResource(R.string.server_lab_remarks),
-                    value = remarks,
-                    onValueChange = { remarks = it; isRemarksError = false },
-                    isError = isRemarksError
-                )
-            }
+            FormTextField(
+                label = stringResource(R.string.sx_chain_name),
+                value = remarks,
+                onValueChange = { remarks = it; isRemarksError = false },
+                isError = isRemarksError
+            )
         }
         item(key = "members_header") { com.v2ray.ang.ui.compose.satra.GroupHeader(stringResource(R.string.server_proxy_chain_members)) }
         val count = members.size + 1
@@ -274,7 +272,7 @@ fun ProxyChainScreen(
                             )
                         }
                         FormDropdownField(
-                            label = stringResource(R.string.server_lab_remarks),
+                            label = stringResource(R.string.sx_chain_hop, index + 1),
                             placeholder = stringResource(R.string.server_proxy_chain_member_unselected),
                             value = member,
                             options = allRemarks,
@@ -282,7 +280,8 @@ fun ProxyChainScreen(
                                 members = members.toMutableList().also { if (index < it.size) it[index] = newVal }
                             },
                             editable = true,
-                            modifier = Modifier.weight(1f)
+                            inset = false,
+                            modifier = Modifier.weight(1f).padding(vertical = 2.dp)
                         )
                         com.v2ray.ang.ui.compose.satra.SatraIconButton(icon = com.v2ray.ang.ui.compose.satra.SatraIcons.Minus, contentDescription = stringResource(R.string.acc_remove), onClick = {
                             if (member.isBlank()) {

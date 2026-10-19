@@ -286,14 +286,12 @@ internal fun UserAssetScreen(
         },
     ) {
         item(key = "geo_source") {
-            Box(Modifier.padding(horizontal = com.v2ray.ang.ui.compose.satra.SatraSpace.Gutter)) {
-                com.v2ray.ang.ui.compose.FormDropdownField(
-                    label = stringResource(R.string.asset_geo_files_sources),
-                    value = geoFilesSource,
-                    options = geoFilesSourcesList,
-                    onValueChange = onGeoSourceSelected,
-                )
-            }
+            com.v2ray.ang.ui.compose.FormDropdownField(
+                label = stringResource(R.string.asset_geo_files_sources),
+                value = geoFilesSource,
+                options = geoFilesSourcesList,
+                onValueChange = onGeoSourceSelected,
+            )
         }
         item(key = "files_header") { com.v2ray.ang.ui.compose.satra.GroupHeader(stringResource(R.string.sx_assets_files)) }
         val assets = uiState.assets

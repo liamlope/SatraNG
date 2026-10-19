@@ -27,6 +27,8 @@ data class ServerRowUiModel(
     val tunnel: Boolean = false,
     /** Last measured download speed, bytes/s; <0 failed, 0 never tested. */
     val speedBps: Long = 0L,
+    /** Proxy bytes used through this config so far (approximate, this device only). */
+    val usedBytes: Long = 0L,
 ) {
     val flag: String get() = GeoIpResolver.flagEmoji(countryCode)
     val locationLabel: String
@@ -68,6 +70,7 @@ fun buildServerRowUiModel(
         cdn = cdnOf(aff, profile)?.label,
         tunnel = com.v2ray.ang.handler.CdnRanges.isTunnel(aff?.entryCountryCode, geo.countryCode, cdnOf(aff, profile)),
         speedBps = aff?.speedBps ?: 0L,
+        usedBytes = runCatching { com.v2ray.ang.handler.UsageStore.serverTraffic(server.guid) }.getOrDefault(0L),
         geoState = when {
             geo.exitVerified -> GeoState.Located
             geo.countryCode == null && (aff?.geoAttemptAt ?: 0L) > 0L -> GeoState.Failed

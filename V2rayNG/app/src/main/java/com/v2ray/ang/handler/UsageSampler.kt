@@ -47,7 +47,8 @@ object UsageSampler {
         appContext = app
         finalizeStaleSession()
         val startedAt = System.currentTimeMillis()
-        val serverName = MmkvManager.getSelectServer()?.let { MmkvManager.decodeServerConfig(it)?.remarks }.orEmpty()
+        val serverGuid = MmkvManager.getSelectServer().orEmpty()
+        val serverName = serverGuid.takeIf { it.isNotBlank() }?.let { MmkvManager.decodeServerConfig(it)?.remarks }.orEmpty()
         job = scope.launch {
             runCatching { UsageStore.prune() }
             runCatching { VpnAppUsageTracker.begin(app) }
@@ -94,7 +95,10 @@ object UsageSampler {
                         UsageStore.addConnectedSeconds(now, secondsCarry / 1000L)
                         secondsCarry %= 1000L
                     }
-                    if (pUp + pDown > 0L) HybridUsageTracker.addLocalDelta(pUp + pDown)
+                    if (pUp + pDown > 0L) {
+                        HybridUsageTracker.addLocalDelta(pUp + pDown)
+                        UsageStore.addServerTraffic(serverGuid, pUp + pDown)
+                    }
 
                     UsageStore.publishLive(
                         LiveUsage(

@@ -316,6 +316,9 @@
     <string name="sx_chain_footer">Трафик идёт через эти конфигурации по порядку. Удерживайте номер, чтобы изменить порядок.</string>
     <string name="sx_assets_files">Файлы</string>
     <string name="sx_assets_footer">Geo-файлы определяют, какие сайты открываются напрямую. Загрузка обновляет их из источника выше.</string>
+    <string name="sx_chain_name">Название</string>
+    <string name="sx_chain_hop">Шаг %1$d</string>
+    <string name="sx_server_used">%1$s израсходовано</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Истекает через %d день</item>
         <item quantity="few">Истекает через %d дня</item>

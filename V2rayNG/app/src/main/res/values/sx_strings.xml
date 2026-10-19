@@ -316,6 +316,9 @@
     <string name="sx_chain_footer">Traffic goes through these configs in order. Long-press a number to reorder.</string>
     <string name="sx_assets_files">Files</string>
     <string name="sx_assets_footer">Geo files decide which sites go direct. Download refreshes them from the source above.</string>
+    <string name="sx_chain_name">Name</string>
+    <string name="sx_chain_hop">Hop %1$d</string>
+    <string name="sx_server_used">%1$s used</string>
     <plurals name="sx_quota_expires_days">
         <item quantity="one">Expires in %d day</item>
         <item quantity="other">Expires in %d days</item>

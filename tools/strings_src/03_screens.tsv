@@ -268,3 +268,6 @@ sx_chain_title	Proxy chain	زنجیره پروکسی
 sx_chain_footer	Traffic goes through these configs in order. Long-press a number to reorder.	ترافیک به ترتیب از این کانفیگ‌ها عبور می‌کند. برای جابه‌جایی، شماره را نگه دارید.
 sx_assets_files	Files	فایل‌ها
 sx_assets_footer	Geo files decide which sites go direct. Download refreshes them from the source above.	فایل‌های Geo مشخص می‌کنند کدام سایت‌ها مستقیم باز شوند. دانلود، آن‌ها را از منبع بالا تازه می‌کند.
+sx_chain_name	Name	نام
+sx_chain_hop	Hop %1$d	گام %1$d
+sx_server_used	%1$s used	%1$s مصرف

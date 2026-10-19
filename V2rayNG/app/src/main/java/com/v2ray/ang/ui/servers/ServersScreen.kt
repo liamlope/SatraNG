@@ -338,16 +338,17 @@ private fun ServerItem(
                         style = Satra.type.headline, color = c.textPrimary,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
                     )
-                    if (row.favorite) {
-                        Spacer(Modifier.width(6.dp))
-                        Icon(SatraIcons.StarFilled, null, tint = c.warning, modifier = Modifier.size(14.dp))
-                    }
                 }
                 ServerSubtitle(row, onRetryLocation)
                 ServerTags(row, speedTesting)
             }
             PingPill(row.testDelayMillis, testing = testing)
-            SatraIconButton(SatraIcons.More, stringResource(R.string.sx_more_options), onMore, tint = c.textSecondary, size = 20.dp)
+            com.v2ray.ang.ui.compose.satra.FavoriteStar(
+                favorite = row.favorite,
+                onToggle = onFavorite,
+                contentDescription = stringResource(if (row.favorite) R.string.sx_server_unfavorite else R.string.sx_server_favorite),
+            )
+            SatraIconButton(SatraIcons.More, stringResource(R.string.sx_more_options), onMore, tint = c.textSecondary, size = 20.dp, modifier = Modifier.width(36.dp))
         }
     }
 }
@@ -402,7 +403,9 @@ internal fun ServerTags(row: ServerRowUiModel, speedTesting: Boolean) {
         row.speedBps < 0L -> stringResource(R.string.sx_speed_failed) to c.textTertiary
         else -> null
     }
-    if (!row.tunnel && row.cdn == null && speed == null) return
+    // Under 1 MB is noise (pings, a few requests); hide it.
+    val used = row.usedBytes.takeIf { it >= 1_048_576L }
+    if (!row.tunnel && row.cdn == null && speed == null && used == null) return
     Row(
         Modifier.padding(top = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -411,6 +414,7 @@ internal fun ServerTags(row: ServerRowUiModel, speedTesting: Boolean) {
         if (row.tunnel) Tag(stringResource(R.string.sx_badge_tunnel), c.info)
         row.cdn?.let { Tag(it, c.textSecondary) }
         speed?.let { (text, color) -> Tag(text, color) }
+        used?.let { Tag(stringResource(R.string.sx_server_used, com.v2ray.ang.ui.compose.satra.formatBytes(it)), c.textTertiary) }
     }
 }
 
