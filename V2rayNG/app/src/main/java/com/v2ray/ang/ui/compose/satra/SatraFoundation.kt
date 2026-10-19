@@ -183,7 +183,7 @@ fun SatraLargeTitleScaffold(
                 Modifier
                     .fillMaxSize()
                     .alpha(collapse)
-                    .background(Satra.colors.background.copy(alpha = 0.97f)),
+                    .background(Satra.colors.background),
             )
             Box(
                 Modifier
