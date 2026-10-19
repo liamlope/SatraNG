@@ -426,4 +426,6 @@
     <string name="sx_sec_fix_ipv6">IPv6 را از تونل عبور دهید</string>
     <string name="sx_set_security_check">بررسی امنیت</string>
     <string name="sx_set_security_check_sub">نشت DNS، IPv6 و WebRTC، رمزنگاری</string>
+    <string name="sx_sec_chip_checking">بررسی امنیت…</string>
+    <string name="sx_sec_chip_score">امنیت %1$d</string>
 </resources>

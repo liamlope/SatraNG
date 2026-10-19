@@ -426,4 +426,6 @@
     <string name="sx_sec_fix_ipv6">Route IPv6 through the tunnel</string>
     <string name="sx_set_security_check">Security check</string>
     <string name="sx_set_security_check_sub">DNS, IPv6 and WebRTC leaks, encryption</string>
+    <string name="sx_sec_chip_checking">Checking security…</string>
+    <string name="sx_sec_chip_score">Security %1$d</string>
 </resources>

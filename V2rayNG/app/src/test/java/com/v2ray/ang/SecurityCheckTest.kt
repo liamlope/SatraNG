@@ -7,6 +7,7 @@ import com.v2ray.ang.handler.SecurityCheck.Status
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.v2ray.ang.ui.home.securityBand
 
 class SecurityCheckTest {
     private val good = SecurityCheck.Facts(
@@ -57,5 +58,17 @@ class SecurityCheckTest {
         assertEquals("1.2.3.4" to "NL", SecurityCheck.parseIpCountry("""{"ip":"1.2.3.4","country_code":"NL"}"""))
         assertEquals("1.2.3.4" to "SE", SecurityCheck.parseIpCountry("""{"countryCode":"SE","query":"1.2.3.4"}"""))
         assertEquals("9.9.9.9" to "NL", SecurityCheck.parseResolver("""{"dns":{"geo":"Netherlands - Cloudflare","ip":"9.9.9.9"}}"""))
+    }
+
+    @Test fun chipBands() {
+        assertEquals(2, securityBand(100)); assertEquals(2, securityBand(85))
+        assertEquals(1, securityBand(84)); assertEquals(1, securityBand(60))
+        assertEquals(0, securityBand(59))
+    }
+
+    @Test fun autoRunWithoutDirectWarnsOnFarResolver() {
+        val r = SecurityCheck.evaluate(good.copy(directCountry = null, resolverCountry = "DE"))
+        assertEquals(Status.Warn, status(r, Item.DnsLeak))
+        assertEquals(Status.Pass, status(SecurityCheck.evaluate(good.copy(directCountry = null)), Item.DnsLeak))
     }
 }

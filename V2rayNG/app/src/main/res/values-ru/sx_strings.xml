@@ -450,4 +450,6 @@
     <string name="sx_sec_fix_ipv6">Направьте IPv6 через туннель</string>
     <string name="sx_set_security_check">Проверка безопасности</string>
     <string name="sx_set_security_check_sub">Утечки DNS, IPv6, WebRTC, шифрование</string>
+    <string name="sx_sec_chip_checking">Проверка безопасности…</string>
+    <string name="sx_sec_chip_score">Безопасность %1$d</string>
 </resources>

@@ -66,6 +66,9 @@ object SecurityCheck {
             f.resolverCountry != null && f.directCountry != null &&
                 f.resolverCountry.equals(f.directCountry, true) &&
                 !f.directCountry.equals(f.exitCountry, true) -> Status.Fail.also { fixes += Fix.UseRemoteDns }
+            // Without the direct comparison: a resolver away from the exit is worth a look.
+            f.directCountry == null && f.resolverCountry != null && f.exitCountry != null &&
+                !f.resolverCountry.equals(f.exitCountry, true) -> Status.Warn
             else -> Status.Pass
         }
         out += Finding(Item.DnsLeak, dns, listOfNotNull(f.resolverIp, f.resolverCountry).joinToString(" · "))
@@ -122,7 +125,8 @@ object SecurityCheck {
 
     // ---------- measurement (IO thread) ----------
 
-    fun run(connected: Boolean): Report {
+    /** [compareDirect]: also ask once outside the tunnel (manual runs only; reveals the real IP to ip-api.com). */
+    fun run(connected: Boolean, compareDirect: Boolean = true): Report {
         val vpnMode = SettingsManager.isVpnMode()
         val guid = MmkvManager.getSelectServer()
         val profile = guid?.let { MmkvManager.decodeServerConfig(it) }
@@ -144,7 +148,7 @@ object SecurityCheck {
         }
 
         val exit = parseIpCountry(get(AppConfig.IP_API_URL, true) ?: get("http://ip-api.com/json/?fields=countryCode,query", true))
-        val direct = parseIpCountry(get("http://ip-api.com/json/?fields=countryCode,query", false))
+        val direct = if (compareDirect) parseIpCountry(get("http://ip-api.com/json/?fields=countryCode,query", false)) else null
         // edns.ip-api.com answers with the resolver that looked its random name up.
         val dns = parseResolver(get("http://${System.nanoTime()}.edns.ip-api.com/json", true))
         val v6 = get("https://api6.ipify.org", true)?.trim()?.takeIf { it.contains(':') }

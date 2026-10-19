@@ -327,6 +327,7 @@ private fun OrbSection(state: MainUiState, live: LiveUiState, onToggle: () -> Un
                 else -> Text(h, style = Satra.type.callout, color = c.textSecondary, textAlign = TextAlign.Center)
             }
         }
+        if (state.phase == ConnectPhase.Connected && live.sessionStartMs > 0L) SecurityChip(live.sessionStartMs)
     }
 }
 
