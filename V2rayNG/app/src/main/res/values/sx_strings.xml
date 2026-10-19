@@ -277,7 +277,6 @@
     <string name="sx_speed_test_sub">Downloads up to 8 MB through this server</string>
     <string name="sx_sort_speed">Speed</string>
     <string name="sx_mbps">%1$s Mbps</string>
-    <string name="sx_badge_tunnel">Tunnel</string>
     <string name="sx_engine_applied">Reconnecting to apply the change</string>
     <string name="sx_split_all">All apps</string>
     <string name="sx_split_only">Only selected</string>

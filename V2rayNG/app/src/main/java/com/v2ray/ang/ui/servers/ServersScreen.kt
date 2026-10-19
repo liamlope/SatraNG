@@ -467,14 +467,12 @@ internal fun ServerTags(row: ServerRowUiModel, speedTesting: Boolean) {
     }
     // Under 1 MB is noise (pings, a few requests); hide it.
     val used = row.usedBytes.takeIf { it >= 1_048_576L }
-    if (!row.tunnel && row.cdn == null && speed == null && used == null) return
+    if (speed == null && used == null) return
     Row(
         Modifier.padding(top = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (row.tunnel) Tag(stringResource(R.string.sx_badge_tunnel), c.info)
-        row.cdn?.let { Tag(it, c.textSecondary) }
         speed?.let { (text, color) -> Tag(text, color) }
         used?.let { Tag(stringResource(R.string.sx_server_used, com.v2ray.ang.ui.compose.satra.formatBytes(it)), c.textTertiary) }
     }

@@ -277,7 +277,6 @@
     <string name="sx_speed_test_sub">تا ۸ مگابایت از طریق این سرور دانلود می‌کند</string>
     <string name="sx_sort_speed">سرعت</string>
     <string name="sx_mbps">%1$s مگابیت</string>
-    <string name="sx_badge_tunnel">تانل</string>
     <string name="sx_engine_applied">برای اعمال تغییر دوباره وصل می‌شویم</string>
     <string name="sx_split_all">همه برنامه‌ها</string>
     <string name="sx_split_only">فقط انتخاب‌شده‌ها</string>

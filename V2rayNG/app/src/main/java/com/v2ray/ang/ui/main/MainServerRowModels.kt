@@ -19,12 +19,8 @@ data class ServerRowUiModel(
     val favorite: Boolean = false,
     val exitVerified: Boolean = false,
     val geoState: GeoState = GeoState.Unknown,
-    /** Country of the server address (entry). Tunnel detection only; never the flag. */
+    /** Country of the server address (entry); never the flag. */
     val entryCountryCode: String? = null,
-    /** CDN the server address belongs to (domain fronting), e.g. "Cloudflare". */
-    val cdn: String? = null,
-    /** Entry in Iran, exit abroad. */
-    val tunnel: Boolean = false,
     /** Last measured download speed, bytes/s; <0 failed, 0 never tested. */
     val speedBps: Long = 0L,
     /** Proxy bytes used through this config so far (approximate, this device only). */
@@ -67,8 +63,6 @@ fun buildServerRowUiModel(
         favorite = aff?.favorite == true,
         exitVerified = geo.exitVerified,
         entryCountryCode = aff?.entryCountryCode,
-        cdn = cdnOf(aff, profile)?.label,
-        tunnel = com.v2ray.ang.handler.CdnRanges.isTunnel(aff?.entryCountryCode, geo.countryCode, cdnOf(aff, profile)),
         speedBps = aff?.speedBps ?: 0L,
         usedBytes = runCatching { com.v2ray.ang.handler.UsageStore.serverTraffic(server.guid) }.getOrDefault(0L),
         geoState = when {
@@ -79,8 +73,6 @@ fun buildServerRowUiModel(
     )
 }
 
-internal fun cdnOf(aff: com.v2ray.ang.dto.entities.ServerAffiliationInfo?, profile: ProfileItem): com.v2ray.ang.handler.CdnRanges.Cdn? =
-    com.v2ray.ang.handler.CdnRanges.match(aff?.entryIp ?: profile.server)
 
 private fun serverProtocolDescription(profile: ProfileItem): String {
     if (profile.configType.isComplexType()) return profile.configType.name

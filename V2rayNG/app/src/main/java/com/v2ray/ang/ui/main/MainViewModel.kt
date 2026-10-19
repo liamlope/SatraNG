@@ -242,7 +242,6 @@ class MainViewModel(
 
     // ---------- Service events ----------
     init {
-        com.v2ray.ang.handler.CdnRanges.loadStored()
         collectServiceEvents()
         setupGroupTab()
         collectDataChanges()
@@ -350,7 +349,6 @@ class MainViewModel(
                     countryCode = geo.countryCode ?: row.countryCode,
                     countryName = geo.countryName ?: row.countryName,
                     exitVerified = geo.exitVerified,
-                    tunnel = row.cdn == null && com.v2ray.ang.handler.CdnRanges.isTunnel(row.entryCountryCode, geo.countryCode ?: row.countryCode, null),
                     geoState = when {
                         geo.exitVerified -> GeoState.Located
                         (geo.countryCode ?: row.countryCode) == null -> GeoState.Failed
@@ -755,17 +753,9 @@ class MainViewModel(
                 if (!geoInFlight.add(row.guid)) continue
                 try {
                     val port = if (uiState.value.isRunning) SettingsManager.getHttpPort() else 0
-                    com.v2ray.ang.handler.CdnRanges.refreshIfStale(port)
                     val entry = GeoIpResolver.resolveEntry(row.guid, row.profile, port)
                     if (entry != null && entry != row.entryCountryCode) {
-                        val a = MmkvManager.decodeServerAffiliationInfo(row.guid)
-                        val cdn = cdnOf(a, row.profile)
-                        patchRowEverywhere(row.guid) {
-                            it.copy(
-                                entryCountryCode = entry, cdn = cdn?.label,
-                                tunnel = com.v2ray.ang.handler.CdnRanges.isTunnel(entry, it.countryCode, cdn),
-                            )
-                        }
+                        patchRowEverywhere(row.guid) { it.copy(entryCountryCode = entry) }
                     }
                 } catch (e: CancellationException) {
                     throw e

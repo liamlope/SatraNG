@@ -142,8 +142,8 @@ class PremiumScreenshotTest {
 
     private val rows = listOf(
         server("a1", "Frankfurt • Fast 01", "DE", "VLESS / ws / tls", 86, fav = true).copy(speedBps = 3_100_000),
-        server("a2", "Amsterdam premium with a very long name that must truncate nicely", "NL", "VLESS / grpc / reality", 143).copy(cdn = "Cloudflare"),
-        server("a3", "Istanbul", "TR", "VMESS / tcp", 312).copy(tunnel = true, entryCountryCode = "IR", usedBytes = 1_480_000_000L),
+        server("a2", "Amsterdam premium with a very long name that must truncate nicely", "NL", "VLESS / grpc / reality", 143),
+        server("a3", "Istanbul", "TR", "VMESS / tcp", 312).copy(entryCountryCode = "IR", usedBytes = 1_480_000_000L),
         server("a4", "Tokyo", "JP", "TROJAN / tls", 780, verified = false),
         server("a5", "Unknown location", null, "VLESS / tcp / tls", 0),
         server("a6", "Blocked node", "US", "SHADOWSOCKS", -1),
