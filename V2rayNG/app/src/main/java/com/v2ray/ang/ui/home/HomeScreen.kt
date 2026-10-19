@@ -110,6 +110,8 @@ fun HomeScreen(
     onSmartConnect: () -> Unit = {},
     onLocate: (String) -> Unit = {},
     onDismissAddSheet: () -> Unit = {},
+    proxyEndpoints: List<com.v2ray.ang.handler.ProxyEndpoint> = emptyList(),
+    onCopy: (String) -> Unit = {},
 ) {
     val hasServers = state.groups.isNotEmpty() && state.selectedGuid != null
     Column(modifier.fillMaxSize()) {
@@ -152,12 +154,30 @@ fun HomeScreen(
                         modifier = Modifier.padding(horizontal = SatraSpace.Gutter),
                     )
                     Spacer(Modifier.height(8.dp))
-                    com.v2ray.ang.ui.servers.SmartConnectCard(
-                        busy = state.smartConnecting,
-                        onClick = onSmartConnect,
-                        compact = true,
-                        modifier = Modifier.padding(horizontal = SatraSpace.Gutter),
-                    )
+                    // Proxy-only mode while connected: show where other apps should point instead of Smart Connect.
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = state.isRunning && proxyEndpoints.isNotEmpty(),
+                        transitionSpec = {
+                            (androidx.compose.animation.fadeIn(tween(220)) togetherWith androidx.compose.animation.fadeOut(tween(160)))
+                                .using(androidx.compose.animation.SizeTransform(clip = false))
+                        },
+                        label = "proxyOrSmart",
+                    ) { showProxy ->
+                        if (showProxy) {
+                            ProxyEndpointCard(
+                                endpoints = proxyEndpoints,
+                                onCopy = onCopy,
+                                modifier = Modifier.padding(horizontal = SatraSpace.Gutter),
+                            )
+                        } else {
+                            com.v2ray.ang.ui.servers.SmartConnectCard(
+                                busy = state.smartConnecting,
+                                onClick = onSmartConnect,
+                                compact = true,
+                                modifier = Modifier.padding(horizontal = SatraSpace.Gutter),
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(gap))
                     TrafficCard(live, onOpenUsage, Modifier.padding(horizontal = SatraSpace.Gutter))
                     state.quota?.let { quota ->
@@ -274,11 +294,11 @@ private fun OrbSection(state: MainUiState, live: LiveUiState, onToggle: () -> Un
     )
     val titleColor by animateColorAsState(
         when (state.phase) {
-            ConnectPhase.Connected -> c.accent
+            ConnectPhase.Connected -> c.success
             ConnectPhase.Failed -> c.danger
             else -> c.textPrimary
         },
-        tween(350), label = "orbTitle",
+        tween(700), label = "orbTitle",
     )
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         ConnectOrb(

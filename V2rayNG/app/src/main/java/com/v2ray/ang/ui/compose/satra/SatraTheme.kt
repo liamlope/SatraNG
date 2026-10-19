@@ -63,6 +63,11 @@ object SatraBrand {
     val Orange = Color(0xFFFF5E00)
     val OrangeLight = Color(0xFFFF8A3D)
     val OrangeDeep = Color(0xFFE04F00)
+
+    /** "Protected" tones the Home orb blends to once connected (orange stays the idle/brand colour). */
+    val Green = Color(0xFF22C55E)
+    val GreenLight = Color(0xFF5EE38F)
+    val GreenDeep = Color(0xFF15913F)
 }
 
 val SatraDarkPalette = SatraPalette(

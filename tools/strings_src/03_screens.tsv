@@ -275,3 +275,16 @@ sx_coach_pull_ping	Pull down to ping every config	برای پینگ همه کا�
 sx_dismiss	Dismiss	بستن
 sx_set_sub_on_open	Update subscriptions on open	به‌روزرسانی اشتراک‌ها هنگام باز کردن
 sx_set_sub_on_open_sub	Also refreshes in the background at each subscription's interval	در پس‌زمینه هم طبق بازه هر اشتراک تازه می‌شوند
+sx_proxy_local	Local proxy	پروکسی محلی
+sx_proxy_socks	SOCKS5	SOCKS5
+sx_proxy_http	HTTP	HTTP
+sx_proxy_mixed	SOCKS5 + HTTP	SOCKS5 + HTTP
+sx_proxy_copied	Address copied	آدرس کپی شد
+sx_proxy_tap_copy	Set this in the app you want to route. Tap to copy.	این را در برنامه‌ای که می‌خواهید از پروکسی رد شود وارد کنید. برای کپی ضربه بزنید.
+sx_proxy_lan	Also reachable from your local network	از شبکه محلی شما هم در دسترس است
+sx_proxy_user	User: %1$s	کاربر: %1$s
+sx_mode_reconnect_title	Reconnect to switch mode?	برای تغییر حالت دوباره وصل شود؟
+sx_mode_reconnect_msg	You're connected. Reconnect now to use the new mode, or keep this connection until the next connect.	اکنون وصل هستید. برای استفاده از حالت جدید اکنون دوباره وصل شوید، یا این اتصال را تا اتصال بعدی نگه دارید.
+sx_mode_reconnect	Reconnect	اتصال دوباره
+sx_later	Later	بعداً
+sx_reconnected	Reconnected	دوباره وصل شد

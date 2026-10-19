@@ -321,3 +321,16 @@ sx_coach_pull_ping	Потяните вниз, чтобы проверить пи
 sx_dismiss	Закрыть
 sx_set_sub_on_open	Обновлять подписки при запуске
 sx_set_sub_on_open_sub	Также обновляются в фоне с интервалом каждой подписки
+sx_proxy_local	Локальный прокси
+sx_proxy_socks	SOCKS5
+sx_proxy_http	HTTP
+sx_proxy_mixed	SOCKS5 + HTTP
+sx_proxy_copied	Адрес скопирован
+sx_proxy_tap_copy	Укажите это в приложении, которое нужно направить. Нажмите, чтобы скопировать.
+sx_proxy_lan	Доступен и из вашей локальной сети
+sx_proxy_user	Пользователь: %1$s
+sx_mode_reconnect_title	Переподключиться для смены режима?
+sx_mode_reconnect_msg	Вы подключены. Переподключитесь сейчас, чтобы включить новый режим, или оставьте текущее соединение до следующего подключения.
+sx_mode_reconnect	Переподключить
+sx_later	Позже
+sx_reconnected	Переподключено

@@ -273,6 +273,22 @@ class MainActivity : HelperBaseComponentActivity(), AppNav {
         toastSuccess(R.string.toast_success)
     }
 
+    override fun reconnectForModeChange() {
+        // The prompt replaces the silent restart-on-resume for this change.
+        SettingsChangeManager.consumeRestartService()
+        if (!mainViewModel.uiState.value.isRunning) return
+        if (SettingsManager.isVpnMode() && VpnService.prepare(this) != null) {
+            // Proxy-only -> VPN without VPN permission yet: stop, then go through the permission flow.
+            LauncherManager.stopService(this)
+            lifecycleScope.launch {
+                delay(700L)
+                requestServiceStart()
+            }
+        } else {
+            LauncherManager.restartIfRunning(this) { toast(R.string.sx_reconnected) }
+        }
+    }
+
     private fun shareToClipboard(guid: String): Boolean =
         AngConfigManager.share2Clipboard(this, guid) == 0
 

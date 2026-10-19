@@ -87,6 +87,11 @@ fun ConnectOrb(
         tween(350), label = "orbRingAlpha",
     )
     val failMix by animateFloatAsState(if (phase == OrbPhase.Failed) 1f else 0f, tween(250), label = "orbFail")
+    // Orange while idle/connecting, easing to green once the tunnel is up.
+    val okMix by animateFloatAsState(
+        if (phase == OrbPhase.Connected) 1f else 0f,
+        if (reduce) tween(150) else tween(900, delayMillis = 120), label = "orbOk",
+    )
 
     val sweep = remember { Animatable(0f) }
     val spin = remember { Animatable(0f) }
@@ -170,7 +175,9 @@ fun ConnectOrb(
         ) {
             val center = Offset(size.width / 2f, size.height / 2f)
             val r = size.minDimension * 0.30f
-            val accent = c.accent
+            val accent = lerp(c.accent, SatraBrand.Green, okMix)
+            val accentLight = lerp(SatraBrand.OrangeLight, SatraBrand.GreenLight, okMix)
+            val accentDeep = lerp(SatraBrand.OrangeDeep, SatraBrand.GreenDeep, okMix)
             val danger = c.danger
             val ringColor = lerp(accent, danger, failMix)
 
@@ -218,8 +225,8 @@ fun ConnectOrb(
             }
 
             // 3. Disc
-            val discTop = lerp(colorOff, SatraBrand.OrangeLight, fill)
-            val discBottom = lerp(colorOff, lerp(accent, SatraBrand.OrangeDeep, 0.55f), fill)
+            val discTop = lerp(colorOff, accentLight, fill)
+            val discBottom = lerp(colorOff, lerp(accent, accentDeep, 0.55f), fill)
             drawCircle(
                 Brush.linearGradient(
                     listOf(discTop, discBottom),
@@ -285,7 +292,7 @@ fun ConnectOrb(
                     val py = center.y + sin(ang) * dist
                     val rad = (3.2f - 2.2f * shock + (i % 3)).coerceAtLeast(0.6f).dp.toPx()
                     drawCircle(
-                        color = (if (i % 3 == 0) SatraBrand.OrangeLight else accent).copy(alpha = (1f - shock)),
+                        color = (if (i % 3 == 0) accentLight else accent).copy(alpha = (1f - shock)),
                         radius = rad, center = Offset(px, py),
                     )
                 }

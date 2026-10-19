@@ -312,6 +312,16 @@ class PremiumScreenshotTest {
 
     private val more = MoreUiState(theme = "0", language = "en", vpnMode = true, speedNotification = true, smartConnect = true, quickConnect = false, showAdvanced = true)
 
+    private val eps = com.v2ray.ang.handler.ProxyEndpoints.build("127.0.0.1", 10808, 10808)
+    private val eps2 = com.v2ray.ang.handler.ProxyEndpoints.build("127.0.0.1", 10808, 10809)
+    @Test fun homeConnectedProxyDark() = shot("home_connected_proxy", true) {
+        HomeScreen(baseState.copy(phase = ConnectPhase.Connected, isRunning = true), live, week, {}, {}, {}, {}, { _: AddMethod -> }, proxyEndpoints = eps)
+    }
+    @Test fun homeConnectedProxyFaLight() = shot("home_connected_proxy", false, "fa") {
+        HomeScreen(baseState.copy(phase = ConnectPhase.Connected, isRunning = true), live, week, {}, {}, {}, {}, { _: AddMethod -> }, proxyEndpoints = eps2)
+    }
+    @Test fun moreProxyModeDark() = shot("settings_proxy", true, heightDp = 1500) { MoreContent(more.copy(vpnMode = false), NoNav, noMore, running = true, proxyEndpoints = eps2) }
+    @Test fun moreReconnectPromptFaLight() = shot("settings_reconnect", false, "fa") { MoreContent(more.copy(vpnMode = false, language = "fa"), NoNav, noMore, running = true, proxyEndpoints = eps, initialReconnectPrompt = true) }
     @Test fun moreDark() = shot("settings", true, heightDp = 1500) { MoreContent(more, NoNav, noMore) }
     @Test fun moreLightFa() = shot("settings", false, "fa", heightDp = 1500) { MoreContent(more.copy(language = "fa"), NoNav, noMore) }
     @Test fun moreLarge() = shot("settings", false, font = 1.4f, heightDp = 2200) { MoreContent(more.copy(showAdvanced = false), NoNav, noMore) }

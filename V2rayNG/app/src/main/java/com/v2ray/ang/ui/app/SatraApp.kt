@@ -69,6 +69,8 @@ interface AppNav {
     fun openSystemVpnSettings()
     fun share(text: String)
     fun copy(text: String)
+    /** Apply a VPN/Proxy-only mode change to a running connection (permission-aware). */
+    fun reconnectForModeChange() {}
 }
 
 object Tabs { const val Home = 0; const val Servers = 1; const val Subs = 2; const val Usage = 3; const val More = 4 }
@@ -101,7 +103,14 @@ fun SatraApp(
                         when (current) {
                             Tabs.Home -> {
                                 val week by usageVm.week.collectAsState()
+                                // Mode captured when the connection came up, so a later unapplied change doesn't lie.
+                                val proxyOnly = rememberSaveable(state.isRunning) { state.isRunning && com.v2ray.ang.handler.ProxyEndpoints.isProxyOnlyMode() }
+                                val endpoints = remember(proxyOnly, state.isRunning) {
+                                    if (proxyOnly) com.v2ray.ang.handler.ProxyEndpoints.current() else emptyList()
+                                }
                                 HomeScreen(
+                                    proxyEndpoints = endpoints,
+                                    onCopy = { nav.copy(it) },
                                     state = state, live = live, week = week,
                                     onToggle = { nav.action(MainAction.ToggleService) },
                                     onPing = { nav.action(MainAction.TestCurrentServer) },

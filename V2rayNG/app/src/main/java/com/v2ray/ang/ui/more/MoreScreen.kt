@@ -55,14 +55,27 @@ private class Section(val header: String?, val footer: String?, val specs: List<
 @Composable
 fun MoreScreen(mainVm: MainViewModel, nav: AppNav, vm: MoreViewModel = viewModel()) {
     val s by vm.state.collectAsState()
+    val main by mainVm.uiState.collectAsState()
     LifecycleResumeEffect(Unit) { vm.refresh(); onPauseOrDispose { } }
-    MoreContent(s, nav, vm)
+    // Recomputed when the mode or connection changes (the dynamic SOCKS port is per connection).
+    val endpoints = remember(s.vpnMode, main.isRunning) {
+        if (s.vpnMode) emptyList() else com.v2ray.ang.handler.ProxyEndpoints.current()
+    }
+    MoreContent(s, nav, vm, running = main.isRunning, proxyEndpoints = endpoints)
 }
 
 /** Stateless body of the Settings tab (also rendered by the screenshot tests). */
 @Composable
-fun MoreContent(s: MoreUiState, nav: AppNav, vm: MoreActions) {
+fun MoreContent(
+    s: MoreUiState,
+    nav: AppNav,
+    vm: MoreActions,
+    running: Boolean = false,
+    proxyEndpoints: List<com.v2ray.ang.handler.ProxyEndpoint> = emptyList(),
+    initialReconnectPrompt: Boolean = false,
+) {
     var query by rememberSaveable { mutableStateOf("") }
+    var reconnectPrompt by rememberSaveable { mutableStateOf(initialReconnectPrompt) }
     var languageSheet by remember { mutableStateOf(false) }
     val c = Satra.colors
     val ctx = LocalContext.current
@@ -118,8 +131,28 @@ fun MoreContent(s: MoreUiState, nav: AppNav, vm: MoreActions) {
                                 Spacer(Modifier.height(10.dp))
                                 SatraSegmented(
                                     listOf(stringResource(R.string.sx_set_mode_vpn), stringResource(R.string.sx_set_mode_proxy)),
-                                    if (s.vpnMode) 0 else 1, { vm.setVpnMode(it == 0) },
+                                    if (s.vpnMode) 0 else 1,
+                                    { idx ->
+                                        val vpn = idx == 0
+                                        if (vpn != s.vpnMode) {
+                                            vm.setVpnMode(vpn)
+                                            if (running) reconnectPrompt = true
+                                        }
+                                    },
                                 )
+                            }
+                        }
+                        if (!s.vpnMode) {
+                            proxyEndpoints.forEach { ep ->
+                                row {
+                                    SatraRow(
+                                        title = stringResource(R.string.sx_proxy_local) + " · " + com.v2ray.ang.ui.home.proxyKindLabel(ep.kind),
+                                        subtitle = com.v2ray.ang.ui.compose.satra.ltr(ep.address),
+                                        icon = SatraIcons.Link, iconColor = c.info,
+                                        trailing = { Icon(SatraIcons.Copy, stringResource(R.string.sx_proxy_tap_copy), tint = c.textTertiary, modifier = Modifier.size(18.dp)) },
+                                        onClick = { nav.copy(ep.address) },
+                                    )
+                                }
                             }
                         }
                     },
@@ -227,6 +260,21 @@ fun MoreContent(s: MoreUiState, nav: AppNav, vm: MoreActions) {
                 Text(stringResource(R.string.app_name) + " v" + BuildConfig.VERSION_NAME, style = Satra.type.footnote, color = c.textTertiary)
             }
         }
+    }
+
+    if (reconnectPrompt) {
+        com.v2ray.ang.ui.compose.satra.SatraAlert(
+            title = stringResource(R.string.sx_mode_reconnect_title),
+            message = stringResource(R.string.sx_mode_reconnect_msg),
+            confirmText = stringResource(R.string.sx_mode_reconnect),
+            onConfirm = { reconnectPrompt = false; nav.reconnectForModeChange() },
+            onDismiss = {
+                reconnectPrompt = false
+                // "Later": keep the current tunnel; the new mode applies on the next connect.
+                com.v2ray.ang.handler.SettingsChangeManager.consumeRestartService()
+            },
+            dismissText = stringResource(R.string.sx_later),
+        )
     }
 
     if (languageSheet) {
