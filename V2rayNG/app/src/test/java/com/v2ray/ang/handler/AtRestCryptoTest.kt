@@ -31,6 +31,13 @@ class AtRestCryptoTest {
         override fun hasBackup() = backup != null
         override fun dropBackup() { backup = null }
         override fun setAsideUnreadable(ids: List<String>) { setAside = true }
+        var scrubs = 0; var scrubBreaks = false; var sole = true
+        override fun soleProcess() = sole
+        override fun scrubTail(id: String, key: String): Boolean {
+            scrubs++
+            if (scrubBreaks) { val saved = data[id]; data[id] = emptyMap(); data[id] = saved!! }
+            return true
+        }
     }
 
     private class FakeVault(var key: String? = null, val usable: Boolean = true) : AtRestCrypto.KeyVault {
@@ -41,6 +48,7 @@ class AtRestCryptoTest {
     private class MemState : AtRestCrypto.StateStore {
         override var state = AtRestCrypto.STATE_PLAIN
         override var migratedAt = 0L
+        override var scrubbed = false
     }
 
     @Test fun migratesWithBackupAndVerifiedReadBack() {
@@ -110,5 +118,22 @@ class AtRestCryptoTest {
     @Test fun randomKeysAre16CharsAndDiffer() {
         val a = KeystoreVault.randomKey(); val b = KeystoreVault.randomKey()
         assertEquals(16, a.length); assertTrue(a != b)
+    }
+
+    @Test fun scrubRunsOnceAfterMigration() {
+        val s = FakeStores(); val st = MemState(); val v = FakeVault()
+        AtRestCrypto.ensure(v, s, st, ids, 0)
+        assertTrue(st.scrubbed); assertEquals(2, s.scrubs)
+        AtRestCrypto.ensure(v, s, st, ids, 10)
+        assertEquals(2, s.scrubs)
+    }
+
+    @Test fun scrubWaitsWhenOtherProcessesRun() {
+        val s = FakeStores().apply { sole = false }; val st = MemState(); val v = FakeVault()
+        AtRestCrypto.ensure(v, s, st, ids, 0)
+        assertTrue(!st.scrubbed); assertEquals(0, s.scrubs)
+        s.sole = true
+        AtRestCrypto.ensure(v, s, st, ids, 10)
+        assertTrue(st.scrubbed)
     }
 }

@@ -34,11 +34,28 @@ object AtRestCrypto {
         fun hasBackup(): Boolean
         fun dropBackup()
         fun setAsideUnreadable(ids: List<String>)
+        /** Zero the bytes past the used data (old plaintext left by re-key). Backed up and reverted on failure. */
+        fun scrubTail(id: String, key: String): Boolean = true
+        /** True when no other app process can have the stores open. */
+        fun soleProcess(): Boolean = true
     }
 
     interface StateStore {
         var state: String
         var migratedAt: Long
+        var scrubbed: Boolean
+            get() = true
+            set(_) {}
+    }
+
+    /** One-time cleanup of plaintext remnants; verified by a full read-back per store. */
+    fun scrub(stores: Stores, st: StateStore, ids: List<String>, key: String) {
+        if (st.scrubbed || !stores.soleProcess()) return
+        val ok = ids.all { id ->
+            val before = stores.snapshot(id, key) ?: return@all false
+            stores.scrubTail(id, key) && stores.snapshot(id, key) == before
+        }
+        if (ok) st.scrubbed = true
     }
 
     sealed interface Outcome {
@@ -53,6 +70,7 @@ object AtRestCrypto {
                 // Prove the stores really open with this key before dropping the safety copy.
                 val readable = ids.all { stores.snapshot(it, key) != null }
                 if (readable && stores.hasBackup() && nowMs - st.migratedAt >= BACKUP_GRACE_MS) stores.dropBackup()
+                if (readable) scrub(stores, st, ids, key)
                 if (readable || !stores.hasBackup()) return Outcome.Encrypted(key, migratedNow = false)
             }
             // Key gone (or stores unreadable): fall back to the plaintext copy.
@@ -78,6 +96,7 @@ object AtRestCrypto {
         }
         st.migratedAt = nowMs
         st.state = STATE_ENCRYPTED
+        scrub(stores, st, ids, key)
         return Outcome.Encrypted(key, migratedNow = true)
     }
 }

@@ -95,6 +95,7 @@ internal class KeyWrap(private val keyProvider: () -> SecretKey?) {
 
 /** MMKV-backed [AtRestCrypto.Stores]: files live in files/mmkv, backups in files/mmkv_plain_backup. */
 internal class MmkvStores(context: Context) : AtRestCrypto.Stores {
+    private val appContext = context.applicationContext ?: context
     private val dir = File(context.filesDir, "mmkv")
     private val backupDir = File(context.filesDir, "mmkv_plain_backup")
     private val asideDir = File(context.filesDir, "mmkv_unreadable_${System.currentTimeMillis()}")
@@ -150,6 +151,43 @@ internal class MmkvStores(context: Context) : AtRestCrypto.Stores {
         false
     }
 
+    override fun soleProcess(): Boolean = try {
+        val am = appContext.getSystemService(android.app.ActivityManager::class.java)
+        val mine = android.os.Process.myUid()
+        am.runningAppProcesses.orEmpty().count { it.uid == mine } <= 1
+    } catch (e: Exception) {
+        false
+    }
+
+    override fun scrubTail(id: String, key: String): Boolean {
+        val f = File(dir, id)
+        if (!f.exists()) return true
+        val bak = File(appContext.filesDir, "mmkv_scrub_tmp_$id")
+        return try {
+            f.copyTo(bak, overwrite = true)
+            RandomAccessFile(f, "rw").use { raf ->
+                // MMKV layout: uint32 LE actual size, then data; everything after is unused.
+                val b = ByteArray(4); raf.seek(0); raf.readFully(b)
+                val used = (b[0].toLong() and 0xff) or ((b[1].toLong() and 0xff) shl 8) or
+                    ((b[2].toLong() and 0xff) shl 16) or ((b[3].toLong() and 0xff) shl 24)
+                val start = 4 + used
+                if (start <= 4 || start > raf.length()) return false.also { bak.delete() }
+                raf.seek(start)
+                val zero = ByteArray(8192)
+                var left = raf.length() - start
+                while (left > 0) { val n = minOf(left, zero.size.toLong()).toInt(); raf.write(zero, 0, n); left -= n }
+                raf.fd.sync()
+            }
+            val ok = snapshot(id, key) != null
+            if (!ok) bak.copyTo(f, overwrite = true)
+            bak.delete() // holds the remnants; never keep it
+            ok
+        } catch (e: Exception) {
+            if (bak.exists()) { bak.copyTo(f, overwrite = true); bak.delete() }
+            false
+        }
+    }
+
     override fun hasBackup(): Boolean = File(backupDir, "complete").exists()
 
     override fun dropBackup() {
@@ -177,6 +215,9 @@ internal class FileState(private val file: File) : AtRestCrypto.StateStore {
     override var migratedAt: Long
         get() = read().getOrNull(1)?.toLongOrNull() ?: 0L
         set(v) = write(state, v)
+    override var scrubbed: Boolean
+        get() = File(file.path + ".scrubbed").exists()
+        set(v) { if (v) File(file.path + ".scrubbed").writeText("1") else File(file.path + ".scrubbed").delete() }
 }
 
 /** Runs [AtRestCrypto.ensure] once per process under a cross-process file lock. */
