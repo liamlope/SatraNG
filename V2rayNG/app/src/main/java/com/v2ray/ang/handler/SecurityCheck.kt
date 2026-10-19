@@ -125,6 +125,24 @@ object SecurityCheck {
 
     // ---------- measurement (IO thread) ----------
 
+    /** Exit (ip, country) seen through the running tunnel, or null. IO thread. */
+    fun liveExit(): Pair<String, String?>? {
+        val port = SettingsManager.getHttpPort()
+        val user = SettingsManager.getSocksUsername()
+        val pass = SettingsManager.getSocksPassword()
+        for (url in listOf(AppConfig.IP_API_URL, "http://ip-api.com/json/?fields=countryCode,query", "https://api.ip.sb/geoip")) {
+            val body = try {
+                HttpUtil.getUrlContent(UrlContentRequest(url = url, timeout = 8000, httpPort = port, proxyUsername = user, proxyPassword = pass))
+            } catch (e: Exception) {
+                null
+            }
+            val r = parseIpCountry(body)
+            val ip = r?.first
+            if (!ip.isNullOrBlank()) return ip to r.second
+        }
+        return null
+    }
+
     /** [compareDirect]: also ask once outside the tunnel (manual runs only; reveals the real IP to ip-api.com). */
     fun run(connected: Boolean, compareDirect: Boolean = true): Report {
         val vpnMode = SettingsManager.isVpnMode()

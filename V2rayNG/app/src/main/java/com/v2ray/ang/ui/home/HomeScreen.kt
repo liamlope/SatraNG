@@ -136,7 +136,8 @@ fun HomeScreen(
                 val density = LocalDensity.current
                 val fontScale = density.fontScale.coerceAtLeast(1f)
                 // Everything except the orb, measured generously (grows with the font scale).
-                val fixed = (70 + 54 + 112 + 66 + 40) * fontScale + (if (state.quota != null) 96 * fontScale else 0f)
+                val fixed = (70 + 54 + 112 + 66 + 40) * fontScale + (if (state.quota != null) 96 * fontScale else 0f) +
+                    (if (state.phase == ConnectPhase.Connected) 40 * fontScale else 0f)
                 val orb = (maxHeight.value - fixed).coerceIn(140f, 288f).dp
                 val gap = ((maxHeight.value - fixed - orb.value) / 6f).coerceIn(6f, 18f).dp
                 Column(
@@ -327,7 +328,7 @@ private fun OrbSection(state: MainUiState, live: LiveUiState, onToggle: () -> Un
                 else -> Text(h, style = Satra.type.callout, color = c.textSecondary, textAlign = TextAlign.Center)
             }
         }
-        if (state.phase == ConnectPhase.Connected && live.sessionStartMs > 0L) SecurityChip(live.sessionStartMs)
+        if (state.phase == ConnectPhase.Connected && live.sessionStartMs > 0L) ConnectedChips(live.sessionStartMs)
     }
 }
 

@@ -428,4 +428,6 @@
     <string name="sx_set_security_check_sub">نشت DNS، IPv6 و WebRTC، رمزنگاری</string>
     <string name="sx_sec_chip_checking">بررسی امنیت…</string>
     <string name="sx_sec_chip_score">امنیت %1$d</string>
+    <string name="sx_exit_ip_detecting">آی‌پی خروجی…</string>
+    <string name="sx_exit_ip_copied">کپی شد</string>
 </resources>

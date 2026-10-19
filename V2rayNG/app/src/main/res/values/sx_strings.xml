@@ -428,4 +428,6 @@
     <string name="sx_set_security_check_sub">DNS, IPv6 and WebRTC leaks, encryption</string>
     <string name="sx_sec_chip_checking">Checking security…</string>
     <string name="sx_sec_chip_score">Security %1$d</string>
+    <string name="sx_exit_ip_detecting">Exit IP…</string>
+    <string name="sx_exit_ip_copied">Copied</string>
 </resources>

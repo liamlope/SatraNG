@@ -52,7 +52,7 @@ internal fun securityBand(score: Int): Int = when {
 
 /** Small "Security 92" chip under the session clock; runs the Security Check once after connect. */
 @Composable
-internal fun SecurityChip(sessionStartMs: Long) {
+internal fun SecurityChip(sessionStartMs: Long, modifier: Modifier = Modifier) {
     val c = Satra.colors
     val ctx = LocalContext.current
     var report by remember(sessionStartMs) {
@@ -77,8 +77,7 @@ internal fun SecurityChip(sessionStartMs: Long) {
     }
     AnimatedVisibility(visible = true, enter = fadeIn(tween(250))) {
         Row(
-            Modifier
-                .padding(top = 8.dp)
+            modifier
                 .clip(SatraShapes.Pill)
                 .background(bg)
                 .satraClickable(pressedScale = 0.95f) { ctx.startActivity(Intent(ctx, SecurityCheckActivity::class.java)) }
