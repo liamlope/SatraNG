@@ -160,24 +160,14 @@ android {
     }
 
     lint {
-        // Only en + fa are hand-translated; other locales fall back to English.
+        // SatraNG ships English (default), Persian and Russian only; the user asked to drop the other
+        // upstream locales. Legacy upstream strings that were never translated fall back to English.
         disable += "MissingTranslation"
     }
 
     androidResources {
         generateLocaleConfig = true
-        localeFilters += listOf(
-            "en",
-            "zh-rCN",
-            "zh-rTW",
-            "vi",
-            "ru",
-            "fa",
-            "ar",
-            "az",
-            "bn",
-            "bqi-rIR"
-        )
+        localeFilters += listOf("en", "fa", "ru")
     }
 
     packaging {

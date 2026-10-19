@@ -1,0 +1,24 @@
+sx_quota_expires_days|one|Истекает через %d день
+sx_quota_expires_days|few|Истекает через %d дня
+sx_quota_expires_days|many|Истекает через %d дней
+sx_quota_expires_days|other|Истекает через %d дня
+sx_configs_count|one|%d сервер
+sx_configs_count|few|%d сервера
+sx_configs_count|many|%d серверов
+sx_configs_count|other|%d сервера
+sx_subs_count|one|%d подписка
+sx_subs_count|few|%d подписки
+sx_subs_count|many|%d подписок
+sx_subs_count|other|%d подписки
+sx_subs_updated|one|%1$s обновлена: %2$d сервер
+sx_subs_updated|few|%1$s обновлена: %2$d сервера
+sx_subs_updated|many|%1$s обновлена: %2$d серверов
+sx_subs_updated|other|%1$s обновлена: %2$d сервера
+sx_hours|one|%d час
+sx_hours|few|%d часа
+sx_hours|many|%d часов
+sx_hours|other|%d часа
+sx_days|one|%d день
+sx_days|few|%d дня
+sx_days|many|%d дней
+sx_days|other|%d дня
