@@ -352,13 +352,8 @@ object CoreServiceManager {
             }
 
             ensureActive()
-            val endpoint = if (time >= 0) SpeedtestManager.getRemoteIPInfo() else null
-            val result = ConnectionTestResult(
-                delayMillis = time,
-                errorMessage = errorStr,
-                country = endpoint?.country,
-                ipAddress = endpoint?.ipAddress,
-            )
+            // Delay only: exit IP/country is measured on connect, never during ping tests.
+            val result = ConnectionTestResult(delayMillis = time, errorMessage = errorStr)
             withContext(Dispatchers.Main.immediate) {
                 if (isRunning()) {
                     MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result, requestId)

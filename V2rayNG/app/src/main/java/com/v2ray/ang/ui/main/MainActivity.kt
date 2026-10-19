@@ -341,9 +341,7 @@ class MainActivity : HelperBaseComponentActivity(), AppNav {
     }
 
     private fun handleLayoutTestClick() {
-        if (mainViewModel.uiState.value.isRunning) {
-            mainViewModel.testCurrentServerRealPing()
-        }
+        mainViewModel.pingSelected()
     }
 
     private fun startV2Ray() {

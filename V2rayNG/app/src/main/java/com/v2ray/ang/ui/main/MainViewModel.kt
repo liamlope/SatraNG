@@ -411,6 +411,17 @@ class MainViewModel(
             is MainServiceEvent.MeasureDelayResult -> {
                 if (!uiState.value.isRunning || !testRequests.completeCurrent(event.requestId)) return
                 _uiState.update { it.copy(isTesting = testRequests.isTesting, status = MainStatus.ConnectionTest(event.result)) }
+                // Measured through the running core: show it on the active config's row and on Home.
+                val guid = uiState.value.selectedGuid
+                if (!guid.isNullOrBlank()) {
+                    val delay = event.result.delayMillis.let { if (it >= 0L) it else -1L }
+                    viewModelScope.launch(ioDispatcher) {
+                        MmkvManager.encodeServerTestDelayMillis(guid, delay)
+                        cacheMutex.withLock { groupDataCache.clear() }
+                        patchRowEverywhere(guid) { it.copy(testDelayMillis = delay) }
+                        refreshSelectedRow()
+                    }
+                }
             }
 
             is MainServiceEvent.MeasureConfigSuccess -> {
@@ -1406,6 +1417,20 @@ class MainViewModel(
         pendingTestResults.clear()
     }
 
+    /**
+     * Ping the active config: through the running core when connected, otherwise with a private
+     * test core like the list test does.
+     */
+    fun pingSelected() {
+        if (uiState.value.isRunning) return testCurrentServerRealPing()
+        val guid = uiState.value.selectedGuid?.takeIf { it.isNotBlank() } ?: return
+        val groupId = dataSource.decodeServerConfig(guid)?.subscriptionId.orEmpty()
+        viewModelScope.launch {
+            patchRowEverywhere(guid) { it.copy(testDelayMillis = 0L) }
+            pingGuids(groupId, listOf(guid))
+        }
+    }
+
     fun testCurrentServerRealPing() {
         if (!uiState.value.isRunning) return
         val requestId = testRequests.beginCurrent()
@@ -1419,10 +1444,7 @@ class MainViewModel(
         applyPendingBestPick()
         val groupId = uiState.value.selectedGroupId
         viewModelScope.launch(ioDispatcher) {
-            // The test worker already measured each answering config's exit country.
-            if (uiState.value.isRunning) {
-                refreshExitGeoForSelectedServer(delayMs = 200L)
-            }
+            // Ping tests never touch exit countries (flags stay stable).
             cacheMutex.withLock { groupDataCache.clear() }
             reloadAllGroups(_uiState.value.groups.map { it.id })
         }
