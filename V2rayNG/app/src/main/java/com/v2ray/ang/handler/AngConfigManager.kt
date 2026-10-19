@@ -179,6 +179,12 @@ object AngConfigManager {
      * @param append Whether to append the configurations.
      * @return A pair containing the number of configurations and subscriptions imported.
      */
+    /**
+     * Imports text shared into the app (share sheet, deep link, QR shortcut). Always appends:
+     * replacing here would wipe the user's existing configs in the default group.
+     */
+    fun importShared(text: String?): Pair<Int, Int> = importBatchConfig(text, "", append = true)
+
     fun importBatchConfig(server: String?, subid: String, append: Boolean): Pair<Int, Int> {
         return try {
             var count = parseBatchConfig(Utils.decode(server), subid, append)
