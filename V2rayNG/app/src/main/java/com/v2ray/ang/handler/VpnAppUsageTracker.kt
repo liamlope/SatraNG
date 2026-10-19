@@ -46,17 +46,29 @@ object VpnAppUsageTracker {
         }
         val cur = snapshot(context, nowMs)
         if (cur.isEmpty()) return
-        val excluded = excludedUids(context)
+        for ((uid, rx, tx) in fold(prev, cur, excludedUids(context))) {
+            UsageStore.addAppTraffic(nowMs, uid, rx, tx)
+        }
+    }
+
+    /**
+     * Growth per UID since [prev] (which is advanced to [cur] in place). A UID seen for the first
+     * time only sets its baseline, so nothing from before the session is ever counted; shrinking
+     * counters (Android re-bucketing) count as zero; [excluded] UIDs are tracked but not reported.
+     */
+    internal fun fold(prev: HashMap<Int, LongArray>, cur: Map<Int, LongArray>, excluded: Set<Int>): List<Triple<Int, Long, Long>> {
+        val out = ArrayList<Triple<Int, Long, Long>>()
         for ((uid, v) in cur) {
             val p = prev[uid]
-            if (p == null) { prev[uid] = v.copyOf(); continue } // first seen mid-session: baseline only
+            if (p == null) { prev[uid] = v.copyOf(); continue }
             val dRx = v[0] - p[0]
             val dTx = v[1] - p[1]
             if (dRx > 0) p[0] = v[0]
             if (dTx > 0) p[1] = v[1]
             if (uid in excluded) continue
-            UsageStore.addAppTraffic(nowMs, uid, dRx.coerceAtLeast(0L), dTx.coerceAtLeast(0L))
+            if (dRx > 0 || dTx > 0) out += Triple(uid, dRx.coerceAtLeast(0L), dTx.coerceAtLeast(0L))
         }
+        return out
     }
 
     @Synchronized
