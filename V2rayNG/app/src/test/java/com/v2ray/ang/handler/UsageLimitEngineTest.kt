@@ -50,4 +50,11 @@ class UsageLimitEngineTest {
         assertTrue(ProcNetUidScanner.distributeByWeight(100L, emptyMap()).isEmpty())
         assertTrue(ProcNetUidScanner.distributeByWeight(0L, mapOf(1 to 1)).isEmpty())
     }
+
+    @Test
+    fun uidTunnelMeter_tagRoundTrip() {
+        assertEquals("appuid-10561", UidTunnelMeter.tagForUid(10561))
+        assertEquals(10561, UidTunnelMeter.parseUid("appuid-10561"))
+        assertEquals(null, UidTunnelMeter.parseUid("proxy"))
+    }
 }

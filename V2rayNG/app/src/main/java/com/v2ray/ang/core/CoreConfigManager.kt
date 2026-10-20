@@ -16,6 +16,7 @@ import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.isNotNullEmpty
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
+import com.v2ray.ang.handler.UidTunnelMeter
 import com.v2ray.ang.handler.UsageLimitEngine
 import com.v2ray.ang.util.HttpUtil
 import com.v2ray.ang.util.JsonUtil
@@ -223,6 +224,8 @@ object CoreConfigManager {
             }
         }
 
+        // Per-UID tunnel metering first; usage limits insert in front so they win on first-match.
+        UidTunnelMeter.applyToConfig(configContext.context, v2rayConfig)
         UsageLimitEngine.applyToConfig(configContext.context, v2rayConfig)
         applyObservability(v2rayConfig, balancerStrategies)
         applySpeedDisabled(v2rayConfig)

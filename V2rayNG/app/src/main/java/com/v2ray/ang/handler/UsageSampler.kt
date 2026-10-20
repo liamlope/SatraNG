@@ -69,6 +69,7 @@ object UsageSampler {
                     val stats = CoreServiceManager.queryAllOutboundTrafficStats()
                     var pUp = 0L; var pDown = 0L; var dUp = 0L; var dDown = 0L
                     val byTag = HashMap<String, Long>()
+                    val byUid = HashMap<Int, Long>()
                     for (s in stats) {
                         if (s.tag == AppConfig.TAG_BLOCKED) continue
                         val isUp = s.direction == AppConfig.UPLINK
@@ -81,8 +82,22 @@ object UsageSampler {
                             if (s.tag.startsWith(UsageRule.COUNT_TAG_PREFIX)) {
                                 byTag[s.tag] = (byTag[s.tag] ?: 0L) + s.value
                             }
+                            UidTunnelMeter.parseUid(s.tag)?.let { uid ->
+                                byUid[uid] = (byUid[uid] ?: 0L) + s.value
+                            }
                         }
                     }
+                    // APP lim-* traffic is also that package's tunnel use (rule matched first).
+                    for (rule in UsageRulesRepository.rules()) {
+                        if (rule.kind != RuleKind.APP || rule.packageName.isBlank()) continue
+                        val delta = byTag[rule.outboundTag] ?: 0L
+                        if (delta <= 0L) continue
+                        val uid = runCatching {
+                            app.packageManager.getPackageUid(rule.packageName, 0)
+                        }.getOrNull() ?: continue
+                        byUid[uid] = (byUid[uid] ?: 0L) + delta
+                    }
+
                     val t = totals
                     totals = Totals(t.proxyUp + pUp, t.proxyDown + pDown, t.directUp + dUp, t.directDown + dDown)
                     val up = pUp + dUp
@@ -114,22 +129,21 @@ object UsageSampler {
                         ),
                     )
 
-                    // Per-app meter: sample often so Apps list tracks "Total through VPN".
-                    // Pass core proxy bytes for this interval so unexplained tunnel traffic is
-                    // attributed by active socket UIDs (same for every package).
+                    // Datapath UID counters (UidTunnelMeter) — primary Apps / APP-limit meter.
+                    val coreUidGrowth = runCatching {
+                        VpnAppUsageTracker.recordCoreUidBytes(now, byUid)
+                    }.getOrDefault(emptyMap())
                     val hasAppLimits = UsageRulesRepository.rules().any { it.enabled && it.matchesApps }
-                    val appSampleEvery = if (hasAppLimits) TICK_MS else 5_000L
                     var appUidByTag = emptyMap<String, Long>()
-                    if (now - lastAppSample >= appSampleEvery) {
+                    if (hasAppLimits && coreUidGrowth.isNotEmpty()) {
+                        appUidByTag = UsageLimitEngine.appUidDeltasForRules(app, coreUidGrowth)
+                    }
+                    // Rare OS supplement when process routing is off.
+                    if (now - lastAppSample >= VpnAppUsageTracker.SAMPLE_EVERY_MS) {
                         lastAppSample = now
                         val coreProxy = proxySinceAppSample
                         proxySinceAppSample = 0L
-                        val growth = runCatching {
-                            VpnAppUsageTracker.sample(app, now, coreProxyBytes = coreProxy)
-                        }.getOrDefault(emptyMap())
-                        if (growth.isNotEmpty() && hasAppLimits) {
-                            appUidByTag = UsageLimitEngine.appUidDeltasForRules(app, growth)
-                        }
+                        runCatching { VpnAppUsageTracker.sample(app, now, coreProxyBytes = coreProxy) }
                     }
 
                     var reload = false

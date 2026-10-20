@@ -11,6 +11,7 @@ import com.v2ray.ang.extension.toast
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
+import com.v2ray.ang.handler.UidTunnelMeter
 import com.v2ray.ang.handler.UsageLimitEngine
 import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.root.RootManager
@@ -129,7 +130,8 @@ object LauncherManager {
         }
 
         SettingsManager.refreshRuntimeSocksPort()
-        // APP/CATEGORY limits need Xray process/UID routing for every package the same way.
+        // Per-app tunnel metering + APP limits need Xray process/UID routing.
+        UidTunnelMeter.ensureEngine()
         UsageLimitEngine.ensureAppEnforcementForStoredRules()
 
         if (config.insecure == true && config.pinnedCA256.isNullOrEmpty()) {
