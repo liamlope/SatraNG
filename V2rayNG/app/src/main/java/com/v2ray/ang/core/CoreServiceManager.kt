@@ -303,6 +303,28 @@ object CoreServiceManager {
     }
 
     /**
+     * Full VPN restart after an APP limit is exceeded. Soft [reloadCore] left keep-alive / HTTP-proxy
+     * sockets alive so apps kept working past the cap; tearing the service down drops them.
+     */
+    fun restartForPolicyChange() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val control = serviceControl?.get() ?: return@launch
+            if (isReloading) return@launch
+            LogUtil.w(AppConfig.TAG, "StartCore-Manager: Policy restart (limit enforce)")
+            try {
+                isReloading = true
+                control.stopService()
+                delay(500L)
+                LauncherManager.startService(control.getService())
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "StartCore-Manager: Policy restart failed", e)
+            } finally {
+                isReloading = false
+            }
+        }
+    }
+
+    /**
      * Queries and resets all outbound traffic counters in one core call.
      * Go side format: tag,direction,value;tag,direction,value;
      */

@@ -160,7 +160,9 @@ object UsageSampler {
                             LimitEvent.Exceeded -> {
                                 LogUtil.w(AppConfig.TAG, "UsageSampler: limit exceeded ${rule.label}")
                                 UsageNotifier.limitExceeded(app, rule)
-                                reload = true
+                                // Hard restart so keep-alives die; soft reload was not enough.
+                                CoreServiceManager.restartForPolicyChange()
+                                return@launch // stop this sampler; new daemon starts a fresh one
                             }
                             LimitEvent.Warned -> UsageNotifier.limitWarning(app, rule)
                             LimitEvent.Released -> reload = true

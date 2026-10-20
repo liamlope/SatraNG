@@ -178,6 +178,28 @@ object UsageLimitEngine {
         "youtubekids.com",
     )
 
+    val FACEBOOK_DOMAINS = listOf(
+        "facebook.com",
+        "fb.com",
+        "fbcdn.net",
+        "facebook.net",
+        "fbsbx.com",
+        "messenger.com",
+        "meta.com",
+        "accountkit.com",
+        "instagram.com",
+        "cdninstagram.com",
+    )
+
+    /** Every package name that shares the limited app's Linux UID (same process identity). */
+    fun packagesForAppLimit(context: Context, packageName: String): List<String> {
+        if (packageName.isBlank()) return emptyList()
+        val pm = context.packageManager
+        val uid = runCatching { pm.getPackageUid(packageName, 0) }.getOrNull() ?: return listOf(packageName)
+        val shared = runCatching { pm.getPackagesForUid(uid)?.toList() }.getOrNull().orEmpty()
+        return (listOf(packageName) + shared).distinct()
+    }
+
     /**
      * True when [rule] is currently supposed to be blocked by the config we build now. Checks the
      * cap again instead of trusting the stored flag, so raising a limit unblocks immediately.
@@ -186,8 +208,10 @@ object UsageLimitEngine {
         if (rule.alwaysBlock) return true
         if (!rule.enabled || rule.limitBytes <= 0L) return false
         val rt = UsageStore.ruleRuntime(rule.id) ?: return false
-        return rt.blocked && rt.periodKey == UsagePeriods.periodKey(rule.period, nowMs) &&
-            rt.used >= rule.limitBytes + rt.bonus
+        if (rt.periodKey != UsagePeriods.periodKey(rule.period, nowMs)) return false
+        val cap = rule.limitBytes + rt.bonus
+        // Self-heal: over-quota means blocked even if the stored flag was lost/raced.
+        return rt.used >= cap
     }
 
     /** UIDs whose APP/CATEGORY limit is currently exhausted — must not receive fill-attribution. */
@@ -218,6 +242,19 @@ object UsageLimitEngine {
             p.startsWith("com.google.android.apps.youtube.") ||
             p == "app.revanced.android.youtube" ||
             p.endsWith(".youtube")
+    }
+
+    private fun isFacebookPackage(packageName: String): Boolean {
+        val p = packageName.lowercase()
+        return p.startsWith("com.facebook.") || p.startsWith("com.instagram.") ||
+            p == "com.meta.wearable" || p.contains("messenger")
+    }
+
+    /** CDN/host shield when process UID is missing on early packets (universal for known big apps). */
+    private fun domainShieldForPackage(packageName: String): List<String> = when {
+        isYoutubePackage(packageName) -> expandSitePresetDomains(YOUTUBE_DOMAINS)
+        isFacebookPackage(packageName) -> expandSitePresetDomains(FACEBOOK_DOMAINS)
+        else -> emptyList()
     }
 
     /**
@@ -254,8 +291,10 @@ object UsageLimitEngine {
             val matcher = when (rule.kind) {
                 RuleKind.APP -> {
                     // Counting uses OS UID; process rules are for block/enforcement only.
+                    // Include every package sharing that UID so split APKs cannot bypass.
                     if (!appOk || rule.packageName.isBlank()) continue
-                    val uids = PackageUidResolver.packageNamesToUids(context, listOf(rule.packageName))
+                    val pkgs = packagesForAppLimit(context, rule.packageName)
+                    val uids = PackageUidResolver.packageNamesToUids(context, pkgs).distinct()
                     if (uids.isEmpty()) continue
                     V2rayConfig.RoutingBean.RulesBean(process = uids)
                 }
@@ -289,19 +328,20 @@ object UsageLimitEngine {
                 continue
             }
             additions += matcher
-            // YouTube (and similar) often opens CDN hosts before process UID is known; when the
-            // APP limit is exhausted, also block the site domains so TUN/QUIC cannot bypass.
-            if (blocked && rule.kind == RuleKind.APP && isYoutubePackage(rule.packageName)) {
-                val domains = expandSitePresetDomains(YOUTUBE_DOMAINS)
+            // When process UID is missing on the first packet, CDN/host rules still blackhole.
+            if (blocked && rule.kind == RuleKind.APP) {
+                val domains = domainShieldForPackage(rule.packageName)
                 if (domains.isNotEmpty()) {
                     additions += V2rayConfig.RoutingBean.RulesBean(
                         domain = domains,
                         outboundTag = AppConfig.TAG_BLOCKED,
                     )
-                    LogUtil.w(AppConfig.TAG, "UsageLimit: ${rule.label} blocked + YouTube domain shield")
+                    LogUtil.w(AppConfig.TAG, "UsageLimit: ${rule.label} blocked + domain shield")
+                } else {
+                    LogUtil.w(AppConfig.TAG, "UsageLimit: ${rule.label} → block (process)")
                 }
             } else if (blocked) {
-                LogUtil.w(AppConfig.TAG, "UsageLimit: ${rule.label} → block (process)")
+                LogUtil.w(AppConfig.TAG, "UsageLimit: ${rule.label} → block")
             }
         }
         if (additions.isNotEmpty()) config.routing.rules.addAll(0, additions)
