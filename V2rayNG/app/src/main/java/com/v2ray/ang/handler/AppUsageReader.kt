@@ -26,8 +26,10 @@ data class AppUsage(
 /**
  * Per-app network totals for the VPN usage meter and APP/CATEGORY limits.
  *
- * Same method for every package: [TrafficStats], and when Usage Access is granted the per-UID
- * max with [NetworkStatsManager] (Wi-Fi + mobile + [ConnectivityManager.TYPE_VPN]).
+ * Under an active VPN the kernel often credits the *tunnel carrier* to the VPN app UID while
+ * [TrafficStats] for client apps barely moves. Prefer [ConnectivityManager.TYPE_VPN] NetworkStats
+ * (per-UID on the VPN network), merge-max with TrafficStats, and let [VpnAppUsageTracker] attribute
+ * any leftover core bytes using active socket UIDs — one path for every package.
  */
 object AppUsageReader {
 
@@ -47,23 +49,37 @@ object AppUsageReader {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
     /**
-     * Best-effort cumulative per-UID counters for metering.
-     *
-     * Under VPN, neither [TrafficStats] nor [NetworkStatsManager] alone is reliable for every app:
-     * TrafficStats often tracks TCP well, while NetworkStats (incl. [ConnectivityManager.TYPE_VPN])
-     * can catch QUIC/UDP that TrafficStats under-counts — or the reverse on some OEMs. When Usage
-     * Access is granted we take the per-UID **max** of both so any package meters the same way.
-     * Without Usage Access, TrafficStats only.
-     *
+     * Cumulative per-UID counters for VPN-session metering.
      * Callers must only ever use growth between two snapshots.
      */
     fun queryRaw(context: Context, startMs: Long, endMs: Long): List<AppUsage> {
         val traffic = queryTrafficStats(context)
         if (!hasAccess(context)) return traffic
-        val net = queryNetworkStats(context, startMs, endMs)
-        if (net.isEmpty()) return traffic
-        if (traffic.isEmpty()) return net
-        return mergeMaxByUid(traffic, net)
+        // VPN network only — Wi-Fi/mobile buckets under a tunnel often sit on the VPN app UID or
+        // stay flat for clients; mixing them in hides real per-app VPN use.
+        val vpn = queryNetworkStatsTypes(
+            context,
+            startMs,
+            endMs,
+            intArrayOf(ConnectivityManager.TYPE_VPN),
+        )
+        if (vpn.isEmpty()) {
+            val all = queryNetworkStatsTypes(
+                context,
+                startMs,
+                endMs,
+                intArrayOf(
+                    ConnectivityManager.TYPE_WIFI,
+                    ConnectivityManager.TYPE_MOBILE,
+                    ConnectivityManager.TYPE_VPN,
+                ),
+            )
+            if (all.isEmpty()) return traffic
+            if (traffic.isEmpty()) return all
+            return mergeMaxByUid(traffic, all)
+        }
+        if (traffic.isEmpty()) return vpn
+        return mergeMaxByUid(traffic, vpn)
     }
 
     /** Per UID, keep the larger rx and larger tx from [a] and [b]. */
@@ -92,7 +108,6 @@ object AppUsageReader {
             val t = TrafficStats.getUidTxBytes(uid)
             if (r == TrafficStats.UNSUPPORTED.toLong() || t == TrafficStats.UNSUPPORTED.toLong()) continue
             if (r < 0L && t < 0L) continue
-            // Same UID may appear for several packages; counters are identical — keep one.
             if (uid !in rx) {
                 rx[uid] = r.coerceAtLeast(0L)
                 tx[uid] = t.coerceAtLeast(0L)
@@ -103,17 +118,16 @@ object AppUsageReader {
         }
     }
 
-    /** Raw per-uid totals in [startMs, endMs), Wi-Fi + mobile + VPN. Needs Usage Access. */
-    fun queryNetworkStats(context: Context, startMs: Long, endMs: Long): List<AppUsage> {
+    private fun queryNetworkStatsTypes(
+        context: Context,
+        startMs: Long,
+        endMs: Long,
+        types: IntArray,
+    ): List<AppUsage> {
         if (!hasAccess(context)) return emptyList()
         val nsm = context.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
         val rx = HashMap<Int, Long>()
         val tx = HashMap<Int, Long>()
-        val types = intArrayOf(
-            ConnectivityManager.TYPE_WIFI,
-            ConnectivityManager.TYPE_MOBILE,
-            ConnectivityManager.TYPE_VPN,
-        )
         for (type in types) {
             var stats: NetworkStats? = null
             try {
@@ -147,7 +161,6 @@ object AppUsageReader {
             }.getOrNull()
             u.copy(packageName = pkg)
         }
-        // Many system uids have no package we can show; fold them into one row (uid -1).
         val (named, anonymous) = result.partition { it.packageName != null }
         val merged = named.toMutableList()
         val rest = anonymous.filter { it.totalBytes > 0 }

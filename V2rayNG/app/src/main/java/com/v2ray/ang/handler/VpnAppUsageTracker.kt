@@ -6,26 +6,26 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.BuildConfig
 
 /**
- * Per-app traffic while the VPN is connected, for the "Apps" list on the Usage screen.
+ * Per-app traffic while the VPN is connected, for the "Apps" list and APP/CATEGORY limits.
  *
- * Android has no API that reports only the bytes an app sent through *this* VPN. What it does
- * have is per-UID accounting ([AppUsageReader]) where tunnelled traffic is credited to the app
- * that produced it. So the daemon takes a snapshot of those counters when the tunnel comes up and
- * then, about once a minute and once more when it stops, adds only the growth since the previous
- * snapshot to a per-day ledger. History from before the session, traffic while disconnected and
- * apps excluded by split tunneling never enter the ledger, so the list starts at zero the first
- * time tracking runs. Numbers are approximate: Android updates its counters in batches and spreads
- * them over its buckets. APP/CATEGORY limits use this same per-UID growth for every package;
- * DOMAIN limits use core `lim-*` stats.
+ * Android often credits tunnel *carrier* bytes to the VPN app UID. Client apps may show little or
+ * nothing in TrafficStats. We therefore:
+ * 1. Snapshot OS per-UID counters ([AppUsageReader]) and take growth (excluding our UID).
+ * 2. Compare with the core's proxy-byte total for the same interval.
+ * 3. Attribute any shortfall across apps that currently own sockets ([ProcNetUidScanner]) —
+ *    proportional to connection count, same rule for every package.
+ *
+ * Numbers stay approximate; DOMAIN limits still use exact core `lim-*` stats.
  */
 object VpnAppUsageTracker {
-    /** Background cadence while VPN is up; Usage screen can also call [sample] more often. */
     const val SAMPLE_EVERY_MS = 30_000L
+
+    /** Synthetic UID for VPN bytes we could not map to a client app (shown as system/other). */
+    const val UNATTRIBUTED_UID = -2
 
     private var last: HashMap<Int, LongArray>? = null
     private var anchorMs = 0L
 
-    /** True when this session's app traffic is going through our tunnel at all. */
     fun applies(): Boolean =
         (MmkvManager.decodeSettingsString(AppConfig.PREF_MODE) ?: AppConfig.VPN) == AppConfig.VPN
 
@@ -33,43 +33,81 @@ object VpnAppUsageTracker {
     fun begin(context: Context, nowMs: Long = System.currentTimeMillis()) {
         last = null
         if (!applies()) return
-        // TrafficStats needs no Usage Access; NetworkStats is only a fallback inside queryRaw.
-        // Fixed anchor for NetworkStats windows: cumulative TrafficStats ignore this.
         anchorMs = nowMs - 3 * 3_600_000L
         last = snapshot(context, nowMs)
         if (last.isNullOrEmpty()) last = null
     }
 
     /**
-     * Adds the growth since the previous sample to the ledger.
-     * @return per-UID (rx+tx) growth this sample; empty when there was no baseline yet.
+     * @param coreProxyBytes uplink+downlink through the proxy this interval (from the core).
+     *        Used as ground truth so the Apps list can catch up to "Total through VPN".
+     * @return per-UID (rx+tx) growth this sample after attribution.
      */
     @Synchronized
-    fun sample(context: Context, nowMs: Long = System.currentTimeMillis()): Map<Int, Long> {
+    fun sample(
+        context: Context,
+        nowMs: Long = System.currentTimeMillis(),
+        coreProxyBytes: Long = 0L,
+    ): Map<Int, Long> {
         val prev = last ?: run {
-            // Tunnel may have started before packages were ready; start counting now.
             if (applies()) begin(context, nowMs)
             return emptyMap()
         }
         val cur = snapshot(context, nowMs)
         if (cur.isEmpty()) return emptyMap()
-        val growth = fold(prev, cur, excludedUids(context))
-        for ((uid, rx, tx) in growth) {
-            UsageStore.addAppTraffic(nowMs, uid, rx, tx)
+
+        val excluded = excludedUids(context)
+        val vpnUid = Process.myUid()
+        // Raw growth including our UID (carrier) — used only to size the shortfall.
+        val rawAll = fold(HashMap(prev.mapValues { it.value.copyOf() }), cur, emptySet())
+        val carrierGrowth = rawAll.filter { it.first == vpnUid }.sumOf { it.second + it.third }
+        // Advance baseline for every UID (including excluded) so next sample is clean.
+        fold(prev, cur, emptySet())
+
+        val osGrowth = HashMap<Int, Long>()
+        for ((uid, rx, tx) in rawAll) {
+            if (uid in excluded) continue
+            val total = rx + tx
+            if (total > 0L) osGrowth[uid] = (osGrowth[uid] ?: 0L) + total
         }
-        return growth.associate { (uid, rx, tx) -> uid to (rx + tx) }
+
+        val attributed = osGrowth.values.sum()
+        val target = maxOf(coreProxyBytes, carrierGrowth)
+        val shortfall = (target - attributed).coerceAtLeast(0L)
+        if (shortfall > 0L) {
+            val weights = ProcNetUidScanner.connectionCounts()
+                .filterKeys { uid -> uid !in excluded && uid >= 10000 }
+            val shares = ProcNetUidScanner.distributeByWeight(shortfall, weights)
+            if (shares.isEmpty()) {
+                osGrowth[UNATTRIBUTED_UID] = (osGrowth[UNATTRIBUTED_UID] ?: 0L) + shortfall
+            } else {
+                for ((uid, bytes) in shares) {
+                    osGrowth[uid] = (osGrowth[uid] ?: 0L) + bytes
+                }
+            }
+        }
+
+        for ((uid, total) in osGrowth) {
+            if (total <= 0L) continue
+            // Treat as download-heavy (rx) for the ledger shape; total is what limits/UI use.
+            UsageStore.addAppTraffic(nowMs, uid, total, 0L)
+        }
+        return osGrowth
     }
 
     /**
      * Growth per UID since [prev] (which is advanced to [cur] in place). A UID seen for the first
-     * time only sets its baseline, so nothing from before the session is ever counted; shrinking
-     * counters (Android re-bucketing) count as zero; [excluded] UIDs are tracked but not reported.
+     * time only sets its baseline; shrinking counters count as zero; [excluded] UIDs are tracked
+     * but not reported when the caller passes them here.
      */
     internal fun fold(prev: HashMap<Int, LongArray>, cur: Map<Int, LongArray>, excluded: Set<Int>): List<Triple<Int, Long, Long>> {
         val out = ArrayList<Triple<Int, Long, Long>>()
         for ((uid, v) in cur) {
             val p = prev[uid]
-            if (p == null) { prev[uid] = v.copyOf(); continue }
+            if (p == null) {
+                prev[uid] = v.copyOf()
+                continue
+            }
             val dRx = v[0] - p[0]
             val dTx = v[1] - p[1]
             if (dRx > 0) p[0] = v[0]
@@ -88,15 +126,12 @@ object VpnAppUsageTracker {
 
     private fun snapshot(context: Context, nowMs: Long): HashMap<Int, LongArray> {
         val map = HashMap<Int, LongArray>()
-        // End in the future so the current bucket is counted whole instead of time-interpolated;
-        // otherwise traffic from just before the session would leak in as the bucket fills.
         for (u in AppUsageReader.queryRaw(context, anchorMs, nowMs + 86_400_000L)) {
             map[u.uid] = longArrayOf(u.rxBytes, u.txBytes)
         }
         return map
     }
 
-    /** Our own UID (the tunnel's carrier traffic) and apps that split tunneling keeps off the VPN. */
     private fun excludedUids(context: Context): Set<Int> {
         val out = HashSet<Int>()
         out += Process.myUid()
@@ -109,7 +144,6 @@ object VpnAppUsageTracker {
                 if (bypass) {
                     out += listed
                 } else {
-                    // Only the listed apps use the VPN: everything else is excluded.
                     val all = last?.keys.orEmpty()
                     out += all.filterNot { it in listed }
                 }

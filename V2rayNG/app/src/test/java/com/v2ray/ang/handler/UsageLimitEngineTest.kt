@@ -3,6 +3,7 @@ package com.v2ray.ang.handler
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+// ProcNetUidScanner + AppUsageReader helpers
 
 class UsageLimitEngineTest {
 
@@ -34,5 +35,19 @@ class UsageLimitEngineTest {
         assertEquals(5L, merged[20]!!.rxBytes)
         assertEquals(1L, merged[30]!!.rxBytes)
         assertEquals(2L, merged[30]!!.txBytes)
+    }
+
+    @Test
+    fun distributeByWeight_splitsAllBytesAcrossUids() {
+        val shares = ProcNetUidScanner.distributeByWeight(1000L, mapOf(10 to 1, 20 to 3))
+        assertEquals(1000L, shares.values.sum())
+        assertEquals(250L, shares[10])
+        assertEquals(750L, shares[20])
+    }
+
+    @Test
+    fun distributeByWeight_emptyWeightsYieldsEmpty() {
+        assertTrue(ProcNetUidScanner.distributeByWeight(100L, emptyMap()).isEmpty())
+        assertTrue(ProcNetUidScanner.distributeByWeight(0L, mapOf(1 to 1)).isEmpty())
     }
 }

@@ -53,6 +53,7 @@ object UsageSampler {
             runCatching { UsageStore.prune() }
             runCatching { VpnAppUsageTracker.begin(app) }
             var lastAppSample = System.currentTimeMillis()
+            var proxySinceAppSample = 0L
             var sessionUp = 0L
             var sessionDown = 0L
             var lastTick = System.currentTimeMillis()
@@ -88,6 +89,7 @@ object UsageSampler {
                     val down = pDown + dDown
                     sessionUp += up
                     sessionDown += down
+                    proxySinceAppSample += pUp + pDown
 
                     UsageStore.addTraffic(now, up, down)
                     secondsCarry += dt
@@ -112,13 +114,19 @@ object UsageSampler {
                         ),
                     )
 
-                    // APP/CATEGORY limits meter from OS per-UID growth every tick (same for all packages).
+                    // Per-app meter: sample often so Apps list tracks "Total through VPN".
+                    // Pass core proxy bytes for this interval so unexplained tunnel traffic is
+                    // attributed by active socket UIDs (same for every package).
                     val hasAppLimits = UsageRulesRepository.rules().any { it.enabled && it.matchesApps }
-                    val appSampleEvery = if (hasAppLimits) TICK_MS else VpnAppUsageTracker.SAMPLE_EVERY_MS
+                    val appSampleEvery = if (hasAppLimits) TICK_MS else 5_000L
                     var appUidByTag = emptyMap<String, Long>()
                     if (now - lastAppSample >= appSampleEvery) {
                         lastAppSample = now
-                        val growth = runCatching { VpnAppUsageTracker.sample(app, now) }.getOrDefault(emptyMap())
+                        val coreProxy = proxySinceAppSample
+                        proxySinceAppSample = 0L
+                        val growth = runCatching {
+                            VpnAppUsageTracker.sample(app, now, coreProxyBytes = coreProxy)
+                        }.getOrDefault(emptyMap())
                         if (growth.isNotEmpty() && hasAppLimits) {
                             appUidByTag = UsageLimitEngine.appUidDeltasForRules(app, growth)
                         }

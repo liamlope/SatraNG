@@ -11,8 +11,8 @@ import com.v2ray.ang.util.PackageUidResolver
  * Turns [UsageRule]s into routing rules for the core.
  *
  * Counting (universal):
- * - **APP / CATEGORY**: OS per-UID growth while VPN is up ([VpnAppUsageTracker] / TrafficStats +
- *   NetworkStats). Same path for every package — no per-app special cases.
+ * - **APP / CATEGORY**: [VpnAppUsageTracker] — OS per-UID growth plus any shortfall vs core proxy
+ *   bytes attributed by active socket UIDs ([ProcNetUidScanner]). Same path for every package.
  * - **DOMAIN**: core `lim-*` outbound stats (sniffed host / domain match).
  *
  * Blocking: each active rule still gets a `lim-*` (or `block`) routing rule. APP/CATEGORY match by
