@@ -23,6 +23,16 @@ class UsageLimitEngineTest {
         assertTrue(out.size == 1)
         assertTrue(out.single().contains("example.com"))
         assertTrue(out.none { it.contains("geosite:youtube") })
+        assertTrue(out.none { it.contains("geosite:facebook") })
+    }
+
+    @Test
+    fun expandSitePresetDomains_addsFacebookCdnAndGeosite() {
+        val out = UsageLimitEngine.expandSitePresetDomains(listOf("facebook.com"))
+        assertTrue(out.any { it.contains("facebook.com") })
+        assertTrue(out.any { it.contains("fbcdn.net") })
+        assertTrue(out.any { it.contains("instagram.com") })
+        assertTrue(out.contains("geosite:facebook"))
     }
 
     @Test
@@ -56,6 +66,41 @@ class UsageLimitEngineTest {
         assertEquals("appuid-10561", UidTunnelMeter.tagForUid(10561))
         assertEquals(10561, UidTunnelMeter.parseUid("appuid-10561"))
         assertEquals(null, UidTunnelMeter.parseUid("proxy"))
+    }
+
+    @Test
+    fun mergeMaxGrowth_takesLargerPerUid() {
+        val a = mapOf(1 to 100L, 2 to 50L)
+        val b = mapOf(1 to 80L, 3 to 10L)
+        val m = VpnAppUsageTracker.mergeMaxGrowth(a, b)
+        assertEquals(100L, m[1])
+        assertEquals(50L, m[2])
+        assertEquals(10L, m[3])
+    }
+
+    @Test
+    fun processUidResolver_antiBypassOnlyWhenDestOwnedByBlockedUid() {
+        assertEquals(-1, ProcessUidResolver.antiBypassUid(emptySet(), "1.2.3.4", 443, destOwner = 10643 to 0L))
+        assertEquals(
+            10643,
+            ProcessUidResolver.antiBypassUid(
+                blockedUids = setOf(10643),
+                destIp = "1.2.3.4",
+                destPort = 443,
+                nowMs = 1_000L,
+                destOwner = 10643 to 900L,
+            ),
+        )
+        assertEquals(
+            -1,
+            ProcessUidResolver.antiBypassUid(
+                blockedUids = setOf(10643),
+                destIp = "1.2.3.4",
+                destPort = 443,
+                nowMs = 1_000L,
+                destOwner = 99999 to 900L,
+            ),
+        )
     }
 
     @Test

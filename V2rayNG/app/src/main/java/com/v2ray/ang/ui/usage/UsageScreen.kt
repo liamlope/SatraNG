@@ -549,7 +549,7 @@ private val sitePresets = listOf(
     SitePreset(R.string.sx_preset_telegram, listOf("telegram.org", "t.me", "telesco.pe")),
 )
 
-private val amountPresetsMb = listOf(100L, 250L, 500L, 1024L, 2048L, 5120L)
+private val amountPresetsMb = listOf(2L, 100L, 250L, 500L, 1024L, 2048L, 5120L)
 
 @Composable
 internal fun LimitEditorSheet(

@@ -30,11 +30,17 @@ object UsageSampler {
 
     private const val TICK_MS = 1000L
 
+    /** Min gap between TUN recreates when a blocked UID keeps transferring. */
+    private const val SOCKET_KILL_MIN_INTERVAL_MS = 2_500L
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var job: Job? = null
 
     @Volatile
     private var appContext: Context? = null
+
+    @Volatile
+    private var lastSocketKillMs = 0L
 
     @Volatile
     var totals = Totals()
@@ -46,6 +52,7 @@ object UsageSampler {
         val app = context.applicationContext
         appContext = app
         finalizeStaleSession()
+        lastSocketKillMs = 0L
         val startedAt = System.currentTimeMillis()
         val serverGuid = MmkvManager.getSelectServer().orEmpty()
         val serverName = serverGuid.takeIf { it.isNotBlank() }?.let { MmkvManager.decodeServerConfig(it)?.remarks }.orEmpty()
@@ -70,6 +77,9 @@ object UsageSampler {
                     var pUp = 0L; var pDown = 0L; var dUp = 0L; var dDown = 0L
                     val byTag = HashMap<String, Long>()
                     val byUid = HashMap<Int, Long>()
+                    // Total through VPN = every byte the core moved on the tunnel (proxy + direct),
+                    // independent of per-app gauges. Blackhole (`block`) is excluded: those packets
+                    // never leave the device as VPN payload (same ledger as early UsageSampler).
                     for (s in stats) {
                         if (s.tag == AppConfig.TAG_BLOCKED) continue
                         val isUp = s.direction == AppConfig.UPLINK
@@ -129,9 +139,11 @@ object UsageSampler {
                         ),
                     )
 
-                    // 1) Exact datapath UID counters (appuid-* / APP lim-*) — used for APP limits.
-                    // 2) Fill shortfall for the Apps list UI only. Never feed fill into LimitEvaluator:
-                    //    a large guessed chunk would jump past a small cap and still leave TUN bypass.
+                    // APP/CATEGORY quotas (universal for every package):
+                    // 1) Exact datapath (appuid-* / lim-*) when ProcessFinder matched
+                    // 2) OS/VPN NetworkStats growth — still moves when traffic is on proxy or block
+                    //    (catch-all/blackhole would otherwise freeze the gauge)
+                    // Apps-list fill stays out of LimitEvaluator (guessed chunks overshoot small caps).
                     val tickProxy = pUp + pDown
                     val blockedUids = runCatching {
                         UsageLimitEngine.blockedUids(app, now)
@@ -145,33 +157,81 @@ object UsageSampler {
 
                     val hasAppLimits = UsageRulesRepository.rules().any { it.enabled && it.matchesApps }
                     var appUidByTag = emptyMap<String, Long>()
-                    if (hasAppLimits && exact.isNotEmpty()) {
-                        appUidByTag = UsageLimitEngine.appUidDeltasForRules(app, exact)
+                    if (hasAppLimits) {
+                        // OS poll advances last-snapshot; skip duplicate Apps-list write (exact already
+                        // recorded datapath bytes; OS bytes for limited UIDs go only into quotas).
+                        val os = runCatching {
+                            VpnAppUsageTracker.pollOsGrowth(app, now, recordToStore = false)
+                        }.getOrDefault(emptyMap())
+                        val growth = VpnAppUsageTracker.mergeMaxGrowth(exact, os)
+                        if (growth.isNotEmpty()) {
+                            appUidByTag = UsageLimitEngine.appUidDeltasForRules(app, growth)
+                        }
+                        // Persist OS-only bytes that exact missed (proxy/block paths) into Apps list.
+                        if (os.isNotEmpty()) {
+                            val extra = HashMap<Int, Long>()
+                            for ((uid, bytes) in os) {
+                                val e = exact[uid] ?: 0L
+                                if (bytes > e) extra[uid] = bytes - e
+                            }
+                            if (extra.isNotEmpty()) {
+                                runCatching { VpnAppUsageTracker.recordCoreUidBytes(now, extra) }
+                            }
+                        }
                     }
                     if (now - lastAppSample >= VpnAppUsageTracker.SAMPLE_EVERY_MS) {
                         lastAppSample = now
                         proxySinceAppSample = 0L
-                        runCatching { VpnAppUsageTracker.sample(app, now) }
+                        // Snapshot already advanced by pollOsGrowth; only refresh if unused.
+                        if (!hasAppLimits) {
+                            runCatching { VpnAppUsageTracker.sample(app, now) }
+                        }
                     }
 
                     var reload = false
+                    // APP/CATEGORY over-quota: recreate TUN so keep-alives die. DOMAIN-only can
+                    // soft-reload. Never full VPN restart here (underlying-network leak window).
+                    var killSockets = false
+                    var exceededApp = false
                     for ((rule, event) in UsageLimitEngine.account(byTag, now, appUidByTag)) {
                         when (event) {
                             LimitEvent.Exceeded -> {
                                 LogUtil.w(AppConfig.TAG, "UsageSampler: limit exceeded ${rule.label}")
                                 UsageNotifier.limitExceeded(app, rule)
-                                // Soft core reload (keeps VPN up). Full VPN restart broke apps/login
-                                // and stopped metering; stopLoop already drops proxy keep-alives.
                                 reload = true
+                                if (rule.matchesApps) exceededApp = true
                             }
                             LimitEvent.Warned -> UsageNotifier.limitWarning(app, rule)
                             LimitEvent.Released -> reload = true
                             LimitEvent.None -> Unit
                         }
                     }
-                    if (reload) CoreServiceManager.reloadForPolicyChange()
+                    // Datapath still counting a blocked UID ⇒ lim/appuid rules won over block.
+                    // Re-enforce with TUN recreate (throttled so Total metering keeps ticking).
+                    val stillFlowing = !reload && blockedUids.isNotEmpty() &&
+                        byUid.keys.any { it in blockedUids } &&
+                        now - lastSocketKillMs >= SOCKET_KILL_MIN_INTERVAL_MS
+                    if (stillFlowing) {
+                        LogUtil.w(AppConfig.TAG, "UsageSampler: blocked UID still transferring — kill TUN")
+                        reload = true
+                    }
+                    killSockets = PolicyEnforcement.needsSocketKill(
+                        matchesApps = exceededApp,
+                        stillFlowingBlocked = stillFlowing,
+                    )
+                    if (reload) {
+                        if (killSockets) lastSocketKillMs = now
+                        // Sync so this tick does not finish while lim-* is still live.
+                        CoreServiceManager.reloadForPolicyChangeSync(killSockets = killSockets)
+                    }
 
                     tickCount++
+                    if (tickCount % 5 == 0 && appUidByTag.isNotEmpty()) {
+                        LogUtil.i(
+                            AppConfig.TAG,
+                            "UsageSampler: APP quota deltas $appUidByTag exact=${exact.size} osTick=1",
+                        )
+                    }
                     if (tickCount % 30 == 0) {
                         logStalledDomainLimits(byTag, pUp + pDown)
                     }

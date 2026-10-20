@@ -102,6 +102,45 @@ object VpnAppUsageTracker {
         return os
     }
 
+    /**
+     * OS/VPN per-UID growth for APP/CATEGORY limit accounting (universal for every package).
+     * Same snapshot pipeline as [sample], but does not write the Apps-list ledger again when
+     * [recordToStore] is false — callers that already recorded exact datapath bytes pass false
+     * and merge with max(exact, os) so block/proxy paths still advance the quota.
+     */
+    @Synchronized
+    fun pollOsGrowth(
+        context: Context,
+        nowMs: Long = System.currentTimeMillis(),
+        recordToStore: Boolean = true,
+    ): Map<Int, Long> {
+        val prev = last ?: run {
+            if (applies()) begin(context, nowMs)
+            return emptyMap()
+        }
+        val cur = snapshot(context, nowMs)
+        if (cur.isEmpty()) return emptyMap()
+        val growth = fold(prev, cur, excludedUids(context))
+        val os = HashMap<Int, Long>()
+        for ((uid, rx, tx) in growth) {
+            val total = rx + tx
+            if (total <= 0L) continue
+            os[uid] = total
+            if (recordToStore) UsageStore.addAppTraffic(nowMs, uid, rx, tx)
+        }
+        return os
+    }
+
+    /** Per-UID max of [a] and [b] (same interval, avoid double-counting overlapping meters). */
+    fun mergeMaxGrowth(a: Map<Int, Long>, b: Map<Int, Long>): Map<Int, Long> {
+        if (a.isEmpty()) return b
+        if (b.isEmpty()) return a
+        val out = HashMap<Int, Long>(a.size + b.size)
+        for ((uid, bytes) in a) out[uid] = bytes
+        for ((uid, bytes) in b) out[uid] = maxOf(out[uid] ?: 0L, bytes)
+        return out
+    }
+
     internal fun fold(prev: HashMap<Int, LongArray>, cur: Map<Int, LongArray>, excluded: Set<Int>): List<Triple<Int, Long, Long>> {
         val out = ArrayList<Triple<Int, Long, Long>>()
         for ((uid, v) in cur) {

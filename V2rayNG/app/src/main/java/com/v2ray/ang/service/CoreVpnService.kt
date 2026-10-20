@@ -22,6 +22,7 @@ import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.handler.UidTunnelMeter
+import com.v2ray.ang.handler.UsageRulesRepository
 import com.v2ray.ang.root.RootLanSharing
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
@@ -129,6 +130,30 @@ class CoreVpnService : VpnService(), ServiceControl {
         return super<VpnService>.setUnderlyingNetworks(networks)
     }
 
+    /**
+     * Rebuilds the TUN so client sockets die, then restarts hev if needed. Does not stop the
+     * VpnService (no permission prompt, no underlying-network leak window like a full restart).
+     */
+    override fun recreateVpnInterfaceForPolicy(): ParcelFileDescriptor? {
+        if (!isRunning) {
+            LogUtil.w(AppConfig.TAG, "StartCore-VPN: recreate TUN skipped (not running)")
+            return null
+        }
+        LogUtil.w(AppConfig.TAG, "StartCore-VPN: recreating TUN for policy enforcement")
+        try {
+            tun2SocksService?.stopTun2Socks()
+            tun2SocksService = null
+        } catch (e: Exception) {
+            LogUtil.w(AppConfig.TAG, "StartCore-VPN: stop tun2socks before recreate failed", e)
+        }
+        if (!configureVpnService()) {
+            LogUtil.e(AppConfig.TAG, "StartCore-VPN: recreate TUN failed")
+            return null
+        }
+        runTun2socks()
+        return mInterface
+    }
+
     override fun attachBaseContext(newBase: Context?) {
         val context = newBase?.let(AppLocaleManager::localizedContext)
         super.attachBaseContext(context)
@@ -220,9 +245,14 @@ class CoreVpnService : VpnService(), ServiceControl {
             builder.addRoute("0.0.0.0", 0)
         }
 
-        // IPv6: tunnel when enabled; otherwise still claim ::/0 so dual-stack devices cannot leak
-        // around the VPN. Removal: drop the else branch only when platform guarantees IPv6 cannot bypass.
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_IPV6_ENABLED, AppConfig.DEFAULT_IPV6_ENABLED)) {
+        // IPv6: when APP/CATEGORY limits are on, do not give the VPN an IPv6 address so dual-stack
+        // apps fall back to IPv4 (getConnectionOwnerUid is reliable there). Still claim ::/0 so
+        // native IPv6 cannot leak off-VPN. Same policy for every package — not per-app.
+        // Removal: restore full IPv6 tunnel when ProcessUidResolver is proven reliable for v6
+        // on all supported OEMs with process routing.
+        val ipv6User = MmkvManager.decodeSettingsBool(AppConfig.PREF_IPV6_ENABLED, AppConfig.DEFAULT_IPV6_ENABLED)
+        val appLimitsOn = UsageRulesRepository.rules().any { it.enabled && it.matchesApps }
+        if (ipv6User && !appLimitsOn) {
             builder.addAddress(vpnConfig.ipv6Client, 126)
             if (bypassLan) {
                 builder.addRoute("2000::", 3) // Currently only 1/8 of total IPv6 is in use
@@ -231,7 +261,6 @@ class CoreVpnService : VpnService(), ServiceControl {
                 builder.addRoute("::", 0)
             }
         } else {
-            builder.addAddress(vpnConfig.ipv6Client, 126)
             builder.addRoute("::", 0)
         }
 

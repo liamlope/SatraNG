@@ -86,6 +86,11 @@ object UsageLimitEngine {
                 val wasReady = canEnforceAppRules()
                 enableAppEnforcement()
                 if (!wasReady) needsVpnRestart = true
+                // VPN Builder drops the IPv6 client address while APP limits are on (IPv4 UID
+                // lookup is reliable). Needs a full interface rebuild, not a soft core reload.
+                if (MmkvManager.decodeSettingsBool(AppConfig.PREF_IPV6_ENABLED, AppConfig.DEFAULT_IPV6_ENABLED)) {
+                    needsVpnRestart = true
+                }
                 if (rule.kind == RuleKind.APP && rule.packageName.isNotBlank()) {
                     if (ensurePackageUsesVpn(rule.packageName)) needsVpnRestart = true
                 }
@@ -148,7 +153,7 @@ object UsageLimitEngine {
         return if (bypass) packageName in apps else packageName !in apps
     }
 
-    /** Expands a YouTube preset so CDN hosts (googlevideo, ytimg, …) are counted and blocked. */
+    /** Expands site presets so CDN hosts are counted and blocked (YouTube / Meta family). */
     fun expandSitePresetDomains(domains: List<String>): List<String> {
         val normalized = domains.mapNotNull { UsageRulesRepository.normalizeDomain(it) }.toMutableList()
         val hosts = normalized.map { it.removePrefix("domain:").removePrefix("full:") }.toSet()
@@ -160,8 +165,21 @@ object UsageLimitEngine {
                 val n = UsageRulesRepository.normalizeDomain(extra) ?: continue
                 if (n !in normalized) normalized += n
             }
-            if (normalized.none { it.startsWith("geosite:") }) {
+            if (normalized.none { it == "geosite:youtube" }) {
                 normalized += "geosite:youtube"
+            }
+        }
+        val looksLikeFacebook = hosts.any { h ->
+            h == "facebook.com" || h == "fb.com" || h == "fbcdn.net" || h == "instagram.com" ||
+                h.endsWith(".facebook.com") || h.endsWith(".fbcdn.net") || h.endsWith(".instagram.com")
+        }
+        if (looksLikeFacebook) {
+            for (extra in FACEBOOK_DOMAINS) {
+                val n = UsageRulesRepository.normalizeDomain(extra) ?: continue
+                if (n !in normalized) normalized += n
+            }
+            if (normalized.none { it == "geosite:facebook" }) {
+                normalized += "geosite:facebook"
             }
         }
         return normalized.distinct()
@@ -189,6 +207,13 @@ object UsageLimitEngine {
         "accountkit.com",
         "instagram.com",
         "cdninstagram.com",
+        "fb.me",
+        "fb.watch",
+        "facebook-hardware.com",
+        "parse.com",
+        "oculus.com",
+        "whatsapp.com",
+        "whatsapp.net",
     )
 
     /** Every package name that shares the limited app's Linux UID (same process identity). */
@@ -250,7 +275,7 @@ object UsageLimitEngine {
             p == "com.meta.wearable" || p.contains("messenger")
     }
 
-    /** CDN/host shield when process UID is missing on early packets (universal for known big apps). */
+    /** CDN/host + geosite shield when process UID is missing on early packets. */
     private fun domainShieldForPackage(packageName: String): List<String> = when {
         isYoutubePackage(packageName) -> expandSitePresetDomains(YOUTUBE_DOMAINS)
         isFacebookPackage(packageName) -> expandSitePresetDomains(FACEBOOK_DOMAINS)
@@ -345,6 +370,8 @@ object UsageLimitEngine {
             }
         }
         if (additions.isNotEmpty()) config.routing.rules.addAll(0, additions)
+        // No TUN catch-all: unidentified flows must stay on lim-*/appuid-*/proxy so APP
+        // quotas keep metering. Enforcement is process→block + domain shield + ProcessUidResolver.
     }
 
     /**

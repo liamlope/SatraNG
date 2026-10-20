@@ -9,7 +9,6 @@ import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.os.Build
 import android.os.ParcelFileDescriptor
-import android.system.OsConstants
 import androidx.core.content.ContextCompat
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.contracts.IDialerService
@@ -23,11 +22,11 @@ import com.v2ray.ang.extension.isNotNullEmpty
 import com.v2ray.ang.handler.UsageSampler
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
-import com.v2ray.ang.handler.ProcNetUidScanner
+import com.v2ray.ang.handler.ProcessUidResolver
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.handler.SpeedtestManager
-import com.v2ray.ang.handler.UidSeenTracker
 import com.v2ray.ang.handler.UidTunnelMeter
+import com.v2ray.ang.handler.VpnAppUsageTracker
 import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.service.DialerNativeService
 import com.v2ray.ang.service.DialerWebviewService
@@ -46,7 +45,6 @@ import libv2ray.CoreCallbackHandler
 import libv2ray.CoreController
 import libv2ray.ProcessFinder
 import java.lang.ref.SoftReference
-import java.net.InetSocketAddress
 
 object CoreServiceManager {
 
@@ -59,6 +57,17 @@ object CoreServiceManager {
     private val connectionTestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile private var isReloading = false
+
+    /** Set when an APP/CATEGORY/DOMAIN limit must rebuild routing; drained even if a handover held the lock. */
+    @Volatile private var pendingPolicyReload = false
+
+    /**
+     * When true, the next policy reload also recreates the VPN TUN so keep-alive sockets die.
+     * Soft core reload alone leaves HTTP/2 and QUIC streams open on the previous lim-* path.
+     */
+    @Volatile private var pendingPolicyKillSockets = false
+
+    private val policyReloadLock = Any()
 
     /** Tun descriptor the core was started with, null in the proxy only and root run modes. */
     private var currentVpnInterface: ParcelFileDescriptor? = null
@@ -257,7 +266,7 @@ object CoreServiceManager {
         networkMonitor = NetworkMonitor(
             connectivity = connectivity,
             onUnderlyingNetworksChanged = { networks -> serviceControl?.get()?.setUnderlyingNetworks(networks) },
-            onHandover = { reloadCore() },
+            onHandover = { reloadCore(killSockets = false) },
         ).also { it.register() }
     }
 
@@ -270,19 +279,48 @@ object CoreServiceManager {
      *
      * @return True if the core is running again.
      */
-    private fun reloadCore(): Boolean {
+    private fun reloadCore(killSockets: Boolean): Boolean {
         if (isReloading) return false
         val service = getService() ?: return false
         if (!isRunning()) return false
 
         return try {
-            val tunFd = currentVpnInterface
-
             isReloading = true
             connectionTestScope.coroutineContext.cancelChildren()
-            LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core reload start...")
+            LogUtil.i(
+                AppConfig.TAG,
+                "StartCore-Manager: Core reload start (killSockets=$killSockets)...",
+            )
 
             coreController.stopLoop()
+            ProcessUidResolver.clearCache()
+            // Brief pause so the OS delivers RSTs for lim-*/HTTP-proxy keep-alives before the new
+            // loop binds the same local ports. Without this, apps can keep streaming on sockets that
+            // were opened under the previous (unblocked) routing. Removal: when stopLoop is proven
+            // to close every inbound/outbound before return on all supported ABIs.
+            try {
+                Thread.sleep(if (killSockets) 200L else 120L)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
+
+            var tunFd = currentVpnInterface
+            if (killSockets) {
+                val fresh = serviceControl?.get()?.recreateVpnInterfaceForPolicy()
+                if (fresh != null) {
+                    currentVpnInterface = fresh
+                    tunFd = fresh
+                    // New TUN ⇒ VPN NetworkStats counters restart; re-anchor so the next OS poll
+                    // does not invent a huge delta or freeze metering.
+                    runCatching { VpnAppUsageTracker.begin(service) }
+                    LogUtil.w(AppConfig.TAG, "StartCore-Manager: TUN recreated for policy kill")
+                } else {
+                    LogUtil.w(
+                        AppConfig.TAG,
+                        "StartCore-Manager: TUN recreate unavailable; core reload only",
+                    )
+                }
+            }
             launchCore(service, tunFd, isReload = true)
 
             LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core reload finished")
@@ -297,20 +335,71 @@ object CoreServiceManager {
         }
     }
 
-    /** Rebuilds the config (usage rules, routing) and swaps the core in place; the tunnel stays up. */
-    fun reloadForPolicyChange() {
-        CoroutineScope(Dispatchers.IO).launch { reloadCore() }
+    /**
+     * Rebuilds routing (usage block/lim rules) and swaps the core in place; the VPN interface stays
+     * up so traffic cannot leak onto the underlying network the way a full service restart would.
+     * Retries when a handover/reload already holds [isReloading].
+     *
+     * @param killSockets When true, also recreates the VPN TUN so keep-alives on over-quota apps die.
+     */
+    fun reloadForPolicyChange(killSockets: Boolean = false) {
+        pendingPolicyReload = true
+        if (killSockets) pendingPolicyKillSockets = true
+        CoroutineScope(Dispatchers.IO).launch { drainPolicyReload() }
     }
 
     /**
-     * Full VPN restart after an APP limit is exceeded. Soft [reloadCore] left keep-alive / HTTP-proxy
-     * sockets alive so apps kept working past the cap; tearing the service down drops them.
+     * Same as [reloadForPolicyChange] but runs on the caller thread so the usage tick that crossed
+     * the cap does not return until block rules are installed (or retries are exhausted).
+     */
+    fun reloadForPolicyChangeSync(killSockets: Boolean = false) {
+        pendingPolicyReload = true
+        if (killSockets) pendingPolicyKillSockets = true
+        drainPolicyReload()
+    }
+
+    private fun drainPolicyReload() {
+        synchronized(policyReloadLock) {
+            var attempts = 0
+            while (pendingPolicyReload && attempts < 8) {
+                pendingPolicyReload = false
+                val kill = pendingPolicyKillSockets
+                pendingPolicyKillSockets = false
+                attempts++
+                if (reloadCore(killSockets = kill)) {
+                    LogUtil.i(
+                        AppConfig.TAG,
+                        "StartCore-Manager: Policy reload ok (attempt $attempts kill=$kill)",
+                    )
+                    continue
+                }
+                // Busy or not running — ask for another pass after a short wait; keep kill intent.
+                pendingPolicyReload = true
+                if (kill) pendingPolicyKillSockets = true
+                LogUtil.w(AppConfig.TAG, "StartCore-Manager: Policy reload deferred (attempt $attempts)")
+                try {
+                    Thread.sleep(150L)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return
+                }
+            }
+            if (pendingPolicyReload) {
+                LogUtil.e(AppConfig.TAG, "StartCore-Manager: Policy reload gave up after $attempts attempts")
+            }
+        }
+    }
+
+    /**
+     * Full VPN restart — only for explicit user/engine switches. Do not use for APP limit
+     * enforcement: tearing the VPN down opens a window where apps reach the internet directly
+     * (unmetered, unblocked) on the underlying network.
      */
     fun restartForPolicyChange() {
         CoroutineScope(Dispatchers.IO).launch {
             val control = serviceControl?.get() ?: return@launch
             if (isReloading) return@launch
-            LogUtil.w(AppConfig.TAG, "StartCore-Manager: Policy restart (limit enforce)")
+            LogUtil.w(AppConfig.TAG, "StartCore-Manager: Policy restart (engine/VPN)")
             try {
                 isReloading = true
                 control.stopService()
@@ -450,70 +539,26 @@ object CoreServiceManager {
     }
 
     /**
-     * Resolves the owning UID for TUN flows so process/`appuid-*` routing can meter every app.
-     *
-     * Order (same for all packages):
-     * 1. [ConnectivityManager.getConnectionOwnerUid] when dest is known (API 29+)
-     * 2. `/proc/net` local-port lookup ([ProcNetUidScanner]) — works when dest is missing/fake
-     *    or owner-UID fails for QUIC/UDP (the approach used by classic LocalVPN/PCAPdroid stacks)
+     * Resolves the owning UID for every TUN / local-proxy flow via [ProcessUidResolver]
+     * (universal — same path for all packages).
      */
-    private class XrayProcessFinder(context: Context) : ProcessFinder {
-        private val cm: ConnectivityManager? = context.getSystemService(ConnectivityManager::class.java)
-
+    private class XrayProcessFinder(private val context: Context) : ProcessFinder {
         override fun findProcessByConnection(network: String, srcIP: String, srcPort: Long, destIP: String, destPort: Long): Long {
-            val port = srcPort.toInt().coerceIn(0, 65535)
-            if (port == 0) return -1L
-
-            val proto = when (network) {
-                "tcp" -> OsConstants.IPPROTO_TCP
-                "udp" -> OsConstants.IPPROTO_UDP
-                else -> null
-            }
-            var uid = -1
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && cm != null && proto != null) {
-                uid = ownerUid(proto, srcIP, port, destIP, destPort.toInt())
-                // System HTTP/SOCKS proxy and early FakeDNS often omit dest; try local inbound ports.
-                if (uid <= 0 && (destIP.isBlank() || destPort == 0L)) {
-                    val candidates = listOf(
-                        SettingsManager.getHttpPort(),
-                        SettingsManager.getSocksPort(),
-                    ).distinct().filter { it in 1..65535 }
-                    for (localPort in candidates) {
-                        uid = ownerUid(proto, srcIP, port, AppConfig.LOOPBACK, localPort)
-                        if (uid > 0) break
-                    }
-                }
-            }
-            if (uid <= 0) {
-                uid = ProcNetUidScanner.findUid(
-                    network = network,
-                    srcIp = srcIP,
-                    srcPort = port,
-                    destIp = destIP,
-                    destPort = destPort.toInt().coerceIn(0, 65535),
-                )
-            }
+            val uid = ProcessUidResolver.resolve(
+                context = context,
+                network = network,
+                srcIp = srcIP,
+                srcPort = srcPort.toInt().coerceIn(0, 65535),
+                destIp = destIP,
+                destPort = destPort.toInt().coerceIn(0, 65535),
+            )
             if (uid > 0) {
-                UidSeenTracker.note(uid)
                 LogUtil.d(
                     AppConfig.TAG,
-                    "ProcessFinder: $network $srcIP:$port -> $destIP:$destPort uid=$uid",
+                    "ProcessFinder: $network $srcIP:$srcPort -> $destIP:$destPort uid=$uid",
                 )
             }
             return uid.toLong()
-        }
-
-        private fun ownerUid(proto: Int, srcIP: String, srcPort: Int, destIP: String, destPort: Int): Int {
-            if (destIP.isBlank() || destPort !in 1..65535) return -1
-            return try {
-                cm!!.getConnectionOwnerUid(
-                    proto,
-                    InetSocketAddress(srcIP, srcPort),
-                    InetSocketAddress(destIP, destPort),
-                )
-            } catch (_: Exception) {
-                -1
-            }
         }
     }
 
