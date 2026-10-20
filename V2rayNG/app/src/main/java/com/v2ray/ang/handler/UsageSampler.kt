@@ -160,9 +160,9 @@ object UsageSampler {
                             LimitEvent.Exceeded -> {
                                 LogUtil.w(AppConfig.TAG, "UsageSampler: limit exceeded ${rule.label}")
                                 UsageNotifier.limitExceeded(app, rule)
-                                // Hard restart so keep-alives die; soft reload was not enough.
-                                CoreServiceManager.restartForPolicyChange()
-                                return@launch // stop this sampler; new daemon starts a fresh one
+                                // Soft core reload (keeps VPN up). Full VPN restart broke apps/login
+                                // and stopped metering; stopLoop already drops proxy keep-alives.
+                                reload = true
                             }
                             LimitEvent.Warned -> UsageNotifier.limitWarning(app, rule)
                             LimitEvent.Released -> reload = true

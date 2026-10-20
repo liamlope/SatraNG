@@ -407,12 +407,25 @@ object UsageLimitEngine {
             val gen = UsageStore.ruleGeneration(rule.id)
             val previous = UsageStore.ruleRuntime(rule.id)
             val step = LimitEvaluator.step(rule.limitBytes, rule.period, previous, delta, nowMs)
-            if (step.runtime != previous) {
+            var rt = step.runtime
+            // Persist blocked=true whenever usage is over cap (UI + next config build agree).
+            if (rule.limitBytes > 0L && rt.periodKey == UsagePeriods.periodKey(rule.period, nowMs)) {
+                val cap = rule.limitBytes + rt.bonus
+                if (rt.used >= cap && !rt.blocked) {
+                    rt = rt.copy(blocked = true, warned = true)
+                }
+            }
+            if (rt != previous) {
                 // The user reset this rule while we were computing: keep their reset.
                 if (UsageStore.ruleGeneration(rule.id) != gen) continue
-                UsageStore.putRuleRuntime(rule.id, step.runtime)
+                UsageStore.putRuleRuntime(rule.id, rt)
             }
-            if (step.event != LimitEvent.None) events += rule to step.event
+            val event = when {
+                step.event != LimitEvent.None -> step.event
+                previous?.blocked != true && rt.blocked -> LimitEvent.Exceeded
+                else -> LimitEvent.None
+            }
+            if (event != LimitEvent.None) events += rule to event
         }
         return events
     }
