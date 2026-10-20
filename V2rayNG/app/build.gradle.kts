@@ -12,9 +12,10 @@ android {
     defaultConfig {
         applicationId = "com.satra.ng"
         minSdk = 24
-        targetSdk = 37
-        versionCode = 753
-        versionName = "2.4.0"
+        // 35 = current stable Play target; 37 (canary) made sideload/Play Protect look more "unknown".
+        targetSdk = 35
+        versionCode = 754
+        versionName = "2.4.1"
 
         val abiFilterList = (properties["ABI_FILTERS"] as? String)?.split(';')
         splits {
@@ -47,6 +48,9 @@ android {
                 keyAlias = "satrang"
                 keyPassword = "SatraNG-Release-2026!"
                 storeType = "PKCS12"
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
             }
         }
     }
