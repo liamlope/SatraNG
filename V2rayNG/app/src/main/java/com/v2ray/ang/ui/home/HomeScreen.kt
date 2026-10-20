@@ -119,10 +119,38 @@ fun HomeScreen(
     onSmartRouting: (Boolean) -> Unit = {},
     onRoutingInfo: () -> Unit = {},
     onDismissSmartTip: () -> Unit = {},
+    updateVersion: String? = null,
+    updateProgress: Float? = null,
+    onUpdate: () -> Unit = {},
 ) {
     val hasServers = state.groups.isNotEmpty() && state.selectedGuid != null
     Column(modifier.fillMaxSize()) {
         HomeTopBar(onAdd = onAdd, importing = state.importing, connected = state.isRunning)
+        if (updateVersion != null) {
+            SatraCard(Modifier.padding(horizontal = SatraSpace.Gutter).padding(top = 8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.sx_home_update_available, updateVersion),
+                            style = Satra.type.headline,
+                            color = Satra.colors.textPrimary,
+                        )
+                        if (updateProgress != null) {
+                            Spacer(Modifier.height(8.dp))
+                            SatraProgressBar(fraction = updateProgress.coerceIn(0f, 1f), height = 6.dp)
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    SatraButton(
+                        if (updateProgress != null) stringResource(R.string.sx_loading)
+                        else stringResource(R.string.sx_home_update_action),
+                        onClick = onUpdate,
+                        compact = true,
+                        enabled = updateProgress == null,
+                    )
+                }
+            }
+        }
         if (!hasServers) {
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),

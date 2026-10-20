@@ -18,7 +18,8 @@ import com.v2ray.ang.BuildConfig
  * them over its buckets. Limit counters are separate and exact (they come from the core itself).
  */
 object VpnAppUsageTracker {
-    const val SAMPLE_EVERY_MS = 60_000L
+    /** Background cadence while VPN is up; Usage screen can also call [sample] more often. */
+    const val SAMPLE_EVERY_MS = 30_000L
 
     private var last: HashMap<Int, LongArray>? = null
     private var anchorMs = 0L

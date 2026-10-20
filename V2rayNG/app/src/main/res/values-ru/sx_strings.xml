@@ -129,6 +129,8 @@
     <string name="sx_subs_updated_all">Обновлено: %1$d, с ошибкой: %2$d</string>
     <string name="sx_subs_failed">Не удалось обновить. Проверьте ссылку и подключение.</string>
     <string name="sx_subs_nothing">Нечего обновлять</string>
+    <string name="sx_home_update_available">Обновление до %1$s</string>
+    <string name="sx_home_update_action">Обновить</string>
     <string name="sx_usage_title">Трафик</string>
     <string name="sx_range_7">7 дней</string>
     <string name="sx_range_30">30 дней</string>
@@ -140,10 +142,14 @@
     <string name="sx_usage_chart_empty">Данных пока нет. Подключитесь, и статистика появится здесь.</string>
     <string name="sx_usage_apps">Приложения</string>
     <string name="sx_usage_apps_empty">Нет данных по приложениям за этот период.</string>
-    <string name="sx_usage_apps_footer">Показан трафик приложений, пока VPN подключён, начиная с момента включения учёта. Нажмите на приложение, чтобы ограничить его.</string>
+    <string name="sx_usage_apps_footer">Трафик VPN по приложениям за выбранные дни (примерно). Общий итог отдельно от дневного/недельного лимита. Нажмите, чтобы ограничить.</string>
+    <string name="sx_usage_app_lifetime">Всего через VPN: %1$s</string>
+    <string name="sx_usage_app_bypass">Вне VPN (split) — не учитывается</string>
+    <string name="sx_usage_app_bypass_badge">Вне VPN</string>
     <string name="sx_usage_access_title">Разрешите доступ к статистике</string>
-    <string name="sx_usage_access_msg">Чтобы показывать трафик приложений, Android просит включить это один раз. SatraNG читает только объём сетевого трафика.</string>
+    <string name="sx_usage_access_msg">Нужно, чтобы показывать расход каждого приложения через VPN — даже без лимитов. SatraNG читает только сетевые итоги. Без этого списка приложений не будет.</string>
     <string name="sx_usage_access_open">Открыть настройки</string>
+    <string name="sx_usage_lifetime_vs_limit">Трафик приложений всегда считается при подключении. Новый лимит начинает свой счётчик с нуля за период и не включает прошлый расход.</string>
     <string name="sx_usage_clear">Очистить историю трафика</string>
     <string name="sx_usage_clear_title">Очистить историю трафика?</string>
     <string name="sx_usage_clear_msg">Графики начнутся с нуля. Ваши лимиты сохранятся.</string>
@@ -232,7 +238,7 @@
     <string name="sx_limit_reset">Сбросить счётчик</string>
     <string name="sx_limit_reset_sub">За этот период использовано %1$s. Счёт начнётся с нуля.</string>
     <string name="sx_limit_delete_msg">Лимит и его счётчик будут удалены. Больше ничего не блокируется.</string>
-    <string name="sx_usage_apps_none_yet">Трафик приложений через VPN ещё не записан. Подключитесь — данные появятся в течение минуты.</string>
+    <string name="sx_usage_apps_none_yet">Трафик приложений через VPN ещё не записан. Подключитесь и пользуйтесь приложениями через VPN — данные появятся примерно через 30 секунд.</string>
     <string name="sx_locating_servers">Определяем расположение серверов…</string>
     <string name="sx_geo_locating">Определяем расположение…</string>
     <string name="sx_geo_failed">Расположение не найдено</string>

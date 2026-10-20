@@ -129,6 +129,8 @@
     <string name="sx_subs_updated_all">Updated %1$d, failed %2$d</string>
     <string name="sx_subs_failed">Update failed. Check your link and connection.</string>
     <string name="sx_subs_nothing">Nothing to update</string>
+    <string name="sx_home_update_available">Update to %1$s</string>
+    <string name="sx_home_update_action">Update</string>
     <string name="sx_usage_title">Usage</string>
     <string name="sx_range_7">7 days</string>
     <string name="sx_range_30">30 days</string>
@@ -140,10 +142,14 @@
     <string name="sx_usage_chart_empty">No data yet. Connect and your usage will show up here.</string>
     <string name="sx_usage_apps">Apps</string>
     <string name="sx_usage_apps_empty">No app data for this period.</string>
-    <string name="sx_usage_apps_footer">Only traffic while the VPN is connected, counted from when tracking started. Android reports it in batches, so it is approximate. Limits are counted exactly. Tap an app to limit it.</string>
+    <string name="sx_usage_apps_footer">VPN traffic per app for the selected days (approximate). Lifetime total is separate from any daily/weekly limit you set. Tap an app to add a limit.</string>
+    <string name="sx_usage_app_lifetime">All time via VPN: %1$s</string>
+    <string name="sx_usage_app_bypass">Outside VPN (split) — not metered</string>
+    <string name="sx_usage_app_bypass_badge">Off VPN</string>
     <string name="sx_usage_access_title">Allow usage access</string>
-    <string name="sx_usage_access_msg">To show how much data each app uses, Android needs you to switch this on once. SatraNG only reads network totals.</string>
+    <string name="sx_usage_access_msg">Required to show how much each app used through the VPN — even with no limits. SatraNG only reads network totals. Without this, the Apps list stays empty.</string>
     <string name="sx_usage_access_open">Open settings</string>
+    <string name="sx_usage_lifetime_vs_limit">App totals are always counted while connected. A new limit starts its own counter from zero for that period — it does not include past usage.</string>
     <string name="sx_usage_clear">Clear usage history</string>
     <string name="sx_usage_clear_title">Clear usage history?</string>
     <string name="sx_usage_clear_msg">Charts start from zero. Your limits stay in place.</string>
@@ -232,7 +238,7 @@
     <string name="sx_limit_reset">Reset usage</string>
     <string name="sx_limit_reset_sub">%1$s used this period. Starts again from zero.</string>
     <string name="sx_limit_delete_msg">The limit and its counter are removed. Nothing is blocked any more.</string>
-    <string name="sx_usage_apps_none_yet">No VPN traffic recorded for apps yet. Connect and it shows up within a minute.</string>
+    <string name="sx_usage_apps_none_yet">No VPN traffic recorded for apps yet. Connect, use apps through the VPN, and totals appear within about 30 seconds.</string>
     <string name="sx_locating_servers">Finding where your servers are…</string>
     <string name="sx_geo_locating">Finding location…</string>
     <string name="sx_geo_failed">Location not found</string>

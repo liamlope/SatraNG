@@ -63,7 +63,108 @@ object UsageLimitEngine {
     fun enableAppEnforcement() {
         MmkvManager.encodeSettings(AppConfig.PREF_USE_HEV_TUNNEL, false)
         MmkvManager.encodeSettings(AppConfig.PREF_ROUTE_ONLY_ENABLED, true)
+        MmkvManager.encodeSettings(AppConfig.PREF_SNIFFING_ENABLED, true)
     }
+
+    /** Domain limits need sniffing so SNI/host can match; turn it on whenever a site rule is saved. */
+    fun enableDomainEnforcement() {
+        MmkvManager.encodeSettings(AppConfig.PREF_SNIFFING_ENABLED, true)
+    }
+
+    /**
+     * Side-effects before a rule is written into the core config.
+     * @return true when the VPN [Builder] / engine must restart (not just reload routing).
+     */
+    fun prepareForRule(context: Context, rule: UsageRule): Boolean {
+        var needsVpnRestart = false
+        when (rule.kind) {
+            RuleKind.DOMAIN -> {
+                val before = MmkvManager.decodeSettingsBool(AppConfig.PREF_SNIFFING_ENABLED, AppConfig.DEFAULT_SNIFFING_ENABLED)
+                enableDomainEnforcement()
+                if (before == false) needsVpnRestart = true
+            }
+            RuleKind.APP, RuleKind.CATEGORY -> {
+                val wasReady = canEnforceAppRules()
+                enableAppEnforcement()
+                if (!wasReady) needsVpnRestart = true
+                if (rule.kind == RuleKind.APP && rule.packageName.isNotBlank()) {
+                    if (ensurePackageUsesVpn(rule.packageName)) needsVpnRestart = true
+                }
+                if (rule.kind == RuleKind.CATEGORY) {
+                    val cat = rule.appCategory
+                    if (cat != null) {
+                        for (pkg in AppCategories.packagesIn(context, cat)) {
+                            if (ensurePackageUsesVpn(pkg)) needsVpnRestart = true
+                        }
+                    }
+                }
+            }
+        }
+        return needsVpnRestart
+    }
+
+    /**
+     * When split tunneling is on, keep a limited package on the VPN path so metering and
+     * blocking can see its traffic. Returns true if the per-app set changed (needs VPN restart).
+     */
+    fun ensurePackageUsesVpn(packageName: String): Boolean {
+        if (packageName.isBlank()) return false
+        if (!MmkvManager.decodeSettingsBool(AppConfig.PREF_PER_APP_PROXY)) return false
+        val bypass = MmkvManager.decodeSettingsBool(AppConfig.PREF_BYPASS_APPS)
+        val set = MmkvManager.decodeSettingsStringSet(AppConfig.PREF_PER_APP_PROXY_SET)?.toMutableSet()
+            ?: mutableSetOf()
+        val changed = if (bypass) {
+            // Listed apps bypass the VPN — remove so this package goes through the tunnel.
+            set.remove(packageName)
+        } else {
+            // Only listed apps use the VPN — add this package.
+            set.add(packageName)
+        }
+        if (changed) {
+            MmkvManager.encodeSettings(AppConfig.PREF_PER_APP_PROXY_SET, set)
+            LogUtil.i(AppConfig.TAG, "UsageLimit: kept $packageName on VPN (split adjusted)")
+        }
+        return changed
+    }
+
+    /** True when split tunneling currently keeps [packageName] off the VPN. */
+    fun isPackageBypassingVpn(packageName: String): Boolean {
+        if (packageName.isBlank()) return false
+        if (!MmkvManager.decodeSettingsBool(AppConfig.PREF_PER_APP_PROXY)) return false
+        val apps = MmkvManager.decodeSettingsStringSet(AppConfig.PREF_PER_APP_PROXY_SET).orEmpty()
+        val bypass = MmkvManager.decodeSettingsBool(AppConfig.PREF_BYPASS_APPS)
+        return if (bypass) packageName in apps else packageName !in apps
+    }
+
+    /** Expands a YouTube preset so CDN hosts (googlevideo, ytimg, …) are counted and blocked. */
+    fun expandSitePresetDomains(domains: List<String>): List<String> {
+        val normalized = domains.mapNotNull { UsageRulesRepository.normalizeDomain(it) }.toMutableList()
+        val hosts = normalized.map { it.removePrefix("domain:").removePrefix("full:") }.toSet()
+        val looksLikeYoutube = hosts.any { h ->
+            h == "youtube.com" || h == "youtu.be" || h == "googlevideo.com" || h.endsWith(".youtube.com")
+        }
+        if (looksLikeYoutube) {
+            for (extra in YOUTUBE_DOMAINS) {
+                val n = UsageRulesRepository.normalizeDomain(extra) ?: continue
+                if (n !in normalized) normalized += n
+            }
+            if (normalized.none { it.startsWith("geosite:") }) {
+                normalized += "geosite:youtube"
+            }
+        }
+        return normalized.distinct()
+    }
+
+    val YOUTUBE_DOMAINS = listOf(
+        "youtube.com",
+        "youtu.be",
+        "googlevideo.com",
+        "ytimg.com",
+        "youtubei.googleapis.com",
+        "yt3.ggpht.com",
+        "ggpht.com",
+        "youtubekids.com",
+    )
 
     /**
      * True when [rule] is currently supposed to be blocked by the config we build now. Checks the

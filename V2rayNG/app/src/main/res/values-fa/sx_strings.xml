@@ -129,6 +129,8 @@
     <string name="sx_subs_updated_all">%1$d موفق، %2$d ناموفق</string>
     <string name="sx_subs_failed">به‌روزرسانی ناموفق بود. لینک و اتصال را بررسی کنید.</string>
     <string name="sx_subs_nothing">چیزی برای به‌روزرسانی نیست</string>
+    <string name="sx_home_update_available">به‌روزرسانی به %1$s</string>
+    <string name="sx_home_update_action">به‌روزرسانی</string>
     <string name="sx_usage_title">مصرف</string>
     <string name="sx_range_7">۷ روز</string>
     <string name="sx_range_30">۳۰ روز</string>
@@ -140,10 +142,14 @@
     <string name="sx_usage_chart_empty">هنوز داده‌ای نیست. وصل شوید تا مصرف شما اینجا نمایش داده شود.</string>
     <string name="sx_usage_apps">برنامه‌ها</string>
     <string name="sx_usage_apps_empty">برای این بازه داده‌ای برای برنامه‌ها نیست.</string>
-    <string name="sx_usage_apps_footer">فقط ترافیکی که هنگام اتصال VPN مصرف شده، از زمان شروع ثبت. اندروید این آمار را با تأخیر گزارش می‌کند، پس تقریبی است؛ شمارش محدودیت‌ها دقیق است. برای محدود کردن، روی برنامه بزنید.</string>
+    <string name="sx_usage_apps_footer">ترافیک VPN هر برنامه در بازهٔ انتخاب‌شده (تقریبی). مجموع عمری جدا از هر سقف روزانه/هفتگی است. برای محدودیت روی برنامه بزنید.</string>
+    <string name="sx_usage_app_lifetime">کل از VPN: %1$s</string>
+    <string name="sx_usage_app_bypass">خارج از VPN (اسپلیت) — شمرده نمی‌شود</string>
+    <string name="sx_usage_app_bypass_badge">خارج VPN</string>
     <string name="sx_usage_access_title">اجازه دسترسی به مصرف</string>
-    <string name="sx_usage_access_msg">برای نمایش مصرف هر برنامه، اندروید می‌خواهد یک بار این دسترسی را روشن کنید. SatraNG فقط مجموع مصرف شبکه را می‌خواند.</string>
+    <string name="sx_usage_access_msg">برای نشان‌دادن مصرف هر برنامه از VPN لازم است — حتی بدون محدودیت. SatraNG فقط مجموع شبکه را می‌خواند. بدون این اجازه فهرست برنامه‌ها خالی می‌ماند.</string>
     <string name="sx_usage_access_open">باز کردن تنظیمات</string>
+    <string name="sx_usage_lifetime_vs_limit">مصرف برنامه‌ها همیشه هنگام اتصال شمرده می‌شود. محدودیت جدید شمارندهٔ خودش را از صفر برای همان دوره شروع می‌کند و مصرف قبلی را حساب نمی‌کند.</string>
     <string name="sx_usage_clear">پاک کردن تاریخچه مصرف</string>
     <string name="sx_usage_clear_title">تاریخچه مصرف پاک شود؟</string>
     <string name="sx_usage_clear_msg">نمودارها از صفر شروع می‌شوند. محدودیت‌های شما حفظ می‌شود.</string>
@@ -232,7 +238,7 @@
     <string name="sx_limit_reset">صفر کردن مصرف</string>
     <string name="sx_limit_reset_sub">%1$s در این دوره مصرف شده. از صفر شروع می‌شود.</string>
     <string name="sx_limit_delete_msg">محدودیت و شمارنده‌اش حذف می‌شود و دیگر چیزی مسدود نیست.</string>
-    <string name="sx_usage_apps_none_yet">هنوز ترافیک VPN برای برنامه‌ها ثبت نشده. وصل شوید؛ ظرف یک دقیقه نمایش داده می‌شود.</string>
+    <string name="sx_usage_apps_none_yet">هنوز ترافیک VPN برای برنامه‌ها ثبت نشده. وصل شوید و از برنامه‌ها از مسیر VPN استفاده کنید؛ حدود ۳۰ ثانیه بعد ظاهر می‌شود.</string>
     <string name="sx_locating_servers">در حال یافتن موقعیت سرورها…</string>
     <string name="sx_geo_locating">در حال یافتن موقعیت…</string>
     <string name="sx_geo_failed">موقعیت پیدا نشد</string>

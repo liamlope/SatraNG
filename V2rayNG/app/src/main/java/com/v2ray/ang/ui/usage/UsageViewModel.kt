@@ -37,6 +37,10 @@ data class AppUsageRow(
     val label: String,
     val rxBytes: Long,
     val txBytes: Long,
+    /** All-time VPN bytes for this UID; independent of the selected day range and of any limit. */
+    val lifetimeBytes: Long = 0L,
+    /** True when split tunneling currently keeps this app off the VPN. */
+    val bypassingVpn: Boolean = false,
 ) {
     val totalBytes: Long get() = rxBytes + txBytes
 }
@@ -109,10 +113,10 @@ class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
         // Charts and rule counters refresh every few seconds (live speed lives on Home and is
         // per second there). Unchanged data produces an equal state, so nothing recomposes.
         tickJob = viewModelScope.launch(Dispatchers.IO) {
-            var n = 0
             while (isActive) {
                 refreshLedger()
-                if (n++ % 6 == 0) loadApps()
+                // While Usage is visible, refresh app meter every tick (~5s).
+                loadApps()
                 delay(LEDGER_REFRESH_MS)
             }
         }
@@ -192,18 +196,24 @@ class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
             _state.update { it.copy(hasUsageAccess = false, apps = emptyList(), appsLoading = false) }
             return
         }
+        // Sample while the Usage screen is open so numbers move without waiting for the daemon cadence.
+        runCatching { com.v2ray.ang.handler.VpnAppUsageTracker.sample(ctx) }
         val keys = UsagePeriods.lastDayKeys(_state.value.rangeDays, System.currentTimeMillis())
-        val rows = AppUsageReader.toRows(ctx, UsageStore.appTraffic(keys)).take(60).map { it.toRow() }
+        val lifetime = UsageStore.appLifetimeAll()
+        val rows = AppUsageReader.toRows(ctx, UsageStore.appTraffic(keys)).take(60).map { u ->
+            u.toRow(lifetime[u.uid]?.totalBytes ?: 0L)
+        }
         _state.update { it.copy(hasUsageAccess = true, apps = rows, appsLoading = false) }
     }
 
-    private fun AppUsage.toRow(): AppUsageRow {
+    private fun AppUsage.toRow(lifetimeBytes: Long = 0L): AppUsageRow {
         val pm = getApplication<Application>().packageManager
         val pkg = packageName
         val label = if (pkg == null) UNLABELED else labelCache.getOrPut(pkg) {
             runCatching { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
         }
-        return AppUsageRow(uid, packageName, label, rxBytes, txBytes)
+        val bypass = pkg != null && UsageLimitEngine.isPackageBypassingVpn(pkg)
+        return AppUsageRow(uid, packageName, label, rxBytes, txBytes, lifetimeBytes, bypass)
     }
 
     // ---- rules ----
@@ -211,11 +221,21 @@ class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
     override fun saveRule(rule: UsageRule) {
         viewModelScope.launch(Dispatchers.IO) {
             val isNew = rule.id.isBlank()
-            val saved = if (isNew) rule.copy(id = UsageRule.newId(), createdAt = System.currentTimeMillis()) else rule
+            var saved = if (isNew) rule.copy(id = UsageRule.newId(), createdAt = System.currentTimeMillis()) else rule
+            if (saved.kind == RuleKind.DOMAIN) {
+                saved = saved.copy(domains = UsageLimitEngine.expandSitePresetDomains(saved.domains))
+            }
+            val needsVpnRestart = UsageLimitEngine.prepareForRule(getApplication(), saved)
             UsageRulesRepository.upsert(saved)
-            // A new rule counts from zero; an edited one is re-checked so a higher cap unblocks now.
+            // A new rule's period counter starts at zero — never seeded from lifetime app meter.
             if (isNew) UsageLimitEngine.resetRule(saved) else UsageLimitEngine.reevaluate(saved)
-            applyPolicy()
+            if (needsVpnRestart) {
+                withContext(Dispatchers.Main) {
+                    LauncherManager.restartIfRunning(getApplication())
+                }
+            } else {
+                applyPolicy()
+            }
             refreshLedger()
         }
     }

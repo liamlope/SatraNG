@@ -128,7 +128,11 @@ object UsageSampler {
                         runCatching { VpnAppUsageTracker.sample(app, now) }
                     }
 
-                    if (++tickCount % 5 == 0 && !globalNotified) {
+                    tickCount++
+                    if (tickCount % 30 == 0) {
+                        logStalledDomainLimits(byTag, pUp + pDown)
+                    }
+                    if (tickCount % 5 == 0 && !globalNotified) {
                         globalNotified = checkGlobalLimit(app, now)
                     }
                 } catch (e: Exception) {
@@ -165,6 +169,24 @@ object UsageSampler {
             )
         }
         UsageStore.publishLive(LiveUsage(running = false, updatedAt = System.currentTimeMillis()))
+    }
+
+    /**
+     * Domain/app limits only move when traffic hits their `lim-*` outbound. If the tunnel is
+     * busy but a rule stays at zero, the matcher (domains/sniff/UID) is wrong — log once a while.
+     */
+    private fun logStalledDomainLimits(byTag: Map<String, Long>, proxyBytes: Long) {
+        if (proxyBytes <= 0L) return
+        for (rule in UsageRulesRepository.rules()) {
+            if (!rule.enabled || rule.alwaysBlock) continue
+            val delta = byTag[rule.outboundTag] ?: 0L
+            if (delta > 0L) continue
+            if (UsageLimitEngine.usedNow(rule) > 0L) continue
+            LogUtil.w(
+                AppConfig.TAG,
+                "UsageLimit: rule ${rule.label} (${rule.kind}) still 0 while proxy active — check sniff/domains/UID",
+            )
+        }
     }
 
     /** @return true once the global limit has been enforced for this window. */

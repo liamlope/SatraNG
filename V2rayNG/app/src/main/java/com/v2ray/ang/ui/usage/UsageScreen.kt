@@ -37,6 +37,7 @@ import com.v2ray.ang.R
 import com.v2ray.ang.handler.GlobalLimit
 import com.v2ray.ang.handler.LimitPeriod
 import com.v2ray.ang.handler.RuleKind
+import com.v2ray.ang.handler.UsageLimitEngine
 import com.v2ray.ang.handler.UsageRule
 import com.v2ray.ang.handler.UsageRulesRepository
 import com.v2ray.ang.handler.UsagePeriods
@@ -181,6 +182,12 @@ fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageA
         item(key = "apps-h") {
             Spacer(Modifier.height(14.dp))
             SectionHeader(stringResource(R.string.sx_usage_apps))
+            Text(
+                stringResource(R.string.sx_usage_lifetime_vs_limit),
+                style = Satra.type.footnote,
+                color = c.textSecondary,
+                modifier = Modifier.padding(horizontal = SatraSpace.Gutter + 4.dp, vertical = 4.dp),
+            )
         }
         if (!state.hasUsageAccess) {
             item(key = "access") {
@@ -390,14 +397,26 @@ private fun HoursChartCard(state: UsageUiState, modifier: Modifier) {
 private fun AppUsageRowView(app: AppUsageRow, maxBytes: Long, limited: Boolean, onClick: (() -> Unit)?) {
     val c = Satra.colors
     val label = if (app.label == UsageViewModel.UNLABELED) stringResource(R.string.sx_other_apps) else app.label
+    val subtitle = buildString {
+        if (app.lifetimeBytes > 0L && app.lifetimeBytes != app.totalBytes) {
+            append(stringResource(R.string.sx_usage_app_lifetime, formatBytes(app.lifetimeBytes)))
+        }
+        if (app.bypassingVpn) {
+            if (isNotEmpty()) append(" · ")
+            append(stringResource(R.string.sx_usage_app_bypass))
+        }
+    }.ifBlank { null }
     SatraRow(
         title = label,
         leading = { AppIcon(app.packageName, size = 40.dp) },
-        subtitle = null,
+        subtitle = subtitle,
         trailing = {
             Column(horizontalAlignment = Alignment.End) {
                 Text(formatBytes(app.totalBytes), style = Satra.type.numberSmall, color = c.textPrimary)
-                if (limited) SatraBadge(stringResource(R.string.sx_limited), c.accent, c.accentSoft)
+                when {
+                    app.bypassingVpn -> SatraBadge(stringResource(R.string.sx_usage_app_bypass_badge), c.warning, c.warningSoft)
+                    limited -> SatraBadge(stringResource(R.string.sx_limited), c.accent, c.accentSoft)
+                }
             }
         },
         onClick = onClick,
@@ -521,7 +540,7 @@ private fun GlobalLimitRow(global: GlobalRow, onClick: () -> Unit) {
 private data class SitePreset(val labelRes: Int, val domains: List<String>)
 
 private val sitePresets = listOf(
-    SitePreset(R.string.sx_preset_youtube, listOf("youtube.com", "googlevideo.com", "ytimg.com", "youtu.be")),
+    SitePreset(R.string.sx_preset_youtube, UsageLimitEngine.YOUTUBE_DOMAINS),
     SitePreset(R.string.sx_preset_instagram, listOf("instagram.com", "cdninstagram.com")),
     SitePreset(R.string.sx_preset_tiktok, listOf("tiktok.com", "tiktokcdn.com", "byteoversea.com")),
     SitePreset(R.string.sx_preset_netflix, listOf("netflix.com", "nflxvideo.net", "nflximg.net")),

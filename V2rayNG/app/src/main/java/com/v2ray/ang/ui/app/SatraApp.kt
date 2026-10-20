@@ -23,8 +23,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
@@ -32,11 +35,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
+import com.v2ray.ang.dto.CheckUpdateResult
+import com.v2ray.ang.handler.ApkUpdateCache
+import com.v2ray.ang.handler.UpdateCheckerManager
 import com.v2ray.ang.handler.UsageStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.v2ray.ang.ui.compose.satra.SatraBackground
 import com.v2ray.ang.ui.compose.satra.SatraIcons
 import com.v2ray.ang.ui.compose.satra.SatraShapes
@@ -88,6 +98,16 @@ fun SatraApp(
     val state by mainVm.uiState.collectAsState()
     val live by mainVm.liveState.collectAsState()
     val holder = rememberSaveableStateHolder()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var updateResult by remember { mutableStateOf<CheckUpdateResult?>(null) }
+    var updateProgress by remember { mutableFloatStateOf(-1f) }
+    LaunchedEffect(Unit) {
+        runCatching {
+            val r = withContext(Dispatchers.IO) { UpdateCheckerManager.checkForUpdate(false) }
+            if (r.hasUpdate && !r.downloadUrl.isNullOrBlank()) updateResult = r
+        }
+    }
     val tabs = listOf(
         SatraTab(SatraIcons.Home, stringResource(R.string.sx_tab_home)),
         SatraTab(SatraIcons.Servers, stringResource(R.string.sx_tab_servers)),
@@ -150,6 +170,31 @@ fun SatraApp(
                                     onSmartConnect = { nav.action(MainAction.SmartConnect) },
                                     onLocate = { guid -> nav.action(MainAction.LocateServer(guid)) },
                                     onDismissAddSheet = { nav.action(MainAction.ShowAddSheet(false)) },
+                                    updateVersion = updateResult?.latestVersion,
+                                    updateProgress = updateProgress.takeIf { it >= 0f },
+                                    onUpdate = {
+                                        val r = updateResult ?: return@HomeScreen
+                                        val ver = r.latestVersion ?: return@HomeScreen
+                                        val url = r.downloadUrl ?: return@HomeScreen
+                                        scope.launch {
+                                            val cached = ApkUpdateCache.cachedApk(context, ver)
+                                            if (ApkUpdateCache.isComplete(cached, null) && cached.length() > 1_000_000L) {
+                                                ApkUpdateCache.openOrInstall(context, cached)
+                                                return@launch
+                                            }
+                                            updateProgress = 0f
+                                            runCatching {
+                                                val apk = ApkUpdateCache.download(context, ver, url) { p ->
+                                                    val frac = if (p.total != null && p.total > 0) {
+                                                        p.downloaded.toFloat() / p.total.toFloat()
+                                                    } else 0f
+                                                    updateProgress = frac
+                                                }
+                                                updateProgress = -1f
+                                                ApkUpdateCache.openOrInstall(context, apk)
+                                            }.onFailure { updateProgress = -1f }
+                                        }
+                                    },
                                 )
                             }
                             Tabs.Servers -> ServersScreen(mainVm, nav)

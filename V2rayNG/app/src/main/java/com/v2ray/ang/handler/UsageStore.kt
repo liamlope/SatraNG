@@ -79,6 +79,38 @@ object UsageStore {
         val day = UsagePeriods.dayKey(nowMs)
         if (rx > 0) kv.encode("a:$day:$uid:r", kv.decodeLong("a:$day:$uid:r", 0L) + rx)
         if (tx > 0) kv.encode("a:$day:$uid:t", kv.decodeLong("a:$day:$uid:t", 0L) + tx)
+        // Lifetime through the VPN — independent of day charts and of any limit counter.
+        addAppLifetime(uid, rx, tx)
+    }
+
+    /**
+     * All-time per-UID VPN bytes. Survives day pruning and limit reset; only [clearLedger] clears it.
+     * Never seeds a usage-limit period counter.
+     */
+    fun addAppLifetime(uid: Int, rx: Long, tx: Long) {
+        if (rx <= 0L && tx <= 0L) return
+        if (rx > 0) kv.encode("lt:$uid:r", kv.decodeLong("lt:$uid:r", 0L) + rx)
+        if (tx > 0) kv.encode("lt:$uid:t", kv.decodeLong("lt:$uid:t", 0L) + tx)
+    }
+
+    fun appLifetime(uid: Int): AppUsage {
+        val rx = kv.decodeLong("lt:$uid:r", 0L)
+        val tx = kv.decodeLong("lt:$uid:t", 0L)
+        return AppUsage(uid, null, rx, tx)
+    }
+
+    fun appLifetimeAll(): Map<Int, AppUsage> {
+        val rx = HashMap<Int, Long>()
+        val tx = HashMap<Int, Long>()
+        kv.allKeys()?.forEach { k ->
+            if (!k.startsWith("lt:")) return@forEach
+            val parts = k.split(':')
+            if (parts.size != 3) return@forEach
+            val uid = parts[1].toIntOrNull() ?: return@forEach
+            val v = kv.decodeLong(k, 0L)
+            if (parts[2] == "r") rx[uid] = (rx[uid] ?: 0L) + v else tx[uid] = (tx[uid] ?: 0L) + v
+        }
+        return (rx.keys + tx.keys).associateWith { AppUsage(it, null, rx[it] ?: 0L, tx[it] ?: 0L) }
     }
 
     /** Per-uid VPN-session totals over the given local days. */
@@ -226,7 +258,10 @@ object UsageStore {
     }
 
     fun clearLedger() {
-        kv.allKeys()?.filter { it.startsWith("d:") || it.startsWith("h:") || it.startsWith("a:") || it.startsWith("s:") }?.forEach { kv.removeValueForKey(it) }
+        kv.allKeys()?.filter {
+            it.startsWith("d:") || it.startsWith("h:") || it.startsWith("a:") ||
+                it.startsWith("s:") || it.startsWith("lt:")
+        }?.forEach { kv.removeValueForKey(it) }
         kv.removeValueForKey("sessions")
     }
 }
