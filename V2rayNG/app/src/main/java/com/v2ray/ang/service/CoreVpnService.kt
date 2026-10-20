@@ -21,6 +21,7 @@ import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.handler.SettingsManager
+import com.v2ray.ang.handler.UidTunnelMeter
 import com.v2ray.ang.root.RootLanSharing
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
@@ -312,7 +313,11 @@ class CoreVpnService : VpnService(), ServiceControl {
      * Starts the tun2socks process with the appropriate parameters.
      */
     private fun runTun2socks() {
+        // Same daemon-side force as CoreServiceManager.launchCore — per-app metering needs
+        // Xray TUN, not hev→socks (which only shows 127.0.0.1 to processFinder).
+        UidTunnelMeter.ensureEngine()
         if (SettingsManager.isUsingHevTun()) {
+            LogUtil.w(AppConfig.TAG, "StartCore-VPN: hev still on after ensureEngine; process UID metering disabled")
             tun2SocksService = TProxyService(
                 context = applicationContext,
                 vpnInterface = mInterface,
@@ -320,6 +325,7 @@ class CoreVpnService : VpnService(), ServiceControl {
                 restartCallback = { runTun2socks() }
             )
         } else {
+            LogUtil.w(AppConfig.TAG, "StartCore-VPN: Xray TUN (hev off) for process/UID metering")
             tun2SocksService = null
         }
 

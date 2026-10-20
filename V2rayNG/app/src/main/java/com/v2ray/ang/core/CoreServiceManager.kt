@@ -26,6 +26,8 @@ import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.handler.ProcNetUidScanner
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.handler.SpeedtestManager
+import com.v2ray.ang.handler.UidSeenTracker
+import com.v2ray.ang.handler.UidTunnelMeter
 import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.service.DialerNativeService
 import com.v2ray.ang.service.DialerWebviewService
@@ -133,6 +135,10 @@ object CoreServiceManager {
         val guid = MmkvManager.getSelectServer() ?: error("No server selected")
         val config = MmkvManager.decodeServerConfig(guid) ?: error("Failed to decode server config")
 
+        // Daemon process must apply this itself — UI-side ensureEngine can race MMKV before
+        // the service reads hev/route-only flags (log symptom: processFinder on 127.0.0.1).
+        UidTunnelMeter.ensureEngine()
+
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Starting core loop for ${config.remarks}")
         val result = CoreConfigManager.getV2rayConfig(service, guid)
         LogUtil.d(AppConfig.TAG, result.content)
@@ -148,9 +154,14 @@ object CoreServiceManager {
         } else {
             ""
         }
-        if (SettingsManager.isUsingHevTun()) {
+        val useHev = SettingsManager.isUsingHevTun()
+        if (useHev) {
             tunFd = 0
         }
+        LogUtil.w(
+            AppConfig.TAG,
+            "StartCore-Manager: hev=$useHev tunFd=$tunFd processRouting=${SettingsManager.canUseProcessRouting()}",
+        )
 
         NotificationManager.showNotification(currentConfig)
         if (dialerAddr.isNotNullEmpty()) {
@@ -431,24 +442,23 @@ object CoreServiceManager {
             val port = srcPort.toInt().coerceIn(0, 65535)
             if (port == 0) return -1L
 
+            val proto = when (network) {
+                "tcp" -> OsConstants.IPPROTO_TCP
+                "udp" -> OsConstants.IPPROTO_UDP
+                else -> null
+            }
             var uid = -1
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && cm != null &&
-                destIP.isNotBlank() && destPort != 0L
-            ) {
-                val proto = when (network) {
-                    "tcp" -> OsConstants.IPPROTO_TCP
-                    "udp" -> OsConstants.IPPROTO_UDP
-                    else -> null
-                }
-                if (proto != null) {
-                    uid = try {
-                        cm.getConnectionOwnerUid(
-                            proto,
-                            InetSocketAddress(srcIP, port),
-                            InetSocketAddress(destIP, destPort.toInt().coerceIn(0, 65535)),
-                        )
-                    } catch (_: Exception) {
-                        -1
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && cm != null && proto != null) {
+                uid = ownerUid(proto, srcIP, port, destIP, destPort.toInt())
+                // System HTTP/SOCKS proxy and early FakeDNS often omit dest; try local inbound ports.
+                if (uid <= 0 && (destIP.isBlank() || destPort == 0L)) {
+                    val candidates = listOf(
+                        SettingsManager.getHttpPort(),
+                        SettingsManager.getSocksPort(),
+                    ).distinct().filter { it in 1..65535 }
+                    for (localPort in candidates) {
+                        uid = ownerUid(proto, srcIP, port, AppConfig.LOOPBACK, localPort)
+                        if (uid > 0) break
                     }
                 }
             }
@@ -462,12 +472,26 @@ object CoreServiceManager {
                 )
             }
             if (uid > 0) {
+                UidSeenTracker.note(uid)
                 LogUtil.d(
                     AppConfig.TAG,
                     "ProcessFinder: $network $srcIP:$port -> $destIP:$destPort uid=$uid",
                 )
             }
             return uid.toLong()
+        }
+
+        private fun ownerUid(proto: Int, srcIP: String, srcPort: Int, destIP: String, destPort: Int): Int {
+            if (destIP.isBlank() || destPort !in 1..65535) return -1
+            return try {
+                cm!!.getConnectionOwnerUid(
+                    proto,
+                    InetSocketAddress(srcIP, srcPort),
+                    InetSocketAddress(destIP, destPort),
+                )
+            } catch (_: Exception) {
+                -1
+            }
         }
     }
 

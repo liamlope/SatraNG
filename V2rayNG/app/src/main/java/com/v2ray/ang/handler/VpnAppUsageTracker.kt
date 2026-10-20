@@ -65,8 +65,14 @@ object VpnAppUsageTracker {
         val shortfall = (coreProxyBytes - attributed).coerceAtLeast(0L)
         if (shortfall < 512L) return emptyMap()
         val excluded = excludedUidsStatic()
+        // Prefer /proc/net socket counts; on Android 10+ SELinux often blocks that — fall back to
+        // UIDs ProcessFinder recently resolved (same apps actively using the tunnel).
         val weights = ProcNetUidScanner.connectionCounts()
             .filterKeys { uid -> uid !in excluded && uid >= 10000 }
+            .ifEmpty {
+                UidSeenTracker.recentWeights(nowMs)
+                    .filterKeys { uid -> uid !in excluded && uid >= 10000 }
+            }
         if (weights.isEmpty()) {
             UsageStore.addAppTraffic(nowMs, UNATTRIBUTED_UID, shortfall, 0L)
             return mapOf(UNATTRIBUTED_UID to shortfall)
