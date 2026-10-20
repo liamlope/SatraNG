@@ -23,6 +23,7 @@ import com.v2ray.ang.extension.isNotNullEmpty
 import com.v2ray.ang.handler.UsageSampler
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
+import com.v2ray.ang.handler.ProcNetUidScanner
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.handler.SpeedtestManager
 import com.v2ray.ang.helper.MessageHelper
@@ -65,7 +66,9 @@ object CoreServiceManager {
             field = value
             val service = value?.get()?.getService()
             CoreNativeManager.initCoreEnv(service)
-            if (service != null && processFinder == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Register on every supported API: getConnectionOwnerUid needs Q+, but /proc/net
+            // fallback works on older devices and is required for reliable appuid metering.
+            if (service != null && processFinder == null) {
                 processFinder = XrayProcessFinder(service)
                 coreController.registerProcessFinder(processFinder)
             }
@@ -414,39 +417,57 @@ object CoreServiceManager {
     }
 
     /**
-     * Process finder implementation for Xray core.
-     * Uses ConnectivityManager to find the owning UID of a connection based on network parameters.
+     * Resolves the owning UID for TUN flows so process/`appuid-*` routing can meter every app.
+     *
+     * Order (same for all packages):
+     * 1. [ConnectivityManager.getConnectionOwnerUid] when dest is known (API 29+)
+     * 2. `/proc/net` local-port lookup ([ProcNetUidScanner]) — works when dest is missing/fake
+     *    or owner-UID fails for QUIC/UDP (the approach used by classic LocalVPN/PCAPdroid stacks)
      */
     private class XrayProcessFinder(context: Context) : ProcessFinder {
         private val cm: ConnectivityManager? = context.getSystemService(ConnectivityManager::class.java)
 
         override fun findProcessByConnection(network: String, srcIP: String, srcPort: Long, destIP: String, destPort: Long): Long {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return -1L
-            if (cm == null) return -1L
-            val proto = when (network) {
-                "tcp" -> OsConstants.IPPROTO_TCP
-                "udp" -> OsConstants.IPPROTO_UDP
-                else -> return -1L
-            }
+            val port = srcPort.toInt().coerceIn(0, 65535)
+            if (port == 0) return -1L
 
-            if (destIP.isBlank() || destPort == 0L) {
-                LogUtil.d(AppConfig.TAG, "ProcessFinder: Find $network connection from $srcIP:$srcPort to :$destPort, (no dest)")
-                return -1L
+            var uid = -1
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && cm != null &&
+                destIP.isNotBlank() && destPort != 0L
+            ) {
+                val proto = when (network) {
+                    "tcp" -> OsConstants.IPPROTO_TCP
+                    "udp" -> OsConstants.IPPROTO_UDP
+                    else -> null
+                }
+                if (proto != null) {
+                    uid = try {
+                        cm.getConnectionOwnerUid(
+                            proto,
+                            InetSocketAddress(srcIP, port),
+                            InetSocketAddress(destIP, destPort.toInt().coerceIn(0, 65535)),
+                        )
+                    } catch (_: Exception) {
+                        -1
+                    }
+                }
             }
-
-            return try {
-                val uid = cm.getConnectionOwnerUid(
-                    proto,
-                    InetSocketAddress(srcIP, srcPort.toInt()),
-                    InetSocketAddress(destIP, destPort.toInt())
-                ).toLong()
-                LogUtil.d(AppConfig.TAG, "ProcessFinder: Find $network connection from $srcIP:$srcPort to $destIP:$destPort, uid=$uid")
-                //LogUtil.d(AppConfig.TAG, "ProcessFinder: Find $network connection from $srcIP:$srcPort to $destIP:$destPort, uid=$uid,${PackageUidResolver.uidToPackageName(uid.toString())}")
-
-                uid
-            } catch (_: Exception) {
-                -1L
+            if (uid <= 0) {
+                uid = ProcNetUidScanner.findUid(
+                    network = network,
+                    srcIp = srcIP,
+                    srcPort = port,
+                    destIp = destIP,
+                    destPort = destPort.toInt().coerceIn(0, 65535),
+                )
             }
+            if (uid > 0) {
+                LogUtil.d(
+                    AppConfig.TAG,
+                    "ProcessFinder: $network $srcIP:$port -> $destIP:$destPort uid=$uid",
+                )
+            }
+            return uid.toLong()
         }
     }
 

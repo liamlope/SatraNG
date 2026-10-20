@@ -57,4 +57,11 @@ class UsageLimitEngineTest {
         assertEquals(10561, UidTunnelMeter.parseUid("appuid-10561"))
         assertEquals(null, UidTunnelMeter.parseUid("proxy"))
     }
+
+    @Test
+    fun distributeByWeight_remainderGoesToHeaviest() {
+        val shares = ProcNetUidScanner.distributeByWeight(10L, mapOf(1 to 1, 2 to 1, 3 to 1))
+        assertEquals(10L, shares.values.sum())
+        assertEquals(3, shares.size)
+    }
 }

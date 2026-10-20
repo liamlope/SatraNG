@@ -8,9 +8,12 @@ import com.v2ray.ang.BuildConfig
 /**
  * Per-app traffic while the VPN is connected.
  *
- * Primary source: core `appuid-*` / APP `lim-*` outbound counters ([UidTunnelMeter]) — bytes counted
- * on the tunnel datapath with a known UID. Optional OS snapshots remain only as a weak supplement
- * when the core reports nothing for a UID (process lookup miss).
+ * Byte sources (universal — no per-app special cases), in order:
+ * 1. Exact: core `appuid-*` / APP `lim-*` counters when process/UID routing matches
+ *    ([UidTunnelMeter] + [ProcNetUidScanner] fallback inside ProcessFinder).
+ * 2. Gap fill: any remaining core proxy bytes this interval are split across client UIDs that
+ *    currently own sockets in `/proc/net` (same idea as RethinkDNS ConnectionTracker: know the
+ *    UID of active flows, attribute tunnel volume to them).
  */
 object VpnAppUsageTracker {
     const val SAMPLE_EVERY_MS = 30_000L
@@ -32,8 +35,8 @@ object VpnAppUsageTracker {
     }
 
     /**
-     * Records one tick of per-UID bytes from the core (already reset there).
-     * @return the same map for APP-limit accounting.
+     * Records per-UID bytes from the core datapath and/or gap-fill.
+     * @return merged map for APP-limit accounting.
      */
     @Synchronized
     fun recordCoreUidBytes(nowMs: Long, byUid: Map<Int, Long>): Map<Int, Long> {
@@ -42,29 +45,45 @@ object VpnAppUsageTracker {
         val out = HashMap<Int, Long>()
         for ((uid, bytes) in byUid) {
             if (bytes <= 0L || uid in excluded) continue
-            out[uid] = bytes
+            out[uid] = (out[uid] ?: 0L) + bytes
             UsageStore.addAppTraffic(nowMs, uid, bytes, 0L)
         }
         return out
     }
 
     /**
-     * Optional OS-counter sample (supplement). Prefer [recordCoreUidBytes] for accuracy.
+     * Attribute [coreProxyBytes] that were not already counted in [alreadyAttributed].
+     * Active socket UIDs from `/proc/net` share the remainder — works for every package.
      */
     @Synchronized
-    fun sample(
-        context: Context,
-        nowMs: Long = System.currentTimeMillis(),
-        coreProxyBytes: Long = 0L,
+    fun fillUnattributed(
+        nowMs: Long,
+        coreProxyBytes: Long,
+        alreadyAttributed: Map<Int, Long>,
     ): Map<Int, Long> {
+        val attributed = alreadyAttributed.values.sum()
+        val shortfall = (coreProxyBytes - attributed).coerceAtLeast(0L)
+        if (shortfall < 512L) return emptyMap()
+        val excluded = excludedUidsStatic()
+        val weights = ProcNetUidScanner.connectionCounts()
+            .filterKeys { uid -> uid !in excluded && uid >= 10000 }
+        if (weights.isEmpty()) {
+            UsageStore.addAppTraffic(nowMs, UNATTRIBUTED_UID, shortfall, 0L)
+            return mapOf(UNATTRIBUTED_UID to shortfall)
+        }
+        val shares = ProcNetUidScanner.distributeByWeight(shortfall, weights)
+        return recordCoreUidBytes(nowMs, shares)
+    }
+
+    @Synchronized
+    fun sample(context: Context, nowMs: Long = System.currentTimeMillis()): Map<Int, Long> {
         val prev = last ?: run {
             if (applies()) begin(context, nowMs)
             return emptyMap()
         }
         val cur = snapshot(context, nowMs)
         if (cur.isEmpty()) return emptyMap()
-        val excluded = excludedUids(context)
-        val growth = fold(prev, cur, excluded)
+        val growth = fold(prev, cur, excludedUids(context))
         val os = HashMap<Int, Long>()
         for ((uid, rx, tx) in growth) {
             val total = rx + tx
@@ -72,14 +91,6 @@ object VpnAppUsageTracker {
                 os[uid] = total
                 UsageStore.addAppTraffic(nowMs, uid, rx, tx)
             }
-        }
-        // If core total dwarfs OS attribution, keep a single unattributed bucket so the UI
-        // can show that metering fell back (should be rare when UidTunnelMeter is active).
-        val attributed = os.values.sum()
-        val shortfall = (coreProxyBytes - attributed).coerceAtLeast(0L)
-        if (shortfall > 1024L && SettingsManager.canUseProcessRouting().not()) {
-            os[UNATTRIBUTED_UID] = (os[UNATTRIBUTED_UID] ?: 0L) + shortfall
-            UsageStore.addAppTraffic(nowMs, UNATTRIBUTED_UID, shortfall, 0L)
         }
         return os
     }
@@ -116,11 +127,7 @@ object VpnAppUsageTracker {
         return map
     }
 
-    private fun excludedUidsStatic(): Set<Int> {
-        val out = HashSet<Int>()
-        out += Process.myUid()
-        return out
-    }
+    private fun excludedUidsStatic(): Set<Int> = setOf(Process.myUid())
 
     private fun excludedUids(context: Context): Set<Int> {
         val out = excludedUidsStatic().toMutableSet()

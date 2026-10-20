@@ -129,21 +129,29 @@ object UsageSampler {
                         ),
                     )
 
-                    // Datapath UID counters (UidTunnelMeter) — primary Apps / APP-limit meter.
-                    val coreUidGrowth = runCatching {
+                    // 1) Exact datapath UID counters (appuid-* / APP lim-*).
+                    // 2) Fill any shortfall vs this tick's proxy total using /proc/net socket UIDs
+                    //    (Rethink/PCAPdroid-style: attribute tunnel volume to apps that own flows).
+                    val tickProxy = pUp + pDown
+                    val exact = runCatching {
                         VpnAppUsageTracker.recordCoreUidBytes(now, byUid)
                     }.getOrDefault(emptyMap())
+                    val filled = runCatching {
+                        VpnAppUsageTracker.fillUnattributed(now, tickProxy, exact)
+                    }.getOrDefault(emptyMap())
+                    val coreUidGrowth = HashMap<Int, Long>()
+                    for ((uid, b) in exact) coreUidGrowth[uid] = (coreUidGrowth[uid] ?: 0L) + b
+                    for ((uid, b) in filled) coreUidGrowth[uid] = (coreUidGrowth[uid] ?: 0L) + b
+
                     val hasAppLimits = UsageRulesRepository.rules().any { it.enabled && it.matchesApps }
                     var appUidByTag = emptyMap<String, Long>()
                     if (hasAppLimits && coreUidGrowth.isNotEmpty()) {
                         appUidByTag = UsageLimitEngine.appUidDeltasForRules(app, coreUidGrowth)
                     }
-                    // Rare OS supplement when process routing is off.
                     if (now - lastAppSample >= VpnAppUsageTracker.SAMPLE_EVERY_MS) {
                         lastAppSample = now
-                        val coreProxy = proxySinceAppSample
                         proxySinceAppSample = 0L
-                        runCatching { VpnAppUsageTracker.sample(app, now, coreProxyBytes = coreProxy) }
+                        runCatching { VpnAppUsageTracker.sample(app, now) }
                     }
 
                     var reload = false
