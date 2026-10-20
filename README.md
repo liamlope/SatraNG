@@ -13,19 +13,16 @@ A V2Ray client for Android, support [Xray core](https://github.com/XTLS/Xray-cor
 
 ---
 
-## Download / 下载
+## Download / دانلود
 
-Download the latest release here:
+**Android (SatraNG):** https://github.com/liamlope/SatraNG/releases  
 
-在这里下载最新版本：
+Pick `SatraNG_*_arm64-v8a.apk` on modern phones (or `universal` if unsure).
 
-[https://github.com/2dust/v2rayNG/releases](https://github.com/2dust/v2rayNG/releases)
+**Desktop (Windows / Linux — SatraN):** https://github.com/liamlope/satran/releases  
 
-> [!TIP]
-> v2rayNG is the mobile version. For the desktop version, please visit the v2rayN \
-> v2rayNG 是手机版，电脑版请访问 v2rayN
->
-> https://github.com/2dust/v2rayN
+- Windows: download **`SatraN-Setup-*.exe`** only, run it, accept UAC → installs to Program Files.  
+- Linux: `satran_*_amd64.deb` or the `.tar.gz`.
 
 ---
 
