@@ -56,7 +56,8 @@ object UidTunnelMeter {
         }
 
         val selfUid = Process.myUid()
-        val uids = clientUids(context).filter { it != selfUid }.take(MAX_UID_RULES)
+        val blocked = UsageLimitEngine.blockedUids(context)
+        val uids = clientUids(context).filter { it != selfUid && it !in blocked }.take(MAX_UID_RULES)
         if (uids.isEmpty()) return
 
         val proxyJson = JsonUtil.toJson(proxy)

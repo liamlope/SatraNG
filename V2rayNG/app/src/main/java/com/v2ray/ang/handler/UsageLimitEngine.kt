@@ -190,6 +190,36 @@ object UsageLimitEngine {
             rt.used >= rule.limitBytes + rt.bonus
     }
 
+    /** UIDs whose APP/CATEGORY limit is currently exhausted — must not receive fill-attribution. */
+    fun blockedUids(context: Context, nowMs: Long = System.currentTimeMillis()): Set<Int> {
+        val out = HashSet<Int>()
+        val pm = context.packageManager
+        fun uidOf(pkg: String): Int? = runCatching { pm.getPackageUid(pkg, 0) }.getOrNull()
+        for (rule in UsageRulesRepository.rules()) {
+            if (!rule.enabled || !rule.matchesApps) continue
+            if (!isBlockedNow(rule, nowMs) && !rule.alwaysBlock) continue
+            when (rule.kind) {
+                RuleKind.APP -> uidOf(rule.packageName)?.let { out += it }
+                RuleKind.CATEGORY -> {
+                    val cat = rule.appCategory ?: continue
+                    for (pkg in AppCategories.packagesIn(context, cat)) {
+                        uidOf(pkg)?.let { out += it }
+                    }
+                }
+                RuleKind.DOMAIN -> Unit
+            }
+        }
+        return out
+    }
+
+    private fun isYoutubePackage(packageName: String): Boolean {
+        val p = packageName.lowercase()
+        return p == "com.google.android.youtube" ||
+            p.startsWith("com.google.android.apps.youtube.") ||
+            p == "app.revanced.android.youtube" ||
+            p.endsWith(".youtube")
+    }
+
     /**
      * Re-checks a rule right after the user edited it. A higher cap (or a different period)
      * releases the block at once; the warning re-arms when usage is back under 80 %.
@@ -241,7 +271,8 @@ object UsageLimitEngine {
                     V2rayConfig.RoutingBean.RulesBean(process = uids)
                 }
             }
-            if (isBlockedNow(rule)) {
+            val blocked = isBlockedNow(rule)
+            if (blocked) {
                 matcher.outboundTag = AppConfig.TAG_BLOCKED
             } else if (proxy != null) {
                 if (cloneTags.add(rule.outboundTag)) {
@@ -258,6 +289,20 @@ object UsageLimitEngine {
                 continue
             }
             additions += matcher
+            // YouTube (and similar) often opens CDN hosts before process UID is known; when the
+            // APP limit is exhausted, also block the site domains so TUN/QUIC cannot bypass.
+            if (blocked && rule.kind == RuleKind.APP && isYoutubePackage(rule.packageName)) {
+                val domains = expandSitePresetDomains(YOUTUBE_DOMAINS)
+                if (domains.isNotEmpty()) {
+                    additions += V2rayConfig.RoutingBean.RulesBean(
+                        domain = domains,
+                        outboundTag = AppConfig.TAG_BLOCKED,
+                    )
+                    LogUtil.w(AppConfig.TAG, "UsageLimit: ${rule.label} blocked + YouTube domain shield")
+                }
+            } else if (blocked) {
+                LogUtil.w(AppConfig.TAG, "UsageLimit: ${rule.label} → block (process)")
+            }
         }
         if (additions.isNotEmpty()) config.routing.rules.addAll(0, additions)
     }

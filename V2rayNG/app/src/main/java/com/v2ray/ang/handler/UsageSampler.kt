@@ -129,24 +129,24 @@ object UsageSampler {
                         ),
                     )
 
-                    // 1) Exact datapath UID counters (appuid-* / APP lim-*).
-                    // 2) Fill any shortfall vs this tick's proxy total using /proc/net socket UIDs
-                    //    (Rethink/PCAPdroid-style: attribute tunnel volume to apps that own flows).
+                    // 1) Exact datapath UID counters (appuid-* / APP lim-*) — used for APP limits.
+                    // 2) Fill shortfall for the Apps list UI only. Never feed fill into LimitEvaluator:
+                    //    a large guessed chunk would jump past a small cap and still leave TUN bypass.
                     val tickProxy = pUp + pDown
+                    val blockedUids = runCatching {
+                        UsageLimitEngine.blockedUids(app, now)
+                    }.getOrDefault(emptySet())
                     val exact = runCatching {
                         VpnAppUsageTracker.recordCoreUidBytes(now, byUid)
                     }.getOrDefault(emptyMap())
-                    val filled = runCatching {
-                        VpnAppUsageTracker.fillUnattributed(now, tickProxy, exact)
-                    }.getOrDefault(emptyMap())
-                    val coreUidGrowth = HashMap<Int, Long>()
-                    for ((uid, b) in exact) coreUidGrowth[uid] = (coreUidGrowth[uid] ?: 0L) + b
-                    for ((uid, b) in filled) coreUidGrowth[uid] = (coreUidGrowth[uid] ?: 0L) + b
+                    runCatching {
+                        VpnAppUsageTracker.fillUnattributed(now, tickProxy, exact, blockedUids)
+                    }
 
                     val hasAppLimits = UsageRulesRepository.rules().any { it.enabled && it.matchesApps }
                     var appUidByTag = emptyMap<String, Long>()
-                    if (hasAppLimits && coreUidGrowth.isNotEmpty()) {
-                        appUidByTag = UsageLimitEngine.appUidDeltasForRules(app, coreUidGrowth)
+                    if (hasAppLimits && exact.isNotEmpty()) {
+                        appUidByTag = UsageLimitEngine.appUidDeltasForRules(app, exact)
                     }
                     if (now - lastAppSample >= VpnAppUsageTracker.SAMPLE_EVERY_MS) {
                         lastAppSample = now
@@ -157,7 +157,11 @@ object UsageSampler {
                     var reload = false
                     for ((rule, event) in UsageLimitEngine.account(byTag, now, appUidByTag)) {
                         when (event) {
-                            LimitEvent.Exceeded -> { UsageNotifier.limitExceeded(app, rule); reload = true }
+                            LimitEvent.Exceeded -> {
+                                LogUtil.w(AppConfig.TAG, "UsageSampler: limit exceeded ${rule.label}")
+                                UsageNotifier.limitExceeded(app, rule)
+                                reload = true
+                            }
                             LimitEvent.Warned -> UsageNotifier.limitWarning(app, rule)
                             LimitEvent.Released -> reload = true
                             LimitEvent.None -> Unit

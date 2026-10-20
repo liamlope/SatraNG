@@ -60,11 +60,12 @@ object VpnAppUsageTracker {
         nowMs: Long,
         coreProxyBytes: Long,
         alreadyAttributed: Map<Int, Long>,
+        blockedUids: Set<Int> = emptySet(),
     ): Map<Int, Long> {
         val attributed = alreadyAttributed.values.sum()
         val shortfall = (coreProxyBytes - attributed).coerceAtLeast(0L)
         if (shortfall < 512L) return emptyMap()
-        val excluded = excludedUidsStatic()
+        val excluded = excludedUidsStatic() + blockedUids
         // Prefer /proc/net socket counts; on Android 10+ SELinux often blocks that — fall back to
         // UIDs ProcessFinder recently resolved (same apps actively using the tunnel).
         val weights = ProcNetUidScanner.connectionCounts()
