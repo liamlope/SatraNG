@@ -1,5 +1,7 @@
 # Ignore data and key store files
 *.dat
+# Required at first launch: routing rewrites geoip:private → this file (libv2ray.aar omits it).
+!V2rayNG/app/src/main/assets/geoip-only-cn-private.dat
 *.jks
 
 # Ignore output JSON file
