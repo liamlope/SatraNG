@@ -1,5 +1,6 @@
 package com.v2ray.ang.handler
 
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -21,5 +22,14 @@ class UsageLimitEngineTest {
         assertTrue(out.size == 1)
         assertTrue(out.single().contains("example.com"))
         assertTrue(out.none { it.contains("geosite:youtube") })
+    }
+
+    @Test
+    fun isYoutubePackage_matchesOfficialAndForks() {
+        assertTrue(UsageLimitEngine.isYoutubePackage("com.google.android.youtube"))
+        assertTrue(UsageLimitEngine.isYoutubePackage("app.morphe.android.apps.youtube.music"))
+        assertTrue(UsageLimitEngine.isYoutubePackage("app.revanced.android.youtube"))
+        assertFalse(UsageLimitEngine.isYoutubePackage("org.telegram.messenger"))
+        assertFalse(UsageLimitEngine.isYoutubePackage(""))
     }
 }

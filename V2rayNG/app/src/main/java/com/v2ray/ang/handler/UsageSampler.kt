@@ -112,8 +112,21 @@ object UsageSampler {
                         ),
                     )
 
+                    // APP/CATEGORY limits need UID samples often enough to move counters when
+                    // core lim-* stays at 0 (QUIC / flaky getConnectionOwnerUid).
+                    val hasAppLimits = UsageRulesRepository.rules().any { it.enabled && it.matchesApps }
+                    val appSampleEvery = if (hasAppLimits) 5_000L else VpnAppUsageTracker.SAMPLE_EVERY_MS
+                    var appUidByTag = emptyMap<String, Long>()
+                    if (now - lastAppSample >= appSampleEvery) {
+                        lastAppSample = now
+                        val growth = runCatching { VpnAppUsageTracker.sample(app, now) }.getOrDefault(emptyMap())
+                        if (growth.isNotEmpty() && hasAppLimits) {
+                            appUidByTag = UsageLimitEngine.appUidDeltasForRules(app, growth)
+                        }
+                    }
+
                     var reload = false
-                    for ((rule, event) in UsageLimitEngine.account(byTag, now)) {
+                    for ((rule, event) in UsageLimitEngine.account(byTag, now, appUidByTag)) {
                         when (event) {
                             LimitEvent.Exceeded -> { UsageNotifier.limitExceeded(app, rule); reload = true }
                             LimitEvent.Warned -> UsageNotifier.limitWarning(app, rule)
@@ -122,11 +135,6 @@ object UsageSampler {
                         }
                     }
                     if (reload) CoreServiceManager.reloadForPolicyChange()
-
-                    if (now - lastAppSample >= VpnAppUsageTracker.SAMPLE_EVERY_MS) {
-                        lastAppSample = now
-                        runCatching { VpnAppUsageTracker.sample(app, now) }
-                    }
 
                     tickCount++
                     if (tickCount % 30 == 0) {

@@ -31,25 +31,32 @@ object VpnAppUsageTracker {
     @Synchronized
     fun begin(context: Context, nowMs: Long = System.currentTimeMillis()) {
         last = null
-        if (!applies() || !AppUsageReader.hasAccess(context)) return
-        // Fixed anchor for the whole session: cumulative counters from here only ever grow.
+        if (!applies()) return
+        // TrafficStats needs no Usage Access; NetworkStats is only a fallback inside queryRaw.
+        // Fixed anchor for NetworkStats windows: cumulative TrafficStats ignore this.
         anchorMs = nowMs - 3 * 3_600_000L
         last = snapshot(context, nowMs)
+        if (last.isNullOrEmpty()) last = null
     }
 
-    /** Adds the growth since the previous sample to the ledger. Cheap enough to call every minute. */
+    /**
+     * Adds the growth since the previous sample to the ledger.
+     * @return per-UID (rx+tx) growth this sample; empty when there was no baseline yet.
+     */
     @Synchronized
-    fun sample(context: Context, nowMs: Long = System.currentTimeMillis()) {
+    fun sample(context: Context, nowMs: Long = System.currentTimeMillis()): Map<Int, Long> {
         val prev = last ?: run {
-            // Usage access may have been granted after the tunnel started: start counting now.
-            if (applies() && AppUsageReader.hasAccess(context)) begin(context, nowMs)
-            return
+            // Tunnel may have started before packages were ready; start counting now.
+            if (applies()) begin(context, nowMs)
+            return emptyMap()
         }
         val cur = snapshot(context, nowMs)
-        if (cur.isEmpty()) return
-        for ((uid, rx, tx) in fold(prev, cur, excludedUids(context))) {
+        if (cur.isEmpty()) return emptyMap()
+        val growth = fold(prev, cur, excludedUids(context))
+        for ((uid, rx, tx) in growth) {
             UsageStore.addAppTraffic(nowMs, uid, rx, tx)
         }
+        return growth.associate { (uid, rx, tx) -> uid to (rx + tx) }
     }
 
     /**

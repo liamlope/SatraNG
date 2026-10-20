@@ -189,6 +189,7 @@ fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageA
                 modifier = Modifier.padding(horizontal = SatraSpace.Gutter + 4.dp, vertical = 4.dp),
             )
         }
+        // Metering works without Usage Access (TrafficStats fallback); with access, NetworkStats+VPN is preferred.
         if (!state.hasUsageAccess) {
             item(key = "access") {
                 SatraCard(Modifier.padding(horizontal = SatraSpace.Gutter)) {
@@ -204,7 +205,8 @@ fun UsageContent(state: UsageUiState, live: LiveUiState, nav: AppNav, vm: UsageA
                     SatraButton(stringResource(R.string.sx_usage_access_open), { nav.openUsageAccess() }, compact = true)
                 }
             }
-        } else if (state.apps.isEmpty()) {
+        }
+        if (state.apps.isEmpty()) {
             item(key = "apps-empty") {
                 Text(
                     stringResource(if (state.appsLoading) R.string.sx_loading else R.string.sx_usage_apps_none_yet),

@@ -6,6 +6,7 @@ import android.app.usage.NetworkStatsManager
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
+import android.net.TrafficStats
 import android.net.Uri
 import android.os.Build
 import android.os.Process
@@ -23,12 +24,12 @@ data class AppUsage(
 }
 
 /**
- * Per-app network totals from Android's own accounting ([NetworkStatsManager]).
+ * Per-app network totals for the VPN usage meter.
  *
- * These are device-wide per-UID counters on Wi-Fi + mobile data, so on their own they include
- * traffic sent while the VPN was off or bypassed (Android credits tunnelled traffic to the app that
- * produced it, not to this VPN app). The Usage screen never shows them directly: the daemon's
- * [VpnAppUsageTracker] only records their growth while the tunnel is up. Needs "Usage access".
+ * When Usage Access is granted, prefer [NetworkStatsManager] (Wi-Fi + mobile +
+ * [ConnectivityManager.TYPE_VPN]) — under an active VPN, [TrafficStats] often under-counts QUIC
+ * apps (YouTube) or credits the VPN UID while Telegram/TCP still looks fine. Fall back to
+ * TrafficStats when Usage Access is missing.
  */
 object AppUsageReader {
 
@@ -47,13 +48,62 @@ object AppUsageReader {
         Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS, Uri.parse("package:${context.packageName}"))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-    /** Raw per-uid totals in [startMs, endMs), merged over Wi-Fi and mobile (no package lookup). */
+    /**
+     * Best-effort cumulative per-UID counters for metering.
+     *
+     * Prefer [NetworkStatsManager] (incl. [ConnectivityManager.TYPE_VPN]) when Usage Access is
+     * granted — under an active VPN, [TrafficStats] often credits tunnelled bytes to the VPN app
+     * or under-counts QUIC apps (YouTube), while Telegram/TCP still looks fine. Fall back to
+     * TrafficStats when Usage Access is missing.
+     *
+     * Callers must only ever use growth between two snapshots.
+     */
     fun queryRaw(context: Context, startMs: Long, endMs: Long): List<AppUsage> {
+        if (hasAccess(context)) {
+            val fromNet = queryNetworkStats(context, startMs, endMs)
+            if (fromNet.isNotEmpty()) return fromNet
+        }
+        return queryTrafficStats(context)
+    }
+
+    /** Cumulative rx/tx since boot per installed-app UID (shared UIDs collapsed). */
+    fun queryTrafficStats(context: Context): List<AppUsage> {
+        val rx = HashMap<Int, Long>()
+        val tx = HashMap<Int, Long>()
+        val pm = context.packageManager
+        val apps = runCatching {
+            @Suppress("DEPRECATION")
+            pm.getInstalledApplications(0)
+        }.getOrElse { emptyList() }
+        for (info in apps) {
+            val uid = info.uid
+            val r = TrafficStats.getUidRxBytes(uid)
+            val t = TrafficStats.getUidTxBytes(uid)
+            if (r == TrafficStats.UNSUPPORTED.toLong() || t == TrafficStats.UNSUPPORTED.toLong()) continue
+            if (r < 0L && t < 0L) continue
+            // Same UID may appear for several packages; counters are identical — keep one.
+            if (uid !in rx) {
+                rx[uid] = r.coerceAtLeast(0L)
+                tx[uid] = t.coerceAtLeast(0L)
+            }
+        }
+        return (rx.keys + tx.keys).map { uid ->
+            AppUsage(uid, null, rx[uid] ?: 0L, tx[uid] ?: 0L)
+        }
+    }
+
+    /** Raw per-uid totals in [startMs, endMs), Wi-Fi + mobile + VPN. Needs Usage Access. */
+    fun queryNetworkStats(context: Context, startMs: Long, endMs: Long): List<AppUsage> {
         if (!hasAccess(context)) return emptyList()
         val nsm = context.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
         val rx = HashMap<Int, Long>()
         val tx = HashMap<Int, Long>()
-        for (type in intArrayOf(ConnectivityManager.TYPE_WIFI, ConnectivityManager.TYPE_MOBILE)) {
+        val types = intArrayOf(
+            ConnectivityManager.TYPE_WIFI,
+            ConnectivityManager.TYPE_MOBILE,
+            ConnectivityManager.TYPE_VPN,
+        )
+        for (type in types) {
             var stats: NetworkStats? = null
             try {
                 stats = nsm.querySummary(type, null, startMs, endMs)

@@ -177,25 +177,20 @@ class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
     fun refreshApps() {
         appsJob?.cancel()
         val ctx = getApplication<Application>()
-        if (!AppUsageReader.hasAccess(ctx)) {
-            _state.update { it.copy(hasUsageAccess = false, apps = emptyList(), appsLoading = false) }
-            return
+        if (_state.value.apps.isEmpty()) {
+            _state.update { it.copy(hasUsageAccess = AppUsageReader.hasAccess(ctx), appsLoading = true) }
         }
-        if (_state.value.apps.isEmpty()) _state.update { it.copy(hasUsageAccess = true, appsLoading = true) }
         appsJob = viewModelScope.launch(Dispatchers.IO) { loadApps() }
     }
 
     /**
      * Per-app rows come only from traffic recorded while the VPN was connected
      * ([com.v2ray.ang.handler.VpnAppUsageTracker]); Android's lifetime totals are never shown.
+     * Metering does not require Usage Access (TrafficStats fallback); with access, NetworkStats+VPN is preferred.
      */
     private fun loadApps() {
         val ctx = getApplication<Application>()
         val has = AppUsageReader.hasAccess(ctx)
-        if (!has) {
-            _state.update { it.copy(hasUsageAccess = false, apps = emptyList(), appsLoading = false) }
-            return
-        }
         // Sample while the Usage screen is open so numbers move without waiting for the daemon cadence.
         runCatching { com.v2ray.ang.handler.VpnAppUsageTracker.sample(ctx) }
         val keys = UsagePeriods.lastDayKeys(_state.value.rangeDays, System.currentTimeMillis())
@@ -203,7 +198,7 @@ class UsageViewModel(app: Application) : AndroidViewModel(app), UsageActions {
         val rows = AppUsageReader.toRows(ctx, UsageStore.appTraffic(keys)).take(60).map { u ->
             u.toRow(lifetime[u.uid]?.totalBytes ?: 0L)
         }
-        _state.update { it.copy(hasUsageAccess = true, apps = rows, appsLoading = false) }
+        _state.update { it.copy(hasUsageAccess = has, apps = rows, appsLoading = false) }
     }
 
     private fun AppUsage.toRow(lifetimeBytes: Long = 0L): AppUsageRow {
