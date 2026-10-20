@@ -1,6 +1,6 @@
 package com.v2ray.ang.handler
 
-import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -25,11 +25,14 @@ class UsageLimitEngineTest {
     }
 
     @Test
-    fun isYoutubePackage_matchesOfficialAndForks() {
-        assertTrue(UsageLimitEngine.isYoutubePackage("com.google.android.youtube"))
-        assertTrue(UsageLimitEngine.isYoutubePackage("app.morphe.android.apps.youtube.music"))
-        assertTrue(UsageLimitEngine.isYoutubePackage("app.revanced.android.youtube"))
-        assertFalse(UsageLimitEngine.isYoutubePackage("org.telegram.messenger"))
-        assertFalse(UsageLimitEngine.isYoutubePackage(""))
+    fun mergeMaxByUid_takesLargerCountersPerUid() {
+        val a = listOf(AppUsage(10, null, 100, 50), AppUsage(20, null, 5, 5))
+        val b = listOf(AppUsage(10, null, 80, 90), AppUsage(30, null, 1, 2))
+        val merged = AppUsageReader.mergeMaxByUid(a, b).associateBy { it.uid }
+        assertEquals(100L, merged[10]!!.rxBytes)
+        assertEquals(90L, merged[10]!!.txBytes)
+        assertEquals(5L, merged[20]!!.rxBytes)
+        assertEquals(1L, merged[30]!!.rxBytes)
+        assertEquals(2L, merged[30]!!.txBytes)
     }
 }

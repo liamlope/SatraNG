@@ -10,15 +10,14 @@ import com.v2ray.ang.util.PackageUidResolver
 /**
  * Turns [UsageRule]s into routing rules for the core.
  *
- * Counting: every active (not yet exhausted) rule gets its own clone of the main proxy outbound
- * (`lim-<id>`), so the core's per-outbound stats give an exact byte count for exactly the traffic
- * that rule matches (through the tunnel, both directions, protocol overhead of the proxy leg included).
+ * Counting (universal):
+ * - **APP / CATEGORY**: OS per-UID growth while VPN is up ([VpnAppUsageTracker] / TrafficStats +
+ *   NetworkStats). Same path for every package — no per-app special cases.
+ * - **DOMAIN**: core `lim-*` outbound stats (sniffed host / domain match).
  *
- * Blocking: once exhausted the same rule is pointed at the `block` outbound; the core is reloaded
- * in place (the TUN device stays up) and the rest of the VPN keeps working.
- *
- * App rules need UID routing, which the core only has with the Xray TUN engine + route-only
- * sniffing on Android 10+ ([canEnforceAppRules]). Domain rules work in every mode that uses the core's routing.
+ * Blocking: each active rule still gets a `lim-*` (or `block`) routing rule. APP/CATEGORY match by
+ * process UID (needs Xray TUN + route-only on Android 10+, [canEnforceAppRules]). DOMAIN match by
+ * host. When exhausted the rule points at `block` and the core reloads in place.
  */
 object UsageLimitEngine {
 
@@ -82,15 +81,6 @@ object UsageLimitEngine {
                 val before = MmkvManager.decodeSettingsBool(AppConfig.PREF_SNIFFING_ENABLED, AppConfig.DEFAULT_SNIFFING_ENABLED)
                 enableDomainEnforcement()
                 if (before == false) needsVpnRestart = true
-                // YouTube domain limits also need UID routing (QUIC/IP often skips sniff).
-                if (isYoutubeDomainRule(rule.domains)) {
-                    val wasReady = canEnforceAppRules()
-                    enableAppEnforcement()
-                    if (!wasReady) needsVpnRestart = true
-                    for (pkg in YOUTUBE_PACKAGES) {
-                        if (ensurePackageUsesVpn(pkg)) needsVpnRestart = true
-                    }
-                }
             }
             RuleKind.APP, RuleKind.CATEGORY -> {
                 val wasReady = canEnforceAppRules()
@@ -98,18 +88,6 @@ object UsageLimitEngine {
                 if (!wasReady) needsVpnRestart = true
                 if (rule.kind == RuleKind.APP && rule.packageName.isNotBlank()) {
                     if (ensurePackageUsesVpn(rule.packageName)) needsVpnRestart = true
-                    // YouTube APP limits also need domain sniff (QUIC often skips UID match).
-                    if (isYoutubePackage(rule.packageName)) {
-                        val before = MmkvManager.decodeSettingsBool(
-                            AppConfig.PREF_SNIFFING_ENABLED,
-                            AppConfig.DEFAULT_SNIFFING_ENABLED,
-                        )
-                        enableDomainEnforcement()
-                        if (before == false) needsVpnRestart = true
-                        for (pkg in YOUTUBE_PACKAGES) {
-                            if (ensurePackageUsesVpn(pkg)) needsVpnRestart = true
-                        }
-                    }
                 }
                 if (rule.kind == RuleKind.CATEGORY) {
                     val cat = rule.appCategory
@@ -122,6 +100,19 @@ object UsageLimitEngine {
             }
         }
         return needsVpnRestart
+    }
+
+    /**
+     * If any APP/CATEGORY limit is enabled, force the Xray+route-only engine so process/UID
+     * block rules can be injected for every package the same way.
+     * @return true when settings changed (caller should restart VPN).
+     */
+    fun ensureAppEnforcementForStoredRules(): Boolean {
+        val need = UsageRulesRepository.rules().any { it.enabled && it.matchesApps }
+        if (!need) return false
+        val wasReady = canEnforceAppRules()
+        enableAppEnforcement()
+        return !wasReady
     }
 
     /**
@@ -187,32 +178,6 @@ object UsageLimitEngine {
         "youtubekids.com",
     )
 
-    val YOUTUBE_PACKAGES = listOf(
-        "com.google.android.youtube",
-        "com.google.android.apps.youtube.music",
-        "com.google.android.apps.youtube.kids",
-        "com.google.android.youtube.tv",
-        "com.vanced.android.youtube",
-        "app.revanced.android.youtube",
-        "app.morphe.android.apps.youtube.music",
-    )
-
-    fun isYoutubePackage(packageName: String): Boolean {
-        if (packageName.isBlank()) return false
-        if (packageName in YOUTUBE_PACKAGES) return true
-        return packageName.contains("youtube", ignoreCase = true)
-    }
-
-    private fun isYoutubeDomainRule(domains: List<String>): Boolean {
-        val hosts = domains.map {
-            it.removePrefix("domain:").removePrefix("full:").removePrefix("geosite:")
-        }
-        return hosts.any { h ->
-            h == "youtube" || h == "youtube.com" || h == "youtu.be" || h == "googlevideo.com" ||
-                h.endsWith(".youtube.com") || h.contains("youtube")
-        }
-    }
-
     /**
      * True when [rule] is currently supposed to be blocked by the config we build now. Checks the
      * cap again instead of trusting the stored flag, so raising a limit unblocks immediately.
@@ -246,6 +211,8 @@ object UsageLimitEngine {
     fun applyToConfig(context: Context, config: V2rayConfig) {
         val rules = UsageRulesRepository.rules().filter { it.enabled }
         if (rules.isEmpty()) return
+        // Same engine for every APP/CATEGORY package (settings only; VPN must already be Xray).
+        ensureAppEnforcementForStoredRules()
         val appOk = canEnforceAppRules()
         val proxy = config.outbounds.firstOrNull { it.tag == AppConfig.TAG_PROXY }
         val additions = ArrayList<V2rayConfig.RoutingBean.RulesBean>()
@@ -256,6 +223,7 @@ object UsageLimitEngine {
         for (rule in rules.sortedBy { if (it.kind == RuleKind.CATEGORY) 1 else 0 }) {
             val matcher = when (rule.kind) {
                 RuleKind.APP -> {
+                    // Counting uses OS UID; process rules are for block/enforcement only.
                     if (!appOk || rule.packageName.isBlank()) continue
                     val uids = PackageUidResolver.packageNamesToUids(context, listOf(rule.packageName))
                     if (uids.isEmpty()) continue
@@ -263,33 +231,7 @@ object UsageLimitEngine {
                 }
                 RuleKind.DOMAIN -> {
                     if (rule.domains.isEmpty()) continue
-                    // YouTube (and similar) often speak QUIC/IP without a sniffsable SNI. Mirror the
-                    // same counted outbound with a process/UID rule for the official apps so
-                    // metering and block still work when domain match fails.
-                    val domainRule = V2rayConfig.RoutingBean.RulesBean(domain = rule.domains)
-                    if (appOk && isYoutubeDomainRule(rule.domains)) {
-                        val ytUids = PackageUidResolver.packageNamesToUids(context, YOUTUBE_PACKAGES)
-                        if (ytUids.isNotEmpty()) {
-                            val tag = if (isBlockedNow(rule)) {
-                                AppConfig.TAG_BLOCKED
-                            } else if (proxy != null) {
-                                if (cloneTags.add(rule.outboundTag)) {
-                                    val copy = JsonUtil.fromJson(JsonUtil.toJson(proxy), V2rayConfig.OutboundBean::class.java)
-                                    if (copy != null) {
-                                        copy.tag = rule.outboundTag
-                                        config.outbounds.add(copy)
-                                    }
-                                }
-                                rule.outboundTag
-                            } else {
-                                null
-                            }
-                            if (tag != null) {
-                                additions += V2rayConfig.RoutingBean.RulesBean(process = ytUids, outboundTag = tag)
-                            }
-                        }
-                    }
-                    domainRule
+                    V2rayConfig.RoutingBean.RulesBean(domain = rule.domains)
                 }
                 RuleKind.CATEGORY -> {
                     val cat = rule.appCategory ?: continue
@@ -316,21 +258,13 @@ object UsageLimitEngine {
                 continue
             }
             additions += matcher
-            // YouTube APP rules: mirror CDN domains onto the same counted/block outbound so QUIC
-            // traffic that never resolves a UID still meters and can be blocked.
-            if (rule.kind == RuleKind.APP && isYoutubePackage(rule.packageName) && matcher.outboundTag != null) {
-                additions += V2rayConfig.RoutingBean.RulesBean(
-                    domain = expandSitePresetDomains(YOUTUBE_DOMAINS),
-                    outboundTag = matcher.outboundTag,
-                )
-            }
         }
         if (additions.isNotEmpty()) config.routing.rules.addAll(0, additions)
     }
 
     /**
-     * Maps one [VpnAppUsageTracker] sample's per-UID growth onto APP/CATEGORY rule outbound tags.
-     * Used when core `lim-*` stats stay at 0 (common for QUIC apps under flaky UID lookup).
+     * Maps one [VpnAppUsageTracker] sample's per-UID growth onto APP/CATEGORY rule tags.
+     * Primary meter for every app package (same method for all).
      */
     fun appUidDeltasForRules(context: Context, growthByUid: Map<Int, Long>): Map<String, Long> {
         if (growthByUid.isEmpty()) return emptyMap()
@@ -363,12 +297,11 @@ object UsageLimitEngine {
     }
 
     /**
-     * Folds one second of per-outbound stats into the rules. Returns the events so the caller
-     * (the sampler) can notify and reload the core.
+     * Folds one tick of stats into the rules.
      *
-     * [appUidByTag] is optional per-tag growth from [VpnAppUsageTracker] for APP/CATEGORY rules
-     * when process matching misses the connection (QUIC/YouTube). Per tick we take the larger of
-     * core `lim-*` and UID growth so the same bytes are not summed twice.
+     * APP/CATEGORY: [appUidByTag] from OS per-UID growth (universal). DOMAIN: core `lim-*`.
+     * When both exist for an app rule, take the larger so proxy overhead and OS batches do not
+     * double-count.
      */
     fun account(
         statsByTag: Map<String, Long>,
@@ -380,7 +313,12 @@ object UsageLimitEngine {
             if (!rule.enabled || rule.alwaysBlock) continue
             val coreDelta = statsByTag[rule.outboundTag] ?: 0L
             val uidDelta = if (rule.matchesApps) appUidByTag[rule.outboundTag] ?: 0L else 0L
-            val delta = maxOf(coreDelta, uidDelta)
+            val delta = if (rule.matchesApps) {
+                // OS UID is the source of truth for every package; lim-* only fills gaps.
+                maxOf(uidDelta, coreDelta)
+            } else {
+                coreDelta
+            }
             val gen = UsageStore.ruleGeneration(rule.id)
             val previous = UsageStore.ruleRuntime(rule.id)
             val step = LimitEvaluator.step(rule.limitBytes, rule.period, previous, delta, nowMs)

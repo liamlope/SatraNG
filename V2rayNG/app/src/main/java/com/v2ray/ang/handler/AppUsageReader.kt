@@ -24,12 +24,10 @@ data class AppUsage(
 }
 
 /**
- * Per-app network totals for the VPN usage meter.
+ * Per-app network totals for the VPN usage meter and APP/CATEGORY limits.
  *
- * When Usage Access is granted, prefer [NetworkStatsManager] (Wi-Fi + mobile +
- * [ConnectivityManager.TYPE_VPN]) — under an active VPN, [TrafficStats] often under-counts QUIC
- * apps (YouTube) or credits the VPN UID while Telegram/TCP still looks fine. Fall back to
- * TrafficStats when Usage Access is missing.
+ * Same method for every package: [TrafficStats], and when Usage Access is granted the per-UID
+ * max with [NetworkStatsManager] (Wi-Fi + mobile + [ConnectivityManager.TYPE_VPN]).
  */
 object AppUsageReader {
 
@@ -51,19 +49,32 @@ object AppUsageReader {
     /**
      * Best-effort cumulative per-UID counters for metering.
      *
-     * Prefer [NetworkStatsManager] (incl. [ConnectivityManager.TYPE_VPN]) when Usage Access is
-     * granted — under an active VPN, [TrafficStats] often credits tunnelled bytes to the VPN app
-     * or under-counts QUIC apps (YouTube), while Telegram/TCP still looks fine. Fall back to
-     * TrafficStats when Usage Access is missing.
+     * Under VPN, neither [TrafficStats] nor [NetworkStatsManager] alone is reliable for every app:
+     * TrafficStats often tracks TCP well, while NetworkStats (incl. [ConnectivityManager.TYPE_VPN])
+     * can catch QUIC/UDP that TrafficStats under-counts — or the reverse on some OEMs. When Usage
+     * Access is granted we take the per-UID **max** of both so any package meters the same way.
+     * Without Usage Access, TrafficStats only.
      *
      * Callers must only ever use growth between two snapshots.
      */
     fun queryRaw(context: Context, startMs: Long, endMs: Long): List<AppUsage> {
-        if (hasAccess(context)) {
-            val fromNet = queryNetworkStats(context, startMs, endMs)
-            if (fromNet.isNotEmpty()) return fromNet
+        val traffic = queryTrafficStats(context)
+        if (!hasAccess(context)) return traffic
+        val net = queryNetworkStats(context, startMs, endMs)
+        if (net.isEmpty()) return traffic
+        if (traffic.isEmpty()) return net
+        return mergeMaxByUid(traffic, net)
+    }
+
+    /** Per UID, keep the larger rx and larger tx from [a] and [b]. */
+    internal fun mergeMaxByUid(a: List<AppUsage>, b: List<AppUsage>): List<AppUsage> {
+        val rx = HashMap<Int, Long>()
+        val tx = HashMap<Int, Long>()
+        for (u in a + b) {
+            rx[u.uid] = maxOf(rx[u.uid] ?: 0L, u.rxBytes)
+            tx[u.uid] = maxOf(tx[u.uid] ?: 0L, u.txBytes)
         }
-        return queryTrafficStats(context)
+        return rx.keys.map { uid -> AppUsage(uid, null, rx[uid] ?: 0L, tx[uid] ?: 0L) }
     }
 
     /** Cumulative rx/tx since boot per installed-app UID (shared UIDs collapsed). */

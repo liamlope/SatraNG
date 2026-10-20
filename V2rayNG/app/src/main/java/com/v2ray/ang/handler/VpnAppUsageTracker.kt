@@ -15,7 +15,8 @@ import com.v2ray.ang.BuildConfig
  * snapshot to a per-day ledger. History from before the session, traffic while disconnected and
  * apps excluded by split tunneling never enter the ledger, so the list starts at zero the first
  * time tracking runs. Numbers are approximate: Android updates its counters in batches and spreads
- * them over its buckets. Limit counters are separate and exact (they come from the core itself).
+ * them over its buckets. APP/CATEGORY limits use this same per-UID growth for every package;
+ * DOMAIN limits use core `lim-*` stats.
  */
 object VpnAppUsageTracker {
     /** Background cadence while VPN is up; Usage screen can also call [sample] more often. */

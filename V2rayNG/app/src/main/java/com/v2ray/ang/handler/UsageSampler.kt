@@ -112,10 +112,9 @@ object UsageSampler {
                         ),
                     )
 
-                    // APP/CATEGORY limits need UID samples often enough to move counters when
-                    // core lim-* stays at 0 (QUIC / flaky getConnectionOwnerUid).
+                    // APP/CATEGORY limits meter from OS per-UID growth every tick (same for all packages).
                     val hasAppLimits = UsageRulesRepository.rules().any { it.enabled && it.matchesApps }
-                    val appSampleEvery = if (hasAppLimits) 5_000L else VpnAppUsageTracker.SAMPLE_EVERY_MS
+                    val appSampleEvery = if (hasAppLimits) TICK_MS else VpnAppUsageTracker.SAMPLE_EVERY_MS
                     var appUidByTag = emptyMap<String, Long>()
                     if (now - lastAppSample >= appSampleEvery) {
                         lastAppSample = now
